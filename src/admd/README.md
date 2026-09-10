@@ -14,7 +14,7 @@ history). `EX` means `admd/examples/lib/` (the Flutter example project, grouped 
 |---|---|
 | Program | Internet of Things Engineering, FILS, year III, semester I (autumn 2026) |
 | Status | Optional, 4 ECTS, paired with Introduction to SAP |
-| Format | 14 weeks. Lecture 2 h every week. Lab 2 h every second week, in even weeks (7 labs) |
+| Format | 14 weeks. Lecture 2 h every week. Lab 2 h every second week, in even weeks (7 labs). There are 15 lecture decks for 14 slots: see the note under the lecture plan |
 | Evaluation | Verification (V), no exam session |
 | Grading (proposed, confirm before publishing) | Lab assignments 5 p (cumulative lab app, graded from the repo), practical lab test 4 p (Lab 7), participation 1 p. Pass with at least 5 of 10 |
 | Instructor | Dinu-Ștefan Rusu, dinu_stefan.rusu@upb.ro, Microsoft Teams course channel, rusudinu.com. Ships Flutter apps professionally: 45+ apps, 400k installs |
@@ -44,8 +44,9 @@ Week numbers are lecture weeks. Labs run in even weeks.
 | 10 | lecture10 | Authentication, OAuth, and App Check | SRC/build-lecture7.js |
 | 11 | lecture11 | Routing, permissions, and WebSockets | SRC/build-lecture8.js |
 | 12 | lecture12 | AI in the app | SRC/build-lecture9.js |
-| 13 | lecture13 | UI polish and testing | new |
-| 14 | lecture14 | Release, distribution, and push notifications | new |
+| 13 | lecture13 | LLMs, RAG, and tool calling in the app | rag/, onia/, demos/, new |
+| 14 | lecture14 | UI polish and testing | new |
+| 15 | lecture15 | Release, distribution, and push notifications | new |
 
 ### Lecture 1: Orientation, Git, and how mobile apps are built
 
@@ -145,7 +146,19 @@ Port SRC/build-lecture9.js in full. Keep the LiteRT and quantization slides shor
 - Custom models: LiteRT and tflite_flutter, off the UI isolate.
 - Cloud LLMs: the key-in-the-binary trap, two correct shapes, firebase_ai, streaming answers, tokens and cost, the failures you will see, plausible wrong answers.
 
-### Lecture 13: UI polish and testing
+### Lecture 13: LLMs, RAG, and tool calling in the app
+
+New deck, written from the instructor's conference material: `rag/Vector-Search.pptx` (vector search and RAG), `onia/ML Kit and Vertex AI.pptx` (the mobile integration story), the notebooks in `demos/` (01 RAG, 02 MCP, 03 MCP plus RAG, 04 MCP plus RAG plus web search) and the notes in `demos/documents/`. Lecture 12 taught ML Kit, LiteRT, and the safe way to call a hosted model through firebase_ai or a backend proxy; this lecture explains what the model does and builds the two patterns every assistant feature needs.
+
+- How a large language model works, for engineers: tokens and the tokenizer, embeddings, attention in one slide (each token looks at the others and weighs them), next-token prediction, the context window as the only memory, sampling and temperature, why the model produces plausible wrong answers, what training and fine-tuning are and why an app never does them. Hosted models (Gemini, Claude, GPT) versus open models run locally (LM Studio, Ollama, the Qwen family) versus on-device (Gemini Nano, callback to Lecture 12). Cost: tokens in and out, latency to first token.
+- Prompting that survives production: system prompt, few-shot examples, structured output with a JSON schema, streaming, prompt injection as the security model (user text is data, not instructions).
+- Retrieval-augmented generation: the problem (knowledge cutoff, private data, hallucination), embeddings as vectors, cosine similarity, chunking, a vector store (Vertex AI Vector Search, pgvector, and a small on-device option), the retrieve, augment, generate loop, citations, evaluation (is the answer grounded in the retrieved text), the usual failures (bad chunking, wrong k, stale index). One end-to-end example: the user's notes from Lab 5 become searchable.
+- Tool calling: the function declaration (name, description, JSON schema of parameters), the loop (the model returns a call, the app runs it, the result goes back, the model answers), parallel calls, when to confirm with the user before a side effect, least privilege. The Model Context Protocol (MCP) as the standard way to expose tools and resources to a model; what an agent is (a loop with tools and a stop condition). Dart code with firebase_ai function calling for two app tools: add a todo, read the device location (permission from Lecture 11).
+- Putting it in the app: architecture (the key stays on the backend or behind Firebase AI Logic with App Check, Lecture 12), where RAG runs (backend for shared documents, on-device for private notes), streaming into a BlocBuilder, latency and offline behavior, cost caps per user, logging without leaking personal data, evaluating with a fixed prompt set before each release, and a checklist. A worked example that ties it together: an assistant tab in the lab todo app that answers questions over the user's todos and can add one through a tool.
+
+Note on the semester. ADMD has 14 lecture slots and 15 decks. Two ways to fit: teach Lectures 12 and 13 as one double session on AI, or fold Lecture 8 into its neighbors (packages into Lecture 2, feature flags into Lecture 9, Firebase wiring into Lecture 10, REST versus GraphQL into Lecture 7). The instructor decides; the decks stay as they are until then.
+
+### Lecture 14: UI polish and testing
 
 New deck. Two halves.
 
@@ -153,9 +166,9 @@ New deck. Two halves.
 - Forms: Form, TextFormField, validators, FocusNode, keyboard types, submit flow, error display.
 - Motion: implicit animations (AnimatedContainer, AnimatedSwitcher, AnimatedOpacity), Hero, when to stop animating.
 - Accessibility: Semantics, contrast, tap targets, text scaling, screen readers (TalkBack, VoiceOver). Localization: flutter_localizations, intl, ARB files, plurals, right-to-left in one slide.
-- Testing: the pyramid, unit tests, widget tests (testWidgets, find, pump, pumpAndSettle), bloc_test callback to Lecture 6, integration_test on a device, golden tests in one slide, mocking with mocktail, running tests in CI (points at Lecture 14).
+- Testing: the pyramid, unit tests, widget tests (testWidgets, find, pump, pumpAndSettle), bloc_test callback to Lecture 6, integration_test on a device, golden tests in one slide, mocking with mocktail, running tests in CI (points at Lecture 15).
 
-### Lecture 14: Release, distribution, and push notifications
+### Lecture 15: Release, distribution, and push notifications
 
 New deck. Ends with the course recap and the lab test rules.
 
