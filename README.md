@@ -1,6 +1,7 @@
 # Course presentations
 
 Lecture and lab decks for the two mobile courses at FILS, built from one shared LaTeX template.
+Repository: https://github.com/rusudinu/presentations
 
 ```
 admd/                         what students use: every published ADMD PDF, plus an index
@@ -12,8 +13,10 @@ src/                          what the instructor edits
   admd/labs/labNN/            same for labs
   admd/Makefile               make · make qa · make clean
   mec/…                       same layout for Mobile and Embedded Computing
-template/                     the Beamer theme, authoring rules, QA and index scripts, two examples
-mobile-and-embedded-computing/  the previous course material (pptx generators, FACTS.md, Flutter examples)
+admd/examples/                the Flutter example project, one folder per lecture
+mec/examples/                 the concurrency demos for MEC Lecture 2
+template/                     the Beamer theme, authoring rules, FACTS.md, QA and index scripts, two examples
+src/reference/                reading material the decks were written from
 ```
 
 ## Building and publishing

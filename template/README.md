@@ -2,7 +2,7 @@
 
 A minimal, keynote-style Beamer theme for **Application Development for Mobile Devices** and
 **Mobile and Embedded Computing**. It mirrors the design system of the existing pptx generator
-(`mobile-and-embedded-computing/slides/assets/template.js`): Helvetica Neue and Menlo, near-monochrome
+(`slides/assets/template.js` in the old course, now removed): Helvetica Neue and Menlo, near-monochrome
 ink/gray/hairline palette, blue as the single accent, orange reserved for embedded topics, black
 title, divider and closing slides, no bullet glyphs, an eyebrow label and one-line title on every slide.
 

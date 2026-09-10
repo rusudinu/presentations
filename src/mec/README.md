@@ -3,13 +3,13 @@
 Course brief. Every lecture and lab deck under `lectures/` and `labs/` in this folder is written from the
 section below that names it, following `template/AUTHORING.md`. `make` here builds them all and publishes
 the PDFs to `mec/` at the top of the repository. Paths below are relative to
-`/Users/dinu/dev/upb/presentations/`. `SRC` means
-`mobile-and-embedded-computing/slides/lectures/`, `LABSRC` means
-`mobile-and-embedded-computing/slides/labs/`, `EX` means
-`mobile-and-embedded-computing/flutter_examples/lib/`, and `FACTS` means
-`mobile-and-embedded-computing/slides/assets/FACTS.md` (verified technical facts, checked 2026:
-Impeller, React Native, Kotlin Multiplatform dates, TinyGo boards, frame budgets, Firebase Auth
-behavior, package names). Read FACTS before writing any slide about boards, runtimes or dates.
+`/Users/dinu/dev/upb/presentations/`. `SRC` and `LABSRC` refer to the previous course's pptx
+generators (`mobile-and-embedded-computing/slides/`, removed from the tree after the port; see git
+history). `EX` means `admd/examples/lib/` (the Flutter example project; the isolate and concurrency
+demos are in `mec/examples/`), and `FACTS` means `template/FACTS.md` (verified technical facts,
+checked 2026: Impeller, React Native, Kotlin Multiplatform dates, TinyGo boards, BLE support, frame
+budgets, Firebase Auth behavior, package names). Read FACTS before writing any slide about boards,
+runtimes or dates.
 
 ## Course facts
 
@@ -24,7 +24,7 @@ behavior, package names). Read FACTS before writing any slide about boards, runt
 | Prerequisite | Application Development for Mobile Devices (ADMD, semester I) or equivalent Flutter and Dart knowledge. Students who took Introduction to SAP instead must work through the ADMD Lectures 2, 3, 5 and 6 decks before week 3 |
 | Instructor | Dinu-Ștefan Rusu, dinu_stefan.rusu@upb.ro, Microsoft Teams course channel, rusudinu.com. Ships Flutter apps professionally: 45+ apps, 400k installs |
 | Stack | Flutter and Dart on the phone, Go on the server, TinyGo on the microcontroller, MQTT between them |
-| Repository | github.com/rusudinu/mobile-and-embedded-computing |
+| Repository | github.com/rusudinu/presentations (slides in `mec/`, code examples in `mec/examples/` and `admd/examples/`) |
 | Metadata for `\course{}` | `Mobile and Embedded Computing`, `\date{Spring 2027}` |
 
 This course teaches what runs under the app and around it: how code executes, how the phone spends energy, how data survives without a network, how the app talks to servers over RPC and to devices over MQTT and BLE, and how a microcontroller program is written. Its sibling ADMD (semester I) taught how to build the app itself. When a topic belongs to ADMD, name the ADMD lecture in one line and move on.

@@ -2,6 +2,8 @@
 
 Slides for every lecture and lab. Open the PDF; the file name is the deck number.
 
+Code examples that go with the lectures are in [examples/](examples/).
+
 ## Lectures
 
 | | Deck | About |

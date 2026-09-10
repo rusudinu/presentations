@@ -31,7 +31,10 @@ def main():
             rows.append(f"| {label} {n} | [{title}]({fname}) | {subtitle}{when} |")
         if rows:
             lines += [f"## {label}s", "", "| | Deck | About |", "|---|---|---|"] + rows + [""]
-    text = f"# {course}\n\nSlides for every lecture and lab. Open the PDF; the file name is the deck number.\n\n" + "\n".join(lines)
+    text = f"# {course}\n\nSlides for every lecture and lab. Open the PDF; the file name is the deck number.\n\n"
+    if os.path.isdir(os.path.join(out, "examples")):
+        text += "Code examples that go with the lectures are in [examples/](examples/).\n\n"
+    text += "\n".join(lines)
     os.makedirs(out, exist_ok=True)
     open(os.path.join(out, "README.md"), "w", encoding="utf-8").write(text)
     print(f"index: {out}/README.md")
