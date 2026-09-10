@@ -19,9 +19,10 @@ Code examples that go with the lectures are in [examples/](examples/).
 | Lecture 09 | [Observability and local storage](ADMD-Lecture-09.pdf) | Seeing what a phone you do not own is doing, and where its data lives |
 | Lecture 10 | [Authentication, OAuth, and App Check](ADMD-Lecture-10.pdf) | Firebase Auth providers, the OAuth handoff, and App Check enforcement |
 | Lecture 11 | [Routing, Permissions, and WebSockets](ADMD-Lecture-11.pdf) | Keeping a connection open, asking the OS for the device, and navigation as data |
-| Lecture 12 | [AI in the App](ADMD-Lecture-12.pdf) | On-device ML, custom models, and safe cloud LLM calls |
-| Lecture 13 | [UI polish and testing](ADMD-Lecture-13.pdf) | Theming, layout, forms, motion, accessibility, and tests |
-| Lecture 14 | [Release, distribution, and push notifications](ADMD-Lecture-14.pdf) | Build modes, signing, the stores, CI/CD, and FCM |
+| Lecture 12 | [AI in the app](ADMD-Lecture-12.pdf) | On-device ML, custom models, and safe cloud LLM calls |
+| Lecture 13 | [LLMs, RAG, and tool calling in the app](ADMD-Lecture-13.pdf) | Large language models, retrieval-augmented generation, and tools |
+| Lecture 14 | [UI polish and testing](ADMD-Lecture-14.pdf) | Theming, layout, forms, motion, accessibility, and tests |
+| Lecture 15 | [Release, distribution, and push notifications](ADMD-Lecture-15.pdf) | Build modes, signing, the stores, CI/CD, and FCM |
 
 ## Labs
 
