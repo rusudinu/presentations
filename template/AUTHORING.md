@@ -17,7 +17,7 @@ writing a slide. The macro reference is in `README.md` in this folder; the two d
 - Expand an acronym the first time it appears in a deck.
 - Say only what you are confident is true in 2026. Prefer stable API and package names. Do not
   quote version numbers, benchmark figures, or dates unless the source material or
-  `mobile-and-embedded-computing/slides/assets/FACTS.md` gives them. When you must estimate,
+  `template/FACTS.md` gives them. When you must estimate,
   say "roughly" and keep the number round.
 - Do not invent product features, package APIs, or command-line flags. If a code snippet cannot
   be verified from the sources, keep it minimal and generic.

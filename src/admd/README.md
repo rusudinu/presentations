@@ -3,11 +3,10 @@
 Course brief. Every lecture and lab deck under `lectures/` and `labs/` in this folder is written from the
 section below that names it, following `template/AUTHORING.md`. `make` here builds them all and publishes
 the PDFs to `admd/` at the top of the repository. Paths below are relative to
-`/Users/dinu/dev/upb/presentations/`. `SRC` means
-`mobile-and-embedded-computing/slides/lectures/`, `LABSRC` means
-`mobile-and-embedded-computing/slides/labs/`, `EX` means
-`mobile-and-embedded-computing/flutter_examples/lib/`, and `FACTS` means
-`mobile-and-embedded-computing/slides/assets/FACTS.md` (verified technical facts, checked 2026).
+`/Users/dinu/dev/upb/presentations/`. `SRC` and `LABSRC` refer to the previous course's pptx
+generators (`mobile-and-embedded-computing/slides/`, removed from the tree after the port; see git
+history). `EX` means `admd/examples/lib/` (the Flutter example project, grouped by lecture), and
+`FACTS` means `template/FACTS.md` (verified technical facts, checked 2026).
 
 ## Course facts
 
@@ -20,7 +19,7 @@ the PDFs to `admd/` at the top of the repository. Paths below are relative to
 | Grading (proposed, confirm before publishing) | Lab assignments 5 p (cumulative lab app, graded from the repo), practical lab test 4 p (Lab 7), participation 1 p. Pass with at least 5 of 10 |
 | Instructor | Dinu-Ștefan Rusu, dinu_stefan.rusu@upb.ro, Microsoft Teams course channel, rusudinu.com. Ships Flutter apps professionally: 45+ apps, 400k installs |
 | Stack | Flutter and Dart, Firebase, Go only where a tiny backend is needed |
-| Repository | github.com/rusudinu/mobile-and-embedded-computing for the shared material; each student keeps one course repository on GitHub for all labs |
+| Repository | github.com/rusudinu/presentations for the shared material (slides in `admd/`, code examples in `admd/examples/`); each student keeps one course repository on GitHub for all labs |
 | Metadata for `\course{}` | `Application Development for Mobile Devices`, `\date{Autumn 2026}` |
 
 This course teaches how to build the app. Its sibling, Mobile and Embedded Computing (MEC, semester II), teaches what runs under the app: runtimes, concurrency, rendering cost, sync, RPC, and the embedded side. When a topic belongs to MEC, say so in one line and move on. Do not teach it here.
