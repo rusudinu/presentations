@@ -4,7 +4,7 @@
 
 \course{Application Development for Mobile Devices}
 \decklabel{Lecture 13}
-\title{LLMs, RAG, and Tool Calling in the App}
+\title{LLMs, RAG, and tool calling in the app}
 \subtitle{Large language models, retrieval-augmented generation, and tools}
 \author{Dinu-Ștefan Rusu}
 \institute{FILS, Universitatea Politehnica București}
@@ -86,9 +86,7 @@
     \begin{column}{0.54\textwidth}
       \muted{The context window is the maximum number of tokens one call can attend to: the system prompt, the conversation so far, retrieved documents, tool results, and the answer being written.}
       \vskip 1mm
-      \muted{Nothing outside it exists. A model has no memory between calls, so every turn resends the history.}
-      \vskip 1mm
-      \muted{When the history stops fitting, something is dropped, and the model behaves as if it never happened.}
+      \muted{Nothing outside it exists. A model has no memory between calls, so every turn resends the history. When it stops fitting, something is dropped, and the model behaves as if it never happened.}
     \end{column}
     \begin{column}{0.42\textwidth}
       \lead{Three ways to make it fit}{}
@@ -126,7 +124,7 @@ generationConfig: GenerationConfig(
     \end{column}
   \end{columns}
   \begin{warning}[Nothing in the model checks the world]
-    A wrong answer comes out of exactly the machinery that produces a right one, so it arrives in the same confident tone. Temperature zero removes the randomness, not the error.
+    A wrong answer comes out of the same machinery as a right one, so it arrives in the same confident tone. Temperature zero removes the randomness, not the error.
   \end{warning}
   \note{Ask a factual question about a person nobody has heard of and read the answer aloud. The fluency of a fabricated biography makes the point better than the definition of hallucination does.}
 \end{frame}
@@ -137,9 +135,9 @@ generationConfig: GenerationConfig(
     \toprule
     & \thead{What it changes} & \thead{What it costs} & \thead{Your app} \\
     \midrule
-    Pre-training & every weight, from scratch & thousands of accelerator-days & never \\
+    Pre-training & every weight & thousands of accelerator-days & never \\
     Fine-tuning & the weights, slightly & a labeled dataset and a training run & rarely, for a fixed style or format \\
-    Prompting and retrieval & only the input of one call & one request & always \\
+    Prompting and retrieval & only the input & one request & always \\
     \bottomrule
   \end{tabular}}
   \vskip 2mm
@@ -154,13 +152,13 @@ generationConfig: GenerationConfig(
   \vskip 2mm
   \begin{grid}[3]
     \cell[\faCloud]{Hosted}{Gemini, Claude and GPT behind an application programming interface (API). Highest capability, billed per token, and the text leaves the device.}
-    \cell[\faServer]{Open weights, local}{LM Studio or Ollama serve a downloaded model, such as one from the Qwen family, on your own machine behind an OpenAI-compatible endpoint.}
+    \cell[\faServer]{Open weights, local}{LM Studio or Ollama serve a downloaded model, such as one from the Qwen family, behind an OpenAI-compatible endpoint on your own machine.}
     \cell[\faMobile]{On the device}{Gemini Nano and the Apple equivalent from Lecture 12. Private and offline, and only where the hardware allows.}
   \end{grid}
-  \vskip 3mm
-  \muted{Two numbers decide how a feature feels: input plus output tokens is the bill, and time to first token is what the user experiences. Streaming turns one long wait into a short one.}
+  \vskip 2mm
+  \muted{The request shape barely differs between the three, so a local endpoint is the cheapest way to develop against this lecture: no key, no bill, nothing leaving your machine.}
   \begin{takeaway}{The request shape is the same in all three.}
-    A local endpoint is the cheapest way to develop against the loops in this lecture.
+    Input plus output tokens is the bill; time to first token is what the user feels.
   \end{takeaway}
   \note{Demonstrate the local option once if the room is curious: a downloaded model behind a local endpoint costs nothing per call and keeps every experiment private. The code differs by one base address.}
 \end{frame}
@@ -170,14 +168,13 @@ generationConfig: GenerationConfig(
 \begin{frame}[eyebrow=Prompting]{The four parts of a prompt}
   \vskip 2mm
   \begin{grid}[2]
-    \cell[\faIcon{cog}]{System prompt}{Role, rules, refusals, output format. Sent on every turn, invisible to the user, and the only place your policy lives.}
-    \cell[\faIcon{list-ol}]{Few-shot examples}{Two or three input and output pairs teach a format faster than a paragraph of adjectives ever will.}
-    \cell[\faIcon{comment}]{The user turn}{The question, plus whatever your app attaches to it: the selected item, retrieved passages, tool results.}
-    \cell[\faIcon{sliders-h}]{Generation config}{Temperature, the output cap, the response schema. Steering that lives in code, not in prose.}
+    \cell[\faIcon{cog}]{System prompt}{Role, rules, refusals, output format. Sent on every turn and the only place your policy lives.}
+    \cell[\faIcon{list-ol}]{Few-shot examples}{Two or three input and output pairs teach a format faster than a paragraph of adjectives.}
+    \cell[\faIcon{comment}]{The user turn}{The question, plus what your app attaches: the selected item, retrieved passages, tool results.}
+    \cell[\faIcon{sliders-h}]{Generation config}{Temperature, the output cap, the response schema. Steering that lives in code.}
   \end{grid}
-  \vskip 3mm
   \begin{takeaway}{A prompt is source code you cannot compile.}
-    Version it, review it in a pull request, and keep a fixed set of questions that must still pass after you edit it.
+    Version it, review it in a pull request, and keep a fixed set of questions it must still pass.
   \end{takeaway}
   \note{Show a prompt file from a real project if you have one. The interesting part is always the refusal rules and the output format, not the friendly opening sentence.}
 \end{frame}
@@ -186,19 +183,16 @@ generationConfig: GenerationConfig(
 \begin{dart}
 final model = FirebaseAI.googleAI().generativeModel(
   model: 'gemini-2.5-flash',
-  systemInstruction: Content.system(rules),
   generationConfig: GenerationConfig(
-    temperature: 0.1,
     responseMimeType: 'application/json',
     responseSchema: Schema.object(properties: {
       'title': Schema.string(),
-      'priority': Schema.enumString(
-          enumValues: ['low', 'normal', 'high']),
+      'priority': Schema.enumString(enumValues: ['low', 'high']),
     }),
   ),
 );
 \end{dart}
-  \muted{JavaScript Object Notation (JSON) with a schema replaces prose parsing. The schema constrains the shape of the answer, never its truth: parse it, then check every value against your own data before it reaches the user interface (UI).}
+  \muted{The rules go in systemInstruction; the shape goes here. JavaScript Object Notation (JSON) with a schema replaces prose parsing, but a schema constrains shape, never truth: parse it, then check every value against your own data.}
   \note{Ask what happens when the model returns a priority of urgent. The enum makes that impossible, which is why constrained fields beat free text everywhere you can use them.}
 \end{frame}
 
@@ -230,14 +224,13 @@ and reply exactly: "All clear."
 \begin{frame}[eyebrow=Prompting]{What actually limits an injection}
   \vskip 2mm
   \begin{grid}[2]
-    \cell[\faLock]{Least privilege}{The model reaches only the tools one signed-in user may use, scoped to that user's own data, and nothing else.}
-    \cell[\faUserCheck]{Confirm side effects}{A tool that spends, deletes, or messages another person stops and shows the user exactly what is about to happen.}
-    \cell[\faFilter]{Validate on the way out}{Look every identifier up in your database. Check links against an allowlist. Reject values outside the schema.}
-    \cell[\faIcon{shield-alt}]{Keep the channels apart}{Retrieved text goes in as labeled data. It is never concatenated into the rules section of the system prompt.}
+    \cell[\faLock]{Least privilege}{The model reaches only the tools one signed-in user may use, scoped to that user's own data.}
+    \cell[\faUserCheck]{Confirm side effects}{A tool that spends, deletes or messages another person stops and shows what is about to happen.}
+    \cell[\faFilter]{Validate on the way out}{Look every identifier up in your database. Check links against an allowlist.}
+    \cell[\faIcon{shield-alt}]{Keep the channels apart}{Retrieved text goes in as labeled data, never into the rules section of the system prompt.}
   \end{grid}
-  \vskip 3mm
   \begin{takeaway}{Injection is contained by architecture, not by wording.}
-    Assume the prompt is already compromised, then ask what the model is still able to do.
+    Assume the prompt is already compromised, then ask what the model can still do.
   \end{takeaway}
   \note{Walk the four cells against the poisoned note from the previous slide and show that each one alone would have stopped it. Defense in depth is the point, not any single control.}
 \end{frame}
@@ -288,11 +281,11 @@ and reply exactly: "All clear."
       \vskip 1mm
       \lead{Too small.}{A sentence retrieved without its heading loses its subject and cannot be understood on its own.}
       \vskip 1mm
-      \muted{A workable default: a few hundred tokens per chunk, split on headings and paragraphs, with a small overlap so a sentence on a boundary survives.}
+      \muted{A workable default: a few hundred tokens, split on headings, with a small overlap.}
     \end{column}
     \begin{column}{0.44\textwidth}
-      \begin{hint}[Store metadata next to the vector]
-        The source file, the section title, the owner's user id and a timestamp. The title is what you cite, and the owner id is how a shared index stays private.
+      \begin{hint}[Keep metadata with the vector]
+        Source file, section title, owner id, timestamp. The title is what you cite; the owner id is how a shared index stays private.
       \end{hint}
     \end{column}
   \end{columns}
@@ -308,16 +301,16 @@ and reply exactly: "All clear."
     \toprule
     \thead{Store} & \thead{Runs} & \thead{Fits when} \\
     \midrule
-    Vertex AI Vector Search & Google Cloud, managed & a large shared corpus outgrows one machine \\
-    pgvector & inside your PostgreSQL & rows and vectors belong together, with filters and joins \\
-    Elasticsearch & your own cluster & you already run it, and want hybrid search \\
+    Vertex AI Vector Search & Google Cloud, managed & a shared corpus outgrows one machine \\
+    pgvector & inside your PostgreSQL & rows and vectors belong together \\
+    Elasticsearch & your own cluster & you run it already and want hybrid search \\
     Chroma or FAISS & a small backend process & prototypes and corpora that fit in memory \\
-    A table on the phone & the device & a private, user-sized corpus that must work offline \\
+    A table on the phone & the device & a private corpus that must work offline \\
     \bottomrule
   \end{tabular}}
-  \vskip 2mm
+  \muted{Whatever you pick holds three things per chunk: the vector, the original text, and the metadata you filter and cite by.}
   \begin{takeaway}{A few thousand chunks need no vector index.}
-    A plain table and a cosine loop are fast enough. An index earns its complexity when a linear scan stops fitting the time budget.
+    A plain table and a cosine loop are fast enough until a linear scan stops fitting the time budget.
   \end{takeaway}
   \note{The instructor demo uses Chroma in memory and a local embedding model, which is the whole store in one process. Say that the shape, not the product, is what transfers to the lab.}
 \end{frame}
@@ -328,16 +321,14 @@ Future<String> answer(String question) async {
   final q = await embed(question);      // the ingestion model
   final hits = await store.nearest(q, k: 4, ownerId: uid);
   final context = hits
-      .map((h) => '[source: ${h.title}]\n${h.text}')
-      .join('\n\n');
+      .map((h) => '[source: ${h.title}]\n${h.text}').join('\n\n');
   final res = await model.generateContent([
     Content.text('Context:\n$context\n\nQuestion: $question'),
   ]);
   return res.text ?? 'I could not find that in your notes.';
 }
 \end{dart}
-  \muted{The system prompt carries the grounding rule: answer only from the context, say you do not know when it is missing, and cite the source labels. The label is what turns an answer into a citation the user can open.}
-  \muted{The owner filter is not a nicety. A shared index queried without it is a data leak dressed up as a feature.}
+  \muted{The system prompt carries the grounding rule: answer only from the context, say you do not know when it is missing, cite the source labels. The owner filter is not a nicety: a shared index queried without it is a data leak.}
   \note{Ask what k should be. Too small and the answer is not in the context; too large and the model drowns in near misses, and both cost you tokens. Four is a starting point, not a rule.}
 \end{frame}
 
@@ -377,7 +368,7 @@ Future<String> answer(String question) async {
     \end{column}
     \begin{column}{0.42\textwidth}
       \begin{hint}[Keep the set small]
-        Every declaration costs input tokens on every single turn and gives the model one more thing to confuse. Five sharp tools beat twenty vague ones.
+        Every declaration costs input tokens on each turn and gives the model one more thing to confuse. Five sharp tools beat twenty vague ones.
       \end{hint}
     \end{column}
   \end{columns}
@@ -391,27 +382,24 @@ Future<String> answer(String question) async {
 \begin{dart}
 final addTodo = FunctionDeclaration(
   'add_todo',
-  'Create a todo for the signed-in user. Use only when the '
-  'user asks to add, create or remember a task.',
-  parameters: {
-    'title': Schema.string(description: 'Short task text'),
-  },
+  'Create a todo for the signed-in user. Use only when '
+  'the user asks to add or remember a task.',
+  parameters: {'title': Schema.string()},
 );
 final model = FirebaseAI.googleAI().generativeModel(
   model: 'gemini-2.5-flash',
   tools: [Tool.functionDeclarations([addTodo, whereAmI])],
 );
 \end{dart}
-  \muted{The second tool wraps the location call from Lecture 11. The runtime permission is still the user's decision, and a refusal is an ordinary tool result to report back, not an exception to throw.}
-  \note{Note that the declaration says nothing about how the tool is implemented. That separation is what lets the same declaration point at a local function today and at a backend endpoint tomorrow.}
+  \muted{The second tool wraps the location call from Lecture 11. The runtime permission is still the user's decision, and a refusal is an ordinary tool result to report back, not an exception.}
+  \note{The declaration says nothing about how the tool is implemented. That separation is what allows the same declaration to point at a local function today and at a backend endpoint tomorrow.}
 \end{frame}
 
 \begin{frame}[fragile,eyebrow=Tools]{The tool-calling loop}
 \begin{dart}
 final chat = model.startChat();
-var rounds = 0;
 var res = await chat.sendMessage(Content.text(question));
-while (res.functionCalls.isNotEmpty && rounds++ < 4) {
+for (var i = 0; i < 4 && res.functionCalls.isNotEmpty; i++) {
   final replies = <FunctionResponse>[];
   for (final call in res.functionCalls) {
     final out = await runTool(call.name, call.args);  // your code
@@ -421,7 +409,7 @@ while (res.functionCalls.isNotEmpty && rounds++ < 4) {
 }
 return res.text ?? '';
 \end{dart}
-  \muted{The model asks, your app runs, the result goes back as another turn, and the model answers using it. Everything called an agent is this loop with a stop condition bolted on.}
+  \muted{The model asks, your app runs, the result goes back as another turn, and the model answers using it. Everything called an agent is this loop plus a stop condition.}
   \note{Point at the round counter. Without it a model that keeps calling the same tool is an unbounded bill and a screen that never settles, and both are easy to reproduce by accident.}
 \end{frame}
 
@@ -433,7 +421,7 @@ return res.text ?? '';
     \cell[\faRobot]{What an agent is}{This loop, a set of tools, and a stop condition. The word names a control flow, not a new capability.}
   \end{grid}
   \vskip 3mm
-  \muted{Give the model a way to finish: a tool that answers, an explicit instruction to reply in text when it has enough, and a final turn where you send the tool results with no tools attached.}
+  \muted{Give the model a way to finish: an instruction to reply in text once it has enough, and a final turn that carries the tool results with no tools attached.}
   \begin{takeaway}{An agent without a stop condition is an unbounded bill.}
     Every production loop has a maximum number of rounds and a wall-clock deadline.
   \end{takeaway}
@@ -482,17 +470,15 @@ return res.text ?? '';
     \toprule
     \thead{Piece} & \thead{Where it runs} & \thead{Why there} \\
     \midrule
-    Provider key & your backend, or Firebase AI Logic & a key inside a binary is a published key \\
-    Attestation & App Check, in enforced mode & only your build may spend your quota \\
+    Key and attestation & your backend, or Firebase AI Logic with App Check enforced & a key inside a binary is a published key \\
     Tool execution & the backend, as the signed-in user & the model must never hold rights \\
     Shared index & the backend & one index, filtered per user on every query \\
     Private notes index & the device & the text never leaves the phone \\
     Prompts and schemas & the repository, reviewed & they are code, and they regress \\
     \bottomrule
   \end{tabular}}
-  \vskip 1mm
   \begin{takeaway}{Nothing here is new since Lecture 12.}
-    The credential rules that governed a single call govern a whole agent loop, with more surface.
+    The rules that governed a single call govern a whole loop, with more surface.
   \end{takeaway}
   \note{Walk the table top to bottom and ask which row the lab app already satisfies. The last row is the one students skip, and prompts drift exactly like untested code does.}
 \end{frame}
@@ -501,46 +487,32 @@ return res.text ?? '';
 \begin{golang}
 func addTodo(w http.ResponseWriter, r *http.Request) {
     uid, err := verifyIDToken(r.Header.Get("Authorization"))
-    if err != nil {
-        http.Error(w, "unauthorized", http.StatusUnauthorized)
-        return
-    }
+    if err != nil { http.Error(w, "unauthorized", 401); return }
     var in struct{ Title string `json:"title"` }
     if err := json.NewDecoder(r.Body).Decode(&in); err != nil {
-        http.Error(w, "bad request", http.StatusBadRequest)
-        return
+        http.Error(w, "bad request", 400); return
     }
-    // uid comes from the verified token, never from an argument
     writeTodo(r.Context(), uid, in.Title)
 }
 \end{golang}
-  \muted{The model supplies the title and nothing else. If it could name the owner, one poisoned note would be enough to write into somebody else's account.}
+  \muted{The user id comes from the verified token, never from a model argument. If the model could name the owner, one poisoned note would be enough to write into another person's account.}
   \note{This is the same identity rule as the security rules from the authentication lecture, one layer higher. The Go here is deliberately boring, because the interesting part is which field is missing.}
 \end{frame}
 
 \begin{frame}[fragile,eyebrow=In the app]{Streaming into a BlocBuilder}
-  \begin{columns}[T]
-    \begin{column}{0.55\textwidth}
 \begin{dart}
 Future<void> ask(String q) async {
-  await _sub?.cancel();   // new question wins
+  await _sub?.cancel();                 // a new question wins
   emit(const Thinking());
   final buf = StringBuffer();
   _sub = repo.answer(q).listen(
-    (c) => emit(Writing(
-        (buf..write(c)).toString())),
+    (chunk) => emit(Writing((buf..write(chunk)).toString())),
     onError: (_) => emit(const Failed()),
     onDone: () => emit(Done(buf.toString())),
   );
 }
 \end{dart}
-    \end{column}
-    \begin{column}{0.41\textwidth}
-      \lead{Four states, one BlocBuilder.}{Idle, thinking, writing, failed. A spinner that never changes reads as a hang.}
-      \vskip 1mm
-      \muted{Retrieval happens before the first token, so show that step too. Cancel the subscription in close(): a stream left running after the screen is gone still costs tokens.}
-    \end{column}
-  \end{columns}
+  \muted{Four states, one BlocBuilder: idle, thinking, writing, failed. Retrieval runs before the first token, so give it a state of its own: a spinner that never changes reads as a hang. Cancel in close(), because a stream left running after the screen is gone still costs tokens.}
   \note{This is the streaming call from Lecture 12 with a cubit around it. Ask why cancelling on a new question matters: two live streams writing into one buffer produce interleaved nonsense.}
 \end{frame}
 
