@@ -111,7 +111,6 @@ mec/lab/#              '#' matches the rest. Last position only
 mec/+/room1/#          both, in one filter
 $SYS/broker/uptime     broker statistics, not matched by a root '#'
 \end{codeblock}
-  \vskip 1mm
   \muted{Topics are UTF-8 strings split by \code{/}. Levels are case sensitive, there is no schema, and the broker creates a topic the moment somebody publishes to it. Wildcards are valid in a subscription only.}
   \begin{takeaway}{Identity goes in the topic, data goes in the payload.}
     A subscriber should be able to select what it wants with a wildcard, instead of receiving everything and parsing its way to the right rows.
@@ -380,7 +379,7 @@ Future<void> _scheduleReconnect() async {
   \begin{columns}[T]
     \begin{column}{0.56\textwidth}
       \begin{itemize}
-        \item TLS 1.3 finishes the handshake in one round trip. The expensive parts are the certificate chain the device verifies, and the buffers it holds while doing so.
+        \item TLS 1.3 finishes the handshake in one round trip. The expensive parts are the certificate chain and the buffers held while verifying it.
         \item A record can be up to 16 KB, so a careless stack wants two buffers that size. A constrained client asks for a smaller limit.
         \item Elliptic curve key exchange costs tens of milliseconds, and RSA costs more. The ESP32 has hardware for the symmetric work.
       \end{itemize}

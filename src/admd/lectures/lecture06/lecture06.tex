@@ -533,7 +533,6 @@ blocTest<TodoBloc, TodoState>(
 \begin{frame}[fragile,eyebrow=Riverpod]{Riverpod: providers without BuildContext}
 \begin{dart}
 void main() => runApp(const ProviderScope(child: App()));
-
 final repoProvider = Provider((ref) => TodoRepository(TodoApi()));
 
 class TodoList extends ConsumerWidget {

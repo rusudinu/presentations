@@ -103,8 +103,7 @@ void main() async {
   runApp(const App());
 }
 \end{dart}
-  \vskip 1mm
-  \muted{The first handler takes framework errors with the widget stack. The second takes async errors from outside it. Reports upload on the next launch.}
+  \muted{The first handler catches framework errors. The second catches async errors outside it. Reports upload on the next launch.}
   \note{Point out that the two handlers cover two different worlds: the framework catches build and layout errors, and everything in a Future or a Zone outside it lands in the platform dispatcher. Missing the second one is why teams believe their app never crashes.}
 \end{frame}
 

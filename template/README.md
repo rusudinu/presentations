@@ -27,8 +27,10 @@ make preview         # plus one PNG per page in preview/ for a visual QA pass
 latexmk -xelatex my-lecture.tex
 ```
 
-Fonts fall back in this order: Helvetica Neue → Arial → Liberation Sans, and Menlo → Courier New →
-Liberation Mono, so a Linux CI box produces the same line breaks as a Mac.
+Fonts come from TeX Live itself: TeX Gyre Heros (a Helvetica clone) for text and DejaVu Sans Mono
+(what Menlo is based on) for code. Nothing depends on the operating system, so a deck builds to the
+same bytes on a Mac and on the GitHub runner. The Makefiles also pin the PDF timestamp to the commit
+time of the deck folder, which is what lets the CI skip a commit when nothing changed.
 
 ## Starting a deck
 

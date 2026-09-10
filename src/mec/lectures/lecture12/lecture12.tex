@@ -54,7 +54,7 @@
 \begin{frame}[fragile,eyebrow=Channels]{MethodChannel: calling from Dart}
   \begin{columns}[T]
     \begin{column}{0.55\textwidth}
-\begin{dart}
+\begin{dart}[aboveskip=1mm,belowskip=1mm]
 class Battery {
   static const _ch = MethodChannel(
       'dev.upb.mec/battery');
@@ -72,8 +72,8 @@ class Battery {
 \end{dart}
     \end{column}
     \begin{column}{0.41\textwidth}
-      \lead{The channel name is just a string.}{Both sides must agree on it byte for byte. A typo compiles fine and fails at run time.}
-      \muted{\code{PlatformException} carries a code the native side chose. \code{MissingPluginException} means nothing answered on this platform.}
+      \lead{The channel name is just a string.}{Both sides must agree on it byte for byte. A typo compiles, then fails at run time.}
+      \muted{\code{PlatformException} carries a code the native side chose. \code{MissingPluginException} means nothing answered.}
     \end{column}
   \end{columns}
   \note{Point out that this looks like an ordinary async call. It is not: every argument gets encoded, and the answer comes back on the same message channel. Ask what happens if the app runs on a platform where the handler was never registered.}
@@ -282,7 +282,7 @@ void free_stats(Stats *s);
 \begin{frame}[fragile,eyebrow=FFI]{ffigen: the config and the generated code}
   \begin{columns}[T]
     \begin{column}{0.52\textwidth}
-\begin{yaml}
+\begin{yaml}[aboveskip=1mm,belowskip=1mm]
 # pubspec.yaml
 dev_dependencies:
   ffigen: any   # dart pub add dev:ffigen
@@ -293,12 +293,12 @@ ffigen:
     entry-points:
       - 'src/sig.h'
 \end{yaml}
-\begin{shell}
+\begin{shell}[aboveskip=1mm,belowskip=1mm]
 dart run ffigen
 \end{shell}
     \end{column}
     \begin{column}{0.44\textwidth}
-\begin{dart}
+\begin{dart}[aboveskip=1mm,belowskip=1mm]
 // generated: sig_bindings.dart
 final class Stats extends Struct {
   @Double() external double mean;
@@ -320,11 +320,10 @@ class SigBindings {
 \begin{frame}[fragile,eyebrow=FFI]{Calling the generated bindings}
   \begin{columns}[T]
     \begin{column}{0.56\textwidth}
-\begin{dart}
+\begin{dart}[aboveskip=1mm,belowskip=1mm]
 final _b = SigBindings(Platform.isAndroid
     ? DynamicLibrary.open('libsig.so')
     : DynamicLibrary.process());
-
 (double, double) analyze(Float64List xs) {
   final arena = Arena();
   try {
@@ -424,25 +423,28 @@ class ReadingsRepository(val http: HttpClient, val store: KeyValueStore) {
 \begin{frame}[fragile,eyebrow=KMP]{expect and actual: the platform bodies}
   \begin{columns}[T]
     \begin{column}{0.48\textwidth}
-\begin{kotlin}[aboveskip=1mm,belowskip=1mm]
-// androidMain
+\begin{kotlin}[aboveskip=0mm,belowskip=0mm,framextopmargin=0.6mm,framexbottommargin=0.6mm]
 actual class KeyValueStore
     actual constructor(name: String) {
-  val p = ctx.getSharedPreferences(name, 0)
-  actual fun put(k: String, v: String) =
-      p.edit().putString(k, v).apply()
+  val p = ctx.getSharedPreferences(
+      name, 0)
+  actual fun put(
+      k: String, v: String) =
+      p.edit()
+          .putString(k, v).apply()
   actual fun get(k: String) =
       p.getString(k, null)
 }
 \end{kotlin}
     \end{column}
     \begin{column}{0.48\textwidth}
-\begin{kotlin}[aboveskip=1mm,belowskip=1mm]
-// iosMain
+\begin{kotlin}[aboveskip=0mm,belowskip=0mm,framextopmargin=0.6mm,framexbottommargin=0.6mm]
 actual class KeyValueStore
     actual constructor(name: String) {
-  val d = NSUserDefaults(suiteName = name)
-  actual fun put(k: String, v: String) =
+  val d = NSUserDefaults(
+      suiteName = name)
+  actual fun put(
+      k: String, v: String) =
       d.setObject(v, forKey = k)
   actual fun get(k: String) =
       d.stringForKey(k)

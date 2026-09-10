@@ -94,7 +94,7 @@ Sec-WebSocket-Accept: s3pPLMBiTxaQ9kYGzw==
 final channel = WebSocketChannel.connect(
   Uri.parse('wss://realtime.example.com/chat'),
 );
-await channel.ready;  // throws if handshake fails
+await channel.ready;  // throws on failure
 final sub = channel.stream.listen(
   (data) => onMessage(data as String),
   onError: (e, st) => scheduleReconnect(),
@@ -394,16 +394,15 @@ final router = GoRouter(
       path: '/chat/:id',
       builder: (c, s) => ChatScreen(
         roomId: s.pathParameters['id']!,
-      ),
-    ),
+      )),
   ],
   errorBuilder: (c, s) => NotFound(),
 );
 \end{dart}
     \end{column}
     \begin{column}{0.36\textwidth}
-      \lead{Stack equals a function of state}{You stop saying "go here" and declare what exists instead.}
-      \muted{One \code{MaterialApp.router} line wires it in, and the tree then works from a deep link or a URL bar.}
+      \lead{Stack equals a function of state}{You declare what exists, instead of saying "go here".}
+      \muted{One \code{MaterialApp.router} line wires it in, then it works from a URL bar.}
       \muted{\code{context.go()} replaces the stack. \code{context.push()} adds to it.}
     \end{column}
   \end{columns}
@@ -465,8 +464,7 @@ final router = GoRouter(
     final atLogin =
         state.matchedLocation == '/login';
     if (user == null && !atLogin) {
-      return '/login';
-    }
+      return '/login'; }
     if (user != null && atLogin) return '/';
     return null;
   },
@@ -474,8 +472,8 @@ final router = GoRouter(
 \end{dart}
     \end{column}
     \begin{column}{0.36\textwidth}
-      \lead{The bridge back to Lecture 10}{redirect runs before every navigation, including the first one. One place decides who may see what.}
-      \muted{authRefresh wraps authStateChanges() in a ChangeNotifier, so sign-out re-runs the guard right away.}
+      \lead{The bridge back to Lecture 10}{redirect runs before every navigation, first one included. One place decides who sees what.}
+      \muted{authRefresh wraps authStateChanges() in a ChangeNotifier, so sign-out re-runs the guard.}
       \muted{Return null to allow, a location to send them elsewhere.}
     \end{column}
   \end{columns}

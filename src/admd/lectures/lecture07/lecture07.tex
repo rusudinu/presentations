@@ -119,15 +119,15 @@ final dio = Dio(BaseOptions(
     \begin{column}{0.56\textwidth}
 \begin{dart}
 final dio = Dio(BaseOptions(
-  baseUrl: 'https://api.example.com',
-));
-
+    baseUrl: 'https://api.example.com'));
 Future<Reading> fetchReading(String id) async {
   try {
-    final r = await dio.get('/readings/$id');
+    final r =
+        await dio.get('/readings/$id');
     return Reading.fromJson(r.data);
   } on DioException catch (e) {
-    throw ApiFailure(e.message ?? 'network error');
+    throw ApiFailure(
+        e.message ?? 'network error');
   }
 }
 \end{dart}
@@ -235,12 +235,12 @@ throw ApiFailure('status ${res.statusCode}');
 \begin{dart}
 Future<T> withRetry<T>(
     Future<T> Function() call) async {
-  for (var a = 0; ; a++) {
-    try {
+  for (var a = 0; ; a++) { try {
       return await call();
     } on DioException catch (e) {
       if (!_retryable(e) || a == 4) rethrow;
-      final wait = Random().nextInt(200 << a);
+      final wait =
+          Random().nextInt(200 << a);
       await Future.delayed(
           Duration(milliseconds: wait));
     }
@@ -286,7 +286,6 @@ Future<T> withRetry<T>(
     \item Full jitter, from the previous slide, spreads those retries across the interval, so the recovering server sees load ramp up instead of arriving all at once.
     \item \textbf{Hedging is the opposite problem.} A few requests are simply slow. Send a second copy after a short delay, take whichever answers first, cancel the other.
   \end{itemize}
-  \vskip 1mm
   {\renewcommand{\arraystretch}{1.0}\usebeamerfont{small}\begin{tabular}{@{}lll@{}}
     \toprule
     \thead{Attempt} & \thead{Sent at} & \thead{Outcome} \\
@@ -308,16 +307,16 @@ Future<T> withRetry<T>(
     \begin{column}{0.56\textwidth}
 \begin{dart}
 class Reading {
-  final String deviceId;
-  final double tempC;
+  final String deviceId; final double tempC;
   Reading({required this.deviceId,
       required this.tempC});
   factory Reading.fromJson(Map j) => Reading(
     deviceId: j['device_id'] as String,
     tempC: (j['temp_c'] as num).toDouble(),
   );
-  Map toJson() =>
-      {'device_id': deviceId, 'temp_c': tempC};
+  Map toJson() => {
+    'device_id': deviceId, 'temp_c': tempC,
+  };
 }
 \end{dart}
     \end{column}

@@ -122,7 +122,7 @@ seq++
       \muted{The simulator runs in the browser, so a broker on your own machine is out of reach. Publish to a public test broker, on a topic prefix nobody else will use.}
     \end{column}
   \end{columns}
-  \vskip 3mm
+  \vskip 1mm
   \muted{A constant proves nothing. Publish a value that moves, so the number on the phone shows the chain is alive.}
 \end{frame}
 
@@ -151,7 +151,6 @@ seq++
   \begin{columns}[T]
     \begin{column}{0.55\textwidth}
 \begin{golang}
-// drivers/netlink, drivers/net/mqtt
 link, _ := netlink.New()
 err := link.NetConnect(
     &netlink.ConnectParams{
@@ -206,7 +205,7 @@ cat /dev/tty.usbmodem1101 | while IFS= read -r line; do
   mosquitto_pub -h localhost -q 1 -t course/t07/reading -m "$line"
 done
 \end{shell}
-  \vskip 3mm
+  \vskip 1mm
   \muted{The board prints the JSON document, one per line, exactly as a networked board would publish it. The laptop only forwards. Nothing else in the lab changes, which is the point: the phone cannot tell the two set-ups apart.}
   \vskip 2mm
   \begin{warning}
@@ -251,7 +250,7 @@ c.updates!.listen((events) {
   _bloc.add(ReadingReceived(jsonDecode(text)));
 });
 \end{dart}
-  \vskip 2mm
+  \vskip 1mm
   \muted{\code{10.0.2.2} is your machine from the Android emulator. A real phone uses the laptop's address.}
 \end{frame}
 

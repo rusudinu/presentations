@@ -297,7 +297,7 @@ pwm.Set(ch, pwm.Top()/4)  // quarter duty
     \cell[\faIdCard]{One address}{Seven bits, fixed by the maker. Two identical sensors need different addresses.}
     \cell[\faBolt]{One voltage}{A 3.3 V board and a 5 V sensor need a level shifter, or the board dies.}
   \end{grid}
-  \vskip 4mm
+  \vskip 2mm
   \muted{If nothing answers, scan the bus first. A device that never acknowledges its address is a wiring problem.}
   \note{Draw the two lines with the pull-ups on the board. Tell the room that a bus scan printing no addresses has saved more lab time than any debugger, and that it is roughly ten lines of code.}
 \end{frame}
@@ -397,9 +397,8 @@ func main() {
     machine.InitADC()
     s := machine.ADC{Pin: machine.ADC0}
     s.Configure(machine.ADCConfig{})
-
     for {
-        led.Set(true)   // proof of life
+        led.Set(true) // proof of life
         println("adc:", s.Get())
         time.Sleep(2 * time.Second)
     }

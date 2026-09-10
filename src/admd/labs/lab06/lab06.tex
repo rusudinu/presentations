@@ -117,13 +117,13 @@ final router = GoRouter(
   refreshListenable: GoRouterRefreshStream(
       FirebaseAuth.instance.authStateChanges()),
   redirect: (context, state) {
-    final signedIn =
-        FirebaseAuth.instance.currentUser != null;
-    final atLogin = state.matchedLocation == '/login';
+    final signedIn = FirebaseAuth.instance
+        .currentUser != null;
+    final atLogin =
+        state.matchedLocation == '/login';
     if (!signedIn && !atLogin) return '/login';
     if (signedIn && atLogin) return '/';
-    return null;
-  },
+    return null; },
 );  // routes: [...]
 \end{dart}
     \end{column}

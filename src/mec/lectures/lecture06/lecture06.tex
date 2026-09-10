@@ -319,7 +319,6 @@ Future<bool> ensureLocation() async {
   return p == LocationPermission.whileInUse || p == LocationPermission.always;
 }
 \end{dart}
-  \vskip 1mm
   \muted{Check \code{isLocationServiceEnabled} first: a granted permission with the radio off returns nothing.}
   \note{Students read a granted permission with the location service off as a bug in their own code, so make the service check explicit. Mention that after openAppSettings the user may come back granted, denied or not at all, so re-check the status on resume.}
 \end{frame}

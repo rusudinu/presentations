@@ -66,6 +66,9 @@ def main():
 
     # ---------------------------------------------------------------- compile
     env = dict(os.environ, TEXINPUTS=f"{TEMPLATE}//:" + os.environ.get("TEXINPUTS", ""))
+    # Same reproducible timestamp as the Makefiles: the commit time of the deck folder.
+    epoch = subprocess.run(["git", "log", "-1", "--format=%ct", "--", d], capture_output=True, text=True).stdout.strip()
+    env.update(SOURCE_DATE_EPOCH=epoch or str(int(__import__("time").time())), SOURCE_DATE_EPOCH_TEX_PRIMITIVES="1")
     r = subprocess.run(["latexmk", "-xelatex", "-interaction=nonstopmode", "-halt-on-error", "-cd", tex],
                        env=env, capture_output=True, text=True)
     log_path = os.path.join(d, base + ".log")

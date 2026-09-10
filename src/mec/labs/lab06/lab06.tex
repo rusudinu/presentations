@@ -214,8 +214,7 @@ final client = ReadingsClient(channel); try {
         timeout: const Duration(seconds: 2)));
   setState(() => _value = r.value);
 } on GrpcError catch (e) {
-  setState(() => _error = e.code);
-}
+  setState(() => _error = e.code); }
 \end{dart}
     \end{column}
     \begin{column}{0.37\textwidth}

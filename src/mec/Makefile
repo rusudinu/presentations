@@ -10,14 +10,16 @@ PDF     := $(SRC:.tex=.pdf)
 
 all: $(PDF) publish
 
+# SOURCE_DATE_EPOCH = the commit time of the deck folder, so an unchanged deck rebuilds to identical bytes.
 %.pdf: %.tex $(TEMPLATE)/beamerthemeupbminimal.sty
-	$(LATEXMK) $<
+	@epoch=$$(git log -1 --format=%ct -- $(<D) 2>/dev/null); \
+	SOURCE_DATE_EPOCH=$${epoch:-$$(date +%s)} SOURCE_DATE_EPOCH_TEX_PRIMITIVES=1 $(LATEXMK) $<
 
 # copy the built PDFs to the student folder under their public names, and refresh its index
 publish:
 	@mkdir -p $(OUT)
-	@for f in lectures/lecture*/lecture*.pdf; do n=$${f##*/lecture}; cp "$$f" "$(OUT)/$(PREFIX)-Lecture-$${n%.pdf}.pdf"; done
-	@for f in labs/lab*/lab*.pdf; do n=$${f##*/lab}; cp "$$f" "$(OUT)/$(PREFIX)-Lab-$${n%.pdf}.pdf"; done
+	@for f in lectures/lecture*/lecture*.pdf; do [ -f "$$f" ] || continue; n=$${f##*/lecture}; t="$(OUT)/$(PREFIX)-Lecture-$${n%.pdf}.pdf"; cmp -s "$$f" "$$t" || { cp "$$f" "$$t"; echo "published $$t"; }; done
+	@for f in labs/lab*/lab*.pdf; do [ -f "$$f" ] || continue; n=$${f##*/lab}; t="$(OUT)/$(PREFIX)-Lab-$${n%.pdf}.pdf"; cmp -s "$$f" "$$t" || { cp "$$f" "$$t"; echo "published $$t"; }; done
 	@python3 $(TEMPLATE)/index.py . $(OUT) $(PREFIX)
 
 # compile, lint and render contact sheets for every deck

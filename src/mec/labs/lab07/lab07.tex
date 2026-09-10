@@ -168,7 +168,6 @@ git push -u origin lab-7
 \end{frame}
 
 \begin{frame}[eyebrow=Troubleshooting]{Mistakes that cost time}
-  \vskip 2mm
   \trouble{Client not connected}{You published before the MQTT connect finished. Await the connection state before the first publish or subscribe.}
   \trouble{An outbox row stays queued forever}{The drain loop never marks the row sent after a successful post. Update its status inside the same transaction as the network call.}
   \trouble{A gRPC call hangs and the screen never updates}{No deadline was set. Attach one, and handle the deadline-exceeded status instead of swallowing it.}

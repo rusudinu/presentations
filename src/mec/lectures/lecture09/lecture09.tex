@@ -158,11 +158,11 @@ int? compare(Vc a, Vc b) {
 \begin{frame}[fragile,eyebrow=Ordering]{Hybrid logical clocks, the compromise}
   \begin{columns}[T]
     \begin{column}{0.56\textwidth}
-\begin{dart}
+\begin{dart}[aboveskip=1mm,belowskip=1mm]
 class Hlc implements Comparable<Hlc> {
   final int wallMs;   // ms since the epoch
   final int counter;  // ties inside one ms
-  final String node;  // replica id, tiebreak
+  final String node;  // replica id
 
   Hlc tick(int nowMs) => nowMs > wallMs
       ? Hlc(nowMs, 0, node)
@@ -178,7 +178,7 @@ class Hlc implements Comparable<Hlc> {
       \lead{Vector clocks cost state per device.}{The vector grows with every replica that ever existed: on a consumer app, every phone the user ever owned.}
       \vskip 2mm
       \lead{An HLC is 64 bits on the wire.}{The wall part keeps the value readable. The counter part never allows it to go backwards, so the order never contradicts causality.}
-      \vskip 2mm
+      \vskip 1mm
       \muted{Use it as your updatedAt.}
     \end{column}
   \end{columns}
@@ -231,7 +231,7 @@ Note resolve(Note l, ServerNote r) =>
 \end{frame}
 
 \begin{frame}[eyebrow=Strategies]{First writer wins}
-  \vskip 3mm
+  \vskip 1mm
   \begin{columns}[T]
     \begin{column}{0.50\textwidth}
       \lead{The example.}{A shared shopping list. Two housemates, both offline in the same supermarket, both create ``bread'' under the same natural key: list id plus lowercased name.}
