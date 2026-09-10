@@ -1,0 +1,617 @@
+% MEC Lecture 3. Compile: latexmk -xelatex lecture03.tex
+\documentclass[10pt,aspectratio=169,t]{beamer}
+\usetheme{upbminimal}
+
+\course{Mobile and Embedded Computing}
+\decklabel{Lecture 3}
+\title{Embedded fundamentals and TinyGo}
+\subtitle{Microcontrollers, peripherals, and Go on bare metal}
+\author{Dinu-Ștefan Rusu}
+\institute{FILS, Universitatea Politehnica București}
+\date{Spring 2027}
+
+\begin{document}
+
+\titleframe
+
+\objectivesframe{
+  \cell[\faMicrochip]{Read the first page of a datasheet}{Core, flash, SRAM, peripherals and clocks, and what those numbers forbid in your code.}
+  \cell[\faBolt]{Pick an execution model}{A super loop with interrupts and timers, or an RTOS with tasks. Know which one your project needs.}
+  \cell[\faPlug]{Drive a peripheral}{GPIO, ADC and PWM, and the difference between I2C, SPI and UART when you pick a sensor.}
+  \cell[\faCode]{Ship a TinyGo program}{Build, flash, read the serial console, and keep the device asleep between readings.}
+}
+
+\divider{Part 1 · Anatomy}{Four orders of magnitude down}[What a microcontroller is made of, and what it does not have]
+
+\begin{frame}[embedded,eyebrow=Anatomy]{The constraint jump: phone to microcontroller}
+  \vskip 1mm
+  \begin{tabular}{@{}lp{46mm}p{56mm}@{}}
+    \toprule
+    & \thead{Phone} & \thead{Microcontroller} \\
+    \midrule
+    RAM       & 8–16 GB              & roughly 520 KB of SRAM \\
+    Storage   & 128–512 GB           & roughly 4 MB of flash \\
+    Power     & roughly 5 W peak     & milliwatts, or a coin cell \\
+    OS        & Android or iOS       & a small kernel, or nothing \\
+    Your code & Dart, ahead of time  & Go, via TinyGo and LLVM \\
+    \bottomrule
+  \end{tabular}
+  \begin{takeaway}{This is the far right of the device spectrum from Lecture 1.}
+    Every habit from that lecture applies, with no headroom left to absorb a mistake.
+  \end{takeaway}
+  \note{Do not reteach the spectrum, the room met it in week 1. The point here is the size of the step: roughly ten thousand times less memory and a thousand times less power. Ask what a Flutter app would have to give up to fit in the right column.}
+\end{frame}
+
+\begin{frame}[embedded,eyebrow=Anatomy]{What is inside a microcontroller}
+  \vskip 2mm
+  \begin{grid}[3]
+    \cell[\faMicrochip]{Core}{One CPU, a Cortex-M or a RISC-V part. No memory management unit, so no processes.}
+    \cell[\faDatabase]{Flash}{Holds your program and its constants. Code runs from it directly.}
+    \cell[\faMemory]{SRAM}{Globals, stacks and the heap share one small block. You run out of this first.}
+    \cell[\faPlug]{Peripherals}{GPIO, timers, ADC, PWM, I2C, SPI, UART. Hardware blocks driven by registers.}
+    \cell[\faClock]{Clocks}{An internal oscillator or a crystal, divided out to the core and each peripheral.}
+    \cell[\faBolt]{Power domains}{Parts of the chip switch off independently. That is what makes deep sleep work.}
+  \end{grid}
+  \note{Stress the missing memory management unit: it is the reason there is no operating system in the phone sense and no protection between your code and the hardware. Ask what happens when a pointer goes wrong here compared to on Android.}
+\end{frame}
+
+\begin{frame}[embedded,eyebrow=Anatomy]{The memory map}
+  \vskip 1mm
+  \begin{tabular}{@{}lp{46mm}p{54mm}@{}}
+    \toprule
+    \thead{Region} & \thead{What lives there} & \thead{Why you care} \\
+    \midrule
+    Vector table & Handler addresses           & The first thing the core reads \\
+    Flash        & Code and constants          & Read-only at run time \\
+    SRAM         & Globals, stack and heap     & One block, shared by all three \\
+    Peripherals  & Control and data registers  & One store turns a pin on \\
+    Core private & Interrupt controller, timer & Fixed by the core design \\
+    \bottomrule
+  \end{tabular}
+  \vskip 3mm
+  \muted{Everything lives in one flat address space. There is no protection, so a wild pointer can overwrite a peripheral register as easily as a variable.}
+  \note{Draw the map on the board as one vertical bar, low addresses at the bottom. The takeaway for the room is that a peripheral is just an address. TinyGo hides this behind the machine package, but the hardware underneath has not changed.}
+\end{frame}
+
+\begin{frame}[embedded,eyebrow=Anatomy]{What half a megabyte of RAM means}
+  \vskip 1mm
+  \begin{grid}[3]
+    \cell[\faLayerGroup]{Statics are cheap}{A fixed-size array decided at compile time never fails to allocate.}
+    \cell[\faExclamationCircle]{The heap is a risk}{Allocation can fail, and no operating system will restart you when it does.}
+    \cell[\faStream]{The stack is small}{Deep recursion and large local buffers corrupt memory silently.}
+    \cell[\faCode]{Buffers, not strings}{Building strings allocates. Reuse one byte slice and write into it.}
+    \cell[\faIcon{compress-arrows-alt}]{Parse incrementally}{Decoding a whole JSON document needs it all in RAM. Read field by field.}
+    \cell[\faTrash]{Collection still happens}{The collector is small and simple. Allocating less is the only real fix.}
+  \end{grid}
+  \note{This is the slide students ignore until Lab 2 fails. Ask them how large a single 4 KB HTTP response buffer is as a fraction of the RAM. Then point out that the network stack, the radio driver and their own code all live in the same block.}
+\end{frame}
+
+\divider{Part 2 · Execution}{Bare metal or a kernel}[The super loop, interrupts, timers, and what an RTOS adds]
+
+\begin{frame}[embedded,fragile,eyebrow=Execution]{The super loop}
+  \begin{columns}[T]
+    \begin{column}{0.55\textwidth}
+\begin{golang}
+func main() {
+    led := machine.LED
+    led.Configure(machine.PinConfig{
+        Mode: machine.PinOutput})
+
+    for {              // this never returns
+        led.High()
+        time.Sleep(200 * time.Millisecond)
+        led.Low()
+        time.Sleep(800 * time.Millisecond)
+    }
+}
+\end{golang}
+    \end{column}
+    \begin{column}{0.41\textwidth}
+      \lead{There is nothing to return to.}{If \code{main} exits, the board stops or resets. The loop is the program.}
+      \muted{Every step in the loop delays every other step. A sensor read that blocks for 100 ms is 100 ms in which nothing else happens.}
+      \begin{hint}[Rule of thumb]
+        A super loop is right while one slow step is still acceptable.
+      \end{hint}
+    \end{column}
+  \end{columns}
+  \note{Run this live on a board if one is at hand. Then ask what happens when a button must be read while the LED is in its 800 ms sleep. That question is the reason the next slide exists.}
+\end{frame}
+
+\begin{frame}[embedded,fragile,eyebrow=Execution]{Interrupts and timers}
+  \begin{columns}[T]
+    \begin{column}{0.55\textwidth}
+\begin{golang}
+var pressed volatile.Register8
+
+button.Configure(machine.PinConfig{
+    Mode: machine.PinInputPullup})
+
+button.SetInterrupt(machine.PinFalling,
+    func(p machine.Pin) {
+        pressed.Set(1)   // set a flag
+    })
+\end{golang}
+    \end{column}
+    \begin{column}{0.41\textwidth}
+      \lead{The handler contract.}{Run for microseconds. Set a flag or push into a buffer. Never sleep, never allocate, never print.}
+      \muted{A hardware timer is the same idea on a schedule: the peripheral counts on its own and interrupts you when it wraps. That is how you sample at a fixed rate without a blocking sleep.}
+    \end{column}
+  \end{columns}
+  \begin{takeaway}{An interrupt steals the CPU from your loop.}
+    Whatever the handler does, the main loop pays for it in latency. Keep handlers short and do the work in the loop.
+  \end{takeaway}
+  \note{Explain the flag pattern: the handler records that something happened, the loop decides what to do about it. Warn that a variable shared with a handler must be declared so the compiler cannot cache it in a register.}
+\end{frame}
+
+\begin{frame}[embedded,eyebrow=Execution]{Bare metal versus an RTOS}
+  \vskip 1mm
+  {\usebeamerfont{small}\begin{tabular}{@{}lll@{}}
+    \toprule
+    & \thead{Super loop} & \thead{Real-time kernel} \\
+    \midrule
+    Scheduling    & You write it, by hand      & Preemptive, by task priority \\
+    A blocking call & Stalls everything        & Blocks one task, others keep running \\
+    Timing        & Best effort                & Deadlines you can reason about \\
+    RAM cost      & None beyond your code      & A stack per task, plus the kernel \\
+    Failure mode  & One slow step delays all   & Races and priority inversion \\
+    Right when    & One sensor, one radio      & Several rates and several deadlines \\
+    \bottomrule
+  \end{tabular}}
+  \begin{takeaway}{Most student projects belong in the left column.}
+    A TinyGo program with goroutines sits between the two: cooperative scheduling, no priorities, and no kernel to configure.
+  \end{takeaway}
+  \note{Most student projects are firmly in the left column and should stay there. Say plainly that adding an RTOS to a one-sensor project buys complexity and nothing else.}
+\end{frame}
+
+\begin{frame}[embedded,eyebrow=Execution]{FreeRTOS in one slide}
+  \vskip 1mm
+  \begin{grid}[3]
+    \cell[\faTasks]{Tasks}{A function with its own stack and a priority, switched by the kernel.}
+    \cell[\faSortAmountUp]{Priorities}{The highest ready priority runs. A task that never blocks starves the rest.}
+    \cell[\faIcon{exchange-alt}]{Queues}{The safe way to move data between tasks and out of a handler.}
+    \cell[\faLock]{Mutexes}{Protect a shared peripheral, such as one bus used by two tasks.}
+    \cell[\faIcon{flag}]{Semaphores}{A handler signals, a task wakes. This is how work leaves an interrupt.}
+    \cell[\faHourglassHalf]{Ticks}{The kernel timer defines every delay, timeout and scheduling step.}
+  \end{grid}
+  \vskip 2mm
+  \muted{ESP-IDF ships FreeRTOS. From TinyGo, goroutines are your task model.}
+  \note{The room needs the vocabulary, not the API, because they will meet it in ESP-IDF tutorials and in datasheets. Point out that a queue between an interrupt and a task is the same producer and consumer shape they wrote with channels in Lecture 2.}
+\end{frame}
+
+\divider{Part 3 · Peripherals}{Talking to the outside world}[GPIO, ADC, PWM, and choosing between I2C, SPI and UART]
+
+\begin{frame}[embedded,eyebrow=Peripherals]{The peripherals you will actually use}
+  \vskip 2mm
+  \begin{grid}[3]
+    \cell[\faToggleOn]{GPIO}{One pin, high or low. Buttons, relays, LEDs, and the chip-select line of an SPI device.}
+    \cell[\faIcon{tachometer-alt}]{ADC}{Turns a voltage into an integer. Potentiometers, light sensors, analog microphones.}
+    \cell[\faWaveSquare]{PWM}{A square wave with an adjustable duty cycle. LED brightness, motor speed, servo angle.}
+    \cell[\faIcon{exchange-alt}]{I2C}{Two shared wires, many addressed devices. Almost every small digital sensor.}
+    \cell[\faBolt]{SPI}{Four wires, one select line per device, megahertz speeds. Displays, flash chips, radios.}
+    \cell[\faTerminal]{UART}{Two wires, point to point, a fixed baud rate. Serial logs, GPS modules, modems.}
+  \end{grid}
+  \note{Ask which of these the room already used in Computer Architecture or in a hobby project. Say that the machine package in TinyGo exposes all six with one API, so the choice is a hardware choice, not a software one.}
+\end{frame}
+
+\begin{frame}[embedded,fragile,eyebrow=Peripherals]{GPIO: the simplest peripheral}
+  \begin{columns}[T]
+    \begin{column}{0.55\textwidth}
+\begin{golang}
+led := machine.LED
+led.Configure(machine.PinConfig{
+    Mode: machine.PinOutput})
+led.Set(true)
+
+btn := machine.GP15
+btn.Configure(machine.PinConfig{
+    Mode: machine.PinInputPullup})
+
+down := !btn.Get()  // pull-up: low
+\end{golang}
+    \end{column}
+    \begin{column}{0.41\textwidth}
+      \lead{Wiring, in words.}{The LED goes from the pin through a resistor to ground. The button connects the pin to ground, and the internal pull-up holds the pin high until it is pressed.}
+      \begin{warning}[Bouncing]
+        A contact makes several transitions in a few milliseconds. Ignore later edges for roughly 20 ms.
+      \end{warning}
+    \end{column}
+  \end{columns}
+  \note{Explain why an unconnected input pin floats and reads random values, and why the pull-up removes that. Debouncing is the first thing that breaks in a lab, so name the symptom: one press counted three times.}
+\end{frame}
+
+\begin{frame}[embedded,fragile,eyebrow=Peripherals]{ADC: turning a voltage into a number}
+  \begin{columns}[T]
+    \begin{column}{0.55\textwidth}
+\begin{golang}
+machine.InitADC()
+
+sensor := machine.ADC{Pin: machine.ADC0}
+sensor.Configure(machine.ADCConfig{})
+
+raw := sensor.Get()      // 0 .. 65535
+// TinyGo scales every board to 16 bits,
+// whatever the hardware resolution is.
+volts := float32(raw) * 3.3 / 65535.0
+\end{golang}
+    \end{column}
+    \begin{column}{0.41\textwidth}
+      \lead{Wiring, in words.}{A resistive sensor forms a divider between the supply and ground. Its middle point goes to the ADC pin.}
+      \muted{Readings jitter. Average several samples, or you will show noise and call it a measurement.}
+      \begin{hint}[Reference]
+        The number means nothing until you know the reference voltage.
+      \end{hint}
+    \end{column}
+  \end{columns}
+  \note{Point out that the scale factor depends on the board reference, so 3.3 in the code is an assumption to check. Suggest averaging sixteen samples in the lab and watching the last digit stop dancing.}
+\end{frame}
+
+\begin{frame}[embedded,fragile,eyebrow=Peripherals]{PWM: an average voltage from a square wave}
+  \begin{columns}[T]
+    \begin{column}{0.55\textwidth}
+\begin{golang}
+pwm := machine.PWM0
+// Period is in nanoseconds: 500 Hz here.
+pwm.Configure(machine.PWMConfig{
+    Period: 1e9 / 500,
+})
+
+ch, _ := pwm.Channel(machine.GP0)
+pwm.Set(ch, pwm.Top()/4)  // quarter duty
+\end{golang}
+    \end{column}
+    \begin{column}{0.41\textwidth}
+      \lead{The pin is still only high or low.}{The peripheral toggles it fast enough that the load sees the average. An LED dims, a motor slows.}
+      \muted{\code{Top()} is the counter maximum for the configured period, so a duty cycle is a fraction of it.}
+      \begin{warning}[Which timer]
+        PWM units are shared between pins. Two pins on the same unit share one period.
+      \end{warning}
+    \end{column}
+  \end{columns}
+  \note{Explain duty cycle with the LED example, then say that a hobby servo is the same peripheral with a 50 Hz period and a pulse between roughly one and two milliseconds. Warn that a motor needs a driver, never a bare pin.}
+\end{frame}
+
+\begin{frame}[embedded,eyebrow=Peripherals]{Picking a bus: I2C, SPI, or UART}
+  \vskip 1mm
+  {\usebeamerfont{small}\begin{tabular}{@{}lllll@{}}
+    \toprule
+    \thead{Bus} & \thead{Wires} & \thead{Speed} & \thead{Devices} & \thead{Use it for} \\
+    \midrule
+    I2C  & 2, shared         & 100–400 kHz  & many, by address & small digital sensors \\
+    SPI  & 3, plus 1 select  & megahertz    & a few            & displays, flash, radios \\
+    UART & 2, point to point & a fixed baud & one              & serial logs, GPS, modems \\
+    \bottomrule
+  \end{tabular}}
+  \vskip 3mm
+  \muted{I2C addresses devices in software, so two wires reach a dozen sensors. SPI is faster but spends a select pin per device. UART has no addressing, so it joins exactly two parties.}
+  \begin{takeaway}{Read the sensor's datasheet before you buy it.}
+    The bus decides your wiring, your pin budget, and whether a driver already exists.
+  \end{takeaway}
+  \note{Ask the room which bus a display with a hundred frames per second needs, and which one a temperature sensor read once a minute needs. The answer is the whole slide.}
+\end{frame}
+
+\begin{frame}[embedded,eyebrow=Peripherals]{Wiring an I2C sensor}
+  \vskip 1mm
+  \begin{grid}[2]
+    \cell[\faPlug]{Four connections}{Supply, ground, and the clock and data lines to the two I2C pins of your board.}
+    \cell[\faIcon{level-up-alt}]{Two pull-up resistors}{Both lines are open drain. Most breakout boards already carry the pair.}
+    \cell[\faIdCard]{One address}{Seven bits, fixed by the maker. Two identical sensors need different addresses.}
+    \cell[\faBolt]{One voltage}{A 3.3 V board and a 5 V sensor need a level shifter, or the board dies.}
+  \end{grid}
+  \vskip 4mm
+  \muted{If nothing answers, scan the bus first. A device that never acknowledges its address is a wiring problem.}
+  \note{Draw the two lines with the pull-ups on the board. Tell the room that a bus scan printing no addresses has saved more lab time than any debugger, and that it is roughly ten lines of code.}
+\end{frame}
+
+\divider{Part 4 · TinyGo}{Go, compiled for bare metal}[The toolchain, the machine package, and the parts of Go you give up]
+
+\begin{frame}[embedded,eyebrow=TinyGo]{TinyGo: Go, compiled for bare metal}
+  \muted{TinyGo reads ordinary Go, emits LLVM intermediate code, and has LLVM produce machine code for Cortex-M, RISC-V, AVR and WebAssembly. It is a different compiler for the same language.}
+  \vskip 2mm
+  \begin{columns}[T]
+    \begin{column}{0.47\textwidth}
+      \kv{What you keep}{}
+      \muted{Goroutines and channels on a chip with no operating system.\par\vskip 1.2mm
+      Binaries measured in tens of kilobytes.\par\vskip 1.5mm
+      The machine package: one hardware API for every supported board.\par\vskip 1.5mm
+      One language shared with the Go backend of Lecture 10.}
+    \end{column}
+    \begin{column}{0.47\textwidth}
+      \kv{What you give up}{}
+      \muted{A reduced runtime: cooperative scheduling, a simple collector.\par\vskip 1.2mm
+      Limited reflection, so reflection-heavy packages will not build.\par\vskip 1.5mm
+      A subset of the standard library, with no full network stack.\par\vskip 1.5mm
+      Some Go packages do not compile for a microcontroller.}
+    \end{column}
+  \end{columns}
+  \note{Say the sentence that matters: you keep the language and the concurrency model, you lose the library ecosystem. Ask the room to guess which standard library package breaks first. The answer is usually the JSON encoder, because it is built on reflection.}
+\end{frame}
+
+\begin{frame}[embedded,fragile,eyebrow=TinyGo]{Which board to buy}
+  \begin{columns}[T]
+    \begin{column}{0.53\textwidth}
+      \accenttext{\textbf{Do not start with the original ESP32.}}
+      \vskip 2mm
+      \muted{The classic Xtensa ESP32, in most tutorials and starter kits, has minimal TinyGo support and no Wi-Fi or Bluetooth.}
+      \vskip 2mm
+      \textbf{Buy one of these instead}
+      \vskip 1.5mm
+      \muted{ESP32-C3 or ESP32-S3: RISC-V parts, with Wi-Fi through the espradio package since TinyGo 0.41.\par\vskip 1.5mm
+      Raspberry Pi Pico, RP2040 or RP2350: first-tier support, best documented.}
+    \end{column}
+    \begin{column}{0.43\textwidth}
+\begin{shell}
+# One flag is the difference:
+tinygo flash -target=pico .
+tinygo flash -target=esp32c3 .
+
+# What does this board have?
+tinygo targets
+\end{shell}
+      \vskip 1mm
+      \begin{hint}[No board yet]
+        Wokwi runs the same binary in a browser.
+      \end{hint}
+    \end{column}
+  \end{columns}
+  \note{Be blunt: a student who orders the wrong board loses two weeks. Point at the microcontrollers reference page on the TinyGo site and say that the support table there is the only source worth trusting before ordering.}
+\end{frame}
+
+\begin{frame}[embedded,fragile,eyebrow=TinyGo]{Build, flash, monitor}
+  \begin{columns}[T]
+    \begin{column}{0.55\textwidth}
+\begin{shell}
+# Compile to a file you can inspect or copy.
+tinygo build -target=pico -o blink.uf2 \
+    ./cmd/blink
+
+# Compile and write it to the board.
+tinygo flash -target=pico ./cmd/blink
+
+# Read what the running board prints.
+tinygo monitor
+
+# How big did it get?
+tinygo build -size short -target=pico \
+    -o blink.uf2 ./cmd/blink
+\end{shell}
+    \end{column}
+    \begin{column}{0.41\textwidth}
+      \lead{Three commands, one loop.}{Edit, flash, monitor. No hot reload, and no debugger attached by default.}
+      \muted{The size report prints the flash and RAM the binary claims. Watch the RAM column: it is the one that runs out.}
+      \begin{warning}[Bootloader mode]
+        Many boards need a button held during reset to accept a flash.
+      \end{warning}
+    \end{column}
+  \end{columns}
+  \note{Have the room run the size report on the blink example and on a program that imports one driver. The jump makes the cost of a dependency concrete in a way no slide does.}
+\end{frame}
+
+\begin{frame}[embedded,fragile,eyebrow=TinyGo]{The machine package: a pin, a sensor, a loop}
+  \begin{columns}[T]
+    \begin{column}{0.55\textwidth}
+\begin{golang}
+func main() {
+    led := machine.LED
+    led.Configure(machine.PinConfig{
+        Mode: machine.PinOutput})
+    machine.InitADC()
+    s := machine.ADC{Pin: machine.ADC0}
+    s.Configure(machine.ADCConfig{})
+
+    for {
+        led.Set(true)   // proof of life
+        println("adc:", s.Get())
+        time.Sleep(2 * time.Second)
+    }
+}
+\end{golang}
+    \end{column}
+    \begin{column}{0.41\textwidth}
+      \lead{One API, every board.}{\code{machine.LED} and \code{machine.ADC0} are aliases resolved per target, so this source flashes to a Pico and an ESP32-C3 unchanged.}
+      \muted{\code{println} writes to the serial port. That is why the monitor is your debugger, and why an LED in the loop is the cheapest proof that the loop still runs.}
+    \end{column}
+  \end{columns}
+  \note{This is the shape of every program the room will write this semester: configure, then loop, then sleep. Point out that there is no framework calling their code, which is the opposite of Flutter.}
+\end{frame}
+
+\begin{frame}[embedded,fragile,eyebrow=TinyGo]{Reading a sensor over I2C}
+  \begin{columns}[T]
+    \begin{column}{0.55\textwidth}
+\begin{golang}
+i2c := machine.I2C0
+i2c.Configure(machine.I2CConfig{
+    Frequency: 400 * machine.KHz})
+
+w := []byte{0x00}   // register to read
+r := make([]byte, 2)
+
+if err := i2c.Tx(0x48, w, r); err != nil {
+    println("i2c:", err.Error())
+}
+raw := int16(uint16(r[0])<<8 | uint16(r[1]))
+\end{golang}
+    \end{column}
+    \begin{column}{0.41\textwidth}
+      \lead{Write the register, then read the bytes.}{Almost every I2C sensor works this way, and \code{Tx} does both halves in one transaction.}
+      \muted{Do not write this by hand. The drivers repository carries a few hundred sensors, each hiding the register map behind a typed reader.}
+      \begin{hint}[Lab 2]
+        Pick a sensor that has a driver.
+      \end{hint}
+    \end{column}
+  \end{columns}
+  \note{Show one driver's source next to this slide so the room sees that a driver is exactly this code with names. Remind them that the register numbers come from the datasheet and nowhere else.}
+\end{frame}
+
+\begin{frame}[embedded,fragile,eyebrow=TinyGo]{Serial is your debugger}
+  \begin{columns}[T]
+    \begin{column}{0.53\textwidth}
+\begin{golang}
+uart := machine.UART0
+uart.Configure(machine.UARTConfig{
+    BaudRate: 115200,
+})
+uart.Write([]byte("boot ok\r\n"))
+
+// println goes to the same place and
+// costs less code than fmt.Sprintf.
+println("seq:", seq, "raw:", raw)
+\end{golang}
+    \end{column}
+    \begin{column}{0.43\textwidth}
+      \lead{Print one line per loop, with a counter.}{A counter that stops means the loop died. A counter that jumps back to zero means the board reset.}
+      \muted{\code{fmt} pulls in a lot of code and allocates. Prefer \code{println} and plain integers.}
+      \muted{A stepping debugger needs a probe over SWD or JTAG. Not what the lab uses.}
+    \end{column}
+  \end{columns}
+  \begin{takeaway}{Every embedded bug looks the same at first: the board went quiet.}
+    A sequence number in every line tells you whether it stopped, reset, or lost its connection.
+  \end{takeaway}
+  \note{Tell the story of a board that reset every thirty seconds because of a watchdog nobody fed, and how the sequence number restarting at zero was the only clue. That is the habit worth installing today.}
+\end{frame}
+
+\begin{frame}[embedded,eyebrow=TinyGo]{The parts of Go you give up}
+  \vskip 1mm
+  \begin{grid}[3]
+    \cell[\faIcon{search}]{Reflection}{Partial. Packages built on it, such as the standard JSON encoder, will not build.}
+    \cell[\faIcon{sync-alt}]{The scheduler}{Cooperative. A goroutine that never blocks starves the others.}
+    \cell[\faTrash]{The collector}{Small and simple. Allocate little and it will not bother you.}
+    \cell[\faNetworkWired]{The net package}{Absent on most targets. Networking comes from packages tied to the radio.}
+    \cell[\faIcon{book}]{The standard library}{A subset. Check a package builds for your target early.}
+    \cell[\faIcon{link}]{cgo and plugins}{Not the tools here. Assume one statically linked binary.}
+  \end{grid}
+  \muted{None of this is a language change. Each is a runtime or library limit.}
+  \note{Frame this as a checklist to run before choosing a dependency: build it for the target early, not the night before the deadline. Ask what a cooperative scheduler implies for a tight computation loop.}
+\end{frame}
+
+\begin{frame}[embedded,fragile,eyebrow=TinyGo]{Goroutines on a chip}
+  \begin{columns}[T]
+    \begin{column}{0.53\textwidth}
+\begin{golang}
+readings := make(chan uint16, 4)
+
+go func() {
+    for {
+        readings <- sensor.Get()
+        time.Sleep(time.Second)
+    }
+}()
+
+for r := range readings {
+    println("adc:", r)   // publish here
+}
+\end{golang}
+    \end{column}
+    \begin{column}{0.43\textwidth}
+      \lead{The same producer and consumer as Lecture 2.}{One goroutine samples on a schedule, the main loop drains the channel.}
+      \muted{Each goroutine costs a stack of a few hundred bytes. Affordable for a handful, not for hundreds.}
+      \begin{warning}[Cooperative]
+        A goroutine yields only when it blocks or sleeps. A busy loop freezes everything.
+      \end{warning}
+    \end{column}
+  \end{columns}
+  \note{Connect this back to week 2 explicitly: the model is identical, the budget is not. Ask what a buffered channel of size four does when the consumer is slower than the producer, and why that is the right behavior for a sensor.}
+\end{frame}
+
+\divider{Part 5 · Power}{Wake, send, sleep}[Sleep modes, wake sources, the watchdog, and what Lab 1 needs]
+
+\begin{frame}[embedded,eyebrow=Power]{Where the milliamps go}
+  \vskip 2mm
+  \begin{grid}[3]
+    \bignum{radio}{dominates the budget, not the processor}
+    \bignum{4}{orders of magnitude between deep sleep and transmitting}
+    \bignum{duty}{cycle, not clock speed, decides battery life}
+  \end{grid}
+  \vskip 5mm
+  \muted{Average current is roughly the active current times the active time, plus the sleep current times the sleep time, all divided by the period. Shorten the active window or lengthen the period, and everything else is noise.}
+  \begin{takeaway}{The question is not how fast the code runs.}
+    It is what fraction of the time the radio is powered.
+  \end{takeaway}
+  \note{On an ESP32-class part the datasheet spread between deep sleep and Wi-Fi transmit is roughly four orders of magnitude: microamps against hundreds of milliamps. Ask the room to guess which line of their program costs the most energy. It is the connect, not the computation.}
+\end{frame}
+
+\begin{frame}[embedded,eyebrow=Power]{Sleep modes, wake sources, and the watchdog}
+  \vskip 1mm
+  {\usebeamerfont{small}\begin{tabular}{@{}lllll@{}}
+    \toprule
+    \thead{Mode} & \thead{CPU} & \thead{Radio} & \thead{RAM} & \thead{Wakes on} \\
+    \midrule
+    Run         & running & on  & kept   & it is already awake \\
+    Idle        & halted  & on  & kept   & any interrupt, in microseconds \\
+    Light sleep & halted  & off & kept   & a timer or a pin, in a millisecond \\
+    Deep sleep  & off     & off & partly & a timer or a chosen pin, then a reset \\
+    \bottomrule
+  \end{tabular}}
+  \vskip 2mm
+  \muted{Deep sleep restarts the program from the top, so surviving state goes to retained memory or flash. The watchdog is a hardware countdown the loop resets each pass.}
+  \begin{takeaway}{Feed the watchdog in the main loop and nowhere else.}
+    Feeding it from an interrupt keeps the timer happy while the program is already stuck.
+  \end{takeaway}
+  \note{The exact wake sources and timings are vendor-specific, so read the datasheet for the board in front of you. The design rule does not change: pick the deepest mode whose wake time you can afford.}
+\end{frame}
+
+\begin{frame}[embedded,fragile,eyebrow=Power]{Wake, send, sleep}
+  \begin{columns}[T]
+    \begin{column}{0.53\textwidth}
+\begin{golang}
+for {
+    buf = append(buf, sample())
+    if len(buf) >= 6 {
+        connect()      // the expensive
+        publish(buf)   // part of the loop
+        disconnect()
+        buf = buf[:0]
+    }
+    time.Sleep(30 * time.Second)
+}
+\end{golang}
+    \end{column}
+    \begin{column}{0.43\textwidth}
+      \lead{Staying connected loses to waking up.}{A keep-alive powers the radio forever to save a handshake you pay once.}
+      \muted{Batch readings before you spend a connection. Six in one publish cost one sixth of the radio time. Accept the reconnect unless commands must arrive fast.}
+    \end{column}
+  \end{columns}
+  \begin{takeaway}{This is the same optimization as batching network calls on a phone.}
+    There it saves an afternoon. On a coin cell it decides between a week and a year.
+  \end{takeaway}
+  \note{The functions here are the student's own: the shape is the lesson, not the API. Lecture 4 fills in what publish actually does over MQTT. Ask what breaks if the device sleeps for thirty minutes instead of thirty seconds.}
+\end{frame}
+
+\begin{frame}[embedded,eyebrow=Lab 1]{Set up before Lab 1}
+  \vskip 1mm
+  \begin{grid}[2]
+    \cell[\faDownload]{Install the toolchain}{Install Go, then TinyGo. Run the targets command and find your board in the list.}
+    \cell[\faMicrochip]{Have a board, or a simulator}{A Raspberry Pi Pico, or an ESP32-C3 or S3. Without hardware, use Wokwi: the lab names the board.}
+    \cell[\faTerminal]{Flash and monitor}{Flash the blink example and read the serial console. If both work, the lab is about the sensor.}
+    \cell[\faServer]{Run a broker}{Install Mosquitto locally and verify publish and subscribe with the command-line clients.}
+  \end{grid}
+  \vskip 3mm
+  \muted{Bring the team sheet filled in. Lab 1 also approves the project idea.}
+  \note{Say the failure modes out loud so nobody loses the first hour: a permission problem on the serial device, a board that never enters bootloader mode, and the wrong target flag. All three are in the lab troubleshooting slide.}
+\end{frame}
+
+\begin{frame}[embedded,eyebrow=Project]{What the project device must do}
+  \vskip 2mm
+  \begin{grid}[2]
+    \cell[\faMicrochip]{A real device component}{A TinyGo program on a supported board, or in the Wokwi simulator, that reads at least one sensor. Blink alone does not count.}
+    \cell[\faWifi]{One live link to the phone}{The reading reaches the app over MQTT or over BLE, and the app shows it changing. Lecture 4 and Lecture 5 cover both.}
+    \cell[\faClock]{Milestone 3}{By the third project session, the device streams a reading to a serial console. That is this lecture plus one sensor.}
+    \cell[\faIcon{ruler}]{One measured number}{Energy, latency, payload size or frame time, with the method you used. The device side is the easiest place to find one.}
+  \end{grid}
+  \note{Push teams to choose the sensor this week, because delivery time is the real risk. Remind them that the simulator is a legitimate choice and that a working simulated device beats a board that never arrived.}
+\end{frame}
+
+\begin{frame}[eyebrow=Recap]{Three things to remember}
+  \vskip 2mm
+  \begin{enumerate}
+    \item A microcontroller is one flat address space with no protection. \muted{SRAM is the resource you run out of, and a peripheral is just an address you write to.}
+    \item Pick the simplest execution model that meets your deadlines. \muted{A super loop with interrupts and timers carries most projects. An RTOS buys priorities and costs RAM.}
+    \item TinyGo keeps the language and the concurrency model. \muted{It gives up reflection, most of the network stack, and a large part of the library ecosystem.}
+  \end{enumerate}
+  \vskip 5mm
+  \kv{Further reading}{\link{https://tinygo.org/docs/reference/microcontrollers/}{tinygo.org board support table} · \link{https://pkg.go.dev/tinygo.org/x/drivers}{the drivers repository} · \link{https://tinygo.org/docs/tutorials/}{tinygo.org tutorials} · \link{https://wokwi.com}{wokwi.com}}
+  \note{Close on the board support table: it is the one page that decides whether a project is easy or impossible. Next week the same device gets a radio, and the reading finally reaches the phone.}
+\end{frame}
+
+\closingframe{Questions?}{dinu\_stefan.rusu@upb.ro · Microsoft Teams: course channel}
+
+\end{document}

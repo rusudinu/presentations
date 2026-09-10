@@ -1,0 +1,177 @@
+% Lab 7: Lab test. Compile: latexmk -xelatex lab07.tex
+\documentclass[10pt,aspectratio=169,t]{beamer}
+\usetheme[lab]{upbminimal}
+
+\course{Application Development for Mobile Devices}
+\decklabel{Lab 7}
+\title{Lab test}
+\subtitle{Rules, format, and two practice specs}
+\author{Dinu-Ștefan Rusu}
+\institute{FILS, Universitatea Politehnica București}
+\date{Week 14}
+
+\begin{document}
+
+\titleframe
+
+\begin{frame}[eyebrow=Today]{What this lab is for}
+  \vskip 2mm
+  \begin{grid}[2]
+    \cell[\faIcon{stopwatch}]{Prove four skills, once}{Build a small app from a one-page spec in ninety minutes: a screen, a Cubit, a network call, and a route.}
+    \cell[\faIcon{graduation-cap}]{Worth four points}{One point per requirement, graded from your pushed branch. There is no live demo.}
+  \end{grid}
+  \vskip 6mm
+  \taskmeta{Time}{90 minutes}{Submit}{Push to admd-labs, branch lab-7, before time is up}
+\end{frame}
+
+\begin{frame}[eyebrow=Rules]{Individual, timed, your own machine}
+  \begin{steps}
+    \item You work alone. No pair programming, no shared screens, no copying a classmate's branch.
+    \item Ninety minutes, one sitting, starting when you receive the spec.
+    \item Your own laptop, your existing \code{admd-labs} repository from Labs 1 to 6.
+    \item No new packages beyond what Labs 2 to 6 already added, unless the spec names one.
+  \end{steps}
+  \begin{takeaway}{The clock does not pause.}
+    A crashed emulator or a broken hot reload eats into your ninety minutes. Restart calmly and keep going.
+  \end{takeaway}
+\end{frame}
+
+\begin{frame}[eyebrow=Rules]{What you may and may not use}
+  \begin{steps}
+    \item Internet access is allowed: official docs, package pages, your own past labs.
+    \item AI agents are allowed for writing code.
+    \item You must be able to explain any line the grader points to, in your own words.
+    \item Asking another person, in the room or online, to write code for you is not allowed.
+  \end{steps}
+  \begin{warning}
+    An agent-written line you cannot explain earns no credit for that requirement, even if it compiles.
+  \end{warning}
+\end{frame}
+
+\begin{frame}[eyebrow=Format]{One spec, four requirements}
+  \vskip 2mm
+  \begin{grid}[2]
+    \cell[\faIcon{file-alt}]{One page, handed at the start}{An app idea and four requirements, on paper or a shared document. Nothing changes once the clock starts.}
+    \cell[\faClock]{Ninety minutes, one push}{Build, commit as you go, and push to branch lab-7 before time is up. No extensions.}
+  \end{grid}
+  \vskip 6mm
+  \muted{Every spec asks for the same four kinds of requirement, described next.}
+\end{frame}
+
+\begin{frame}[eyebrow=Format]{The four requirements, generically}
+  \begin{grid}[2]
+    \cell[\faThLarge]{A screen}{Built from the layout widgets: Row, Column, ListView, Card. No hardcoded pixel offsets.}
+    \cell[\faToggleOn]{State in a Cubit}{An Equatable state class, \code{emit}, and a BlocBuilder. Not a raw setState.}
+    \cell[\faWifi]{One network call}{A single HTTP call parsed into a model class with fromJson. Not a hardcoded map.}
+    \cell[\faIcon{route}]{One navigation}{A go\_router route that carries data and pushes to a second screen.}
+  \end{grid}
+\end{frame}
+
+\begin{frame}[eyebrow=Rubric]{One point per requirement}
+  {\usebeamerfont{small}\begin{tabular}{@{}p{24mm}p{42mm}p{42mm}@{}}
+    \toprule
+    \thead{Requirement} & \thead{Full credit (1 pt)} & \thead{Partial credit (0.5 pt)} \\
+    \midrule
+    Screen & Matches the spec's widgets, no overflow & Builds, but the layout differs from spec \\
+    Cubit state & UI updates through emit, never setState & Cubit exists, but a screen still calls setState \\
+    Network + model & Parses the real response into a model & Call runs, but fields come from a raw map \\
+    go\_router nav & Navigates and returns with the right data & Route exists, but push or data is wrong \\
+    \bottomrule
+  \end{tabular}}
+  \vskip 2mm
+  \muted{Anything not attempted scores zero.}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=Submission]{Push before the clock runs out}
+\begin{shell}
+git checkout -b lab-7
+git push -u origin lab-7
+\end{shell}
+  \begin{steps}
+    \item Create the branch the moment you receive the spec.
+    \item Commit as you finish each requirement, with a message that names it.
+    \item Push before the ninety minutes end.
+    \item Open one pull request titled with your name. It does not need a review to count.
+  \end{steps}
+  \begin{warning}
+    The grader reads the branch as it stands at the deadline. A late push is not graded.
+  \end{warning}
+\end{frame}
+
+\begin{frame}[eyebrow=Prepare]{How to prepare}
+  \vskip 2mm
+  {\usebeamerfont{small}\begin{tabular}{@{}p{60mm}p{20mm}@{}}
+    \toprule
+    \thead{Requirement} & \thead{Taught in} \\
+    \midrule
+    Screen from the layout widgets & Lab 3 \\
+    State in a Cubit & Lab 5 \\
+    Network call and a model class & Lab 4 \\
+    Navigation with go\_router & Lab 6 \\
+    \bottomrule
+  \end{tabular}}
+  \vskip 4mm
+  \begin{takeaway}{Nothing on the test is new.}
+    Re-read the Task slides and the reference code in those four labs. Redo one small screen from memory before you come.
+  \end{takeaway}
+\end{frame}
+
+\begin{frame}[eyebrow=Practice A]{Practice A: habit tracker}
+  \muted{An app that lists daily habits the user can check off.}
+  \vskip 2mm
+  \begin{columns}[T]
+    \begin{column}{0.56\textwidth}
+      \begin{steps}
+        \item A \code{ListView.builder} of habit cards, each with a checkbox, and a button that opens a dialog to add one.
+        \item A \code{HabitsCubit} with an Equatable state holding the habit list. Toggling or adding emits a new state.
+        \item On start, fetch \code{/users/1} from JSONPlaceholder and parse it into a \code{User} model shown in the AppBar.
+        \item Routes \code{/} and \code{/habit/:id}. Tapping a card pushes to the detail route.
+      \end{steps}
+    \end{column}
+    \begin{column}{0.4\textwidth}
+      \kv{Grader checks}{}
+      \begin{checklist}
+        \item The app builds and runs.
+        \item A checkbox toggle goes through the Cubit, never setState.
+        \item The AppBar name comes from the API, not a hardcoded string.
+        \item The back button returns from the detail screen to the list.
+      \end{checklist}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}[eyebrow=Practice B]{Practice B: campus events board}
+  \muted{An app that lists campus events, with filtering and a detail view.}
+  \vskip 2mm
+  \begin{columns}[T]
+    \begin{column}{0.56\textwidth}
+      \begin{steps}
+        \item A row of filter chips (All, Today) above a scrollable list of event cards.
+        \item An \code{EventsCubit} with a state holding the event list and the selected filter. Picking a chip emits a filtered state.
+        \item On start, fetch \code{/posts} from JSONPlaceholder and parse each item into an \code{Event} model.
+        \item Routes \code{/} and \code{/event/:id}. Tapping a card pushes to a detail screen with the full text.
+      \end{steps}
+    \end{column}
+    \begin{column}{0.4\textwidth}
+      \kv{Grader checks}{}
+      \begin{checklist}
+        \item A filter chip changes the list through the Cubit, not a local variable.
+        \item Every field on screen comes from the Event model, never a raw map key.
+        \item The detail route reads the id from the URL.
+        \item The app does not crash when the network call is slow.
+      \end{checklist}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}[eyebrow=Troubleshooting]{Mistakes that cost time}
+  \vskip 2mm
+  \trouble{Bad state: field does not exist for the class}{The JSON keys do not match the model. Print the raw response before writing fromJson.}
+  \trouble{No routes matched location "/habit/3"}{The path pushed is not in the go\_router route list, or a name is misspelled.}
+  \trouble{A blank screen, nothing in the console}{The Cubit never emitted after the network call finished. Check that the future actually completes.}
+  \trouble{setState() or emit() called after dispose()}{A response arrived after the screen closed. Check \code{mounted} before calling either.}
+\end{frame}
+
+\closingframe{Push before time runs out.}{Branch lab-7 · one pull request · nothing after the deadline}
+
+\end{document}

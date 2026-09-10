@@ -1,0 +1,244 @@
+% Mobile and Embedded Computing, Lab 4. Compile: latexmk -xelatex lab04.tex
+\documentclass[10pt,aspectratio=169,t]{beamer}
+\usetheme[lab]{upbminimal}
+
+\course{Mobile and Embedded Computing}
+\decklabel{Lab 4}
+\title{Phone sensors and a background task}
+\subtitle{Step detection, location, and a task that outlives the app}
+\author{Dinu-Ștefan Rusu}
+\institute{FILS, Universitatea Politehnica București}
+\date{Week 8}
+
+\begin{document}
+
+\titleframe
+
+\begin{frame}[eyebrow=Today]{What this lab is for}
+  \vskip 2mm
+  \begin{grid}[2]
+    \cell[\faIcon{shoe-prints}]{Count a step from raw motion}{Turn an accelerometer stream into a step count with a threshold and a debounce window, sampling period stated explicitly.}
+    \cell[\faClock]{Make work survive the app closing}{Schedule a workmanager task that keeps running after the user closes the app, and read its result back on the next launch.}
+  \end{grid}
+  \vskip 6mm
+  \taskmeta{Time}{2 hours}{Submit}{Push to your team repo, branch \code{lab-4}, before next lab}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=Setup]{Where your code goes}
+  \begin{steps}
+    \item Branch the team repository and add the four dependencies:
+\begin{shell}
+git checkout -b lab-4
+flutter pub add sensors_plus geolocator
+flutter pub add workmanager shared_preferences
+\end{shell}
+    \item App code lives in \code{lib/lab4/}. One file per task keeps the diff readable.
+    \item Run the app once before changing anything, ideally on a real device.
+  \end{steps}
+  \begin{hint}[Prefer a real device]
+    The accelerometer, GPS and background scheduler all behave differently, sometimes not at all, in the emulator. Keep one nearby for this lab.
+  \end{hint}
+\end{frame}
+
+\begin{frame}[embedded,eyebrow=Task I]{A step counter from raw acceleration}
+  \begin{columns}[T]
+    \begin{column}{0.55\textwidth}
+      \begin{steps}
+        \item Read \code{accelerometerEventStream}, \code{samplingPeriod: gameInterval} (about 50 Hz).
+        \item Compute the magnitude, $\sqrt{x^2+y^2+z^2}$.
+        \item Track a slow baseline, then cross a threshold above it to count a step.
+        \item Debounce so one footfall cannot count twice, and show the total live.
+      \end{steps}
+    \end{column}
+    \begin{column}{0.41\textwidth}
+      \kv{Done when}{}
+      \begin{checklist}
+        \item The count increases when you shake the phone and stays flat when it is still.
+        \item The sampling period is a named constant, not the default.
+        \item A single footfall cannot count twice.
+      \end{checklist}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}[embedded,fragile,eyebrow=Task I]{Threshold and debounce, in code}
+\begin{dart}
+accelerometerEventStream(
+  samplingPeriod: SensorInterval.gameInterval,  // ~50 Hz
+).listen((e) {
+  final m = sqrt(e.x*e.x + e.y*e.y + e.z*e.z);
+  _baseline = 0.9*_baseline + 0.1*m;
+  if (!_above && m > _baseline + 1.2 &&
+      DateTime.now().difference(_last) >= _minGap) {
+    _above = true; steps++; _last = DateTime.now();
+  } else if (_above && m < _baseline + 0.4) {
+    _above = false;
+  }
+});
+\end{dart}
+  \muted{\code{\_baseline}, \code{\_above}, \code{\_last} are fields declared once.}
+\end{frame}
+
+\begin{frame}[eyebrow=Task II]{Location, under the right permission flow}
+  \begin{columns}[T]
+    \begin{column}{0.55\textwidth}
+      \begin{steps}
+        \item Check \code{isLocationServiceEnabled} first: a granted permission with the radio off returns nothing.
+        \item Call \code{checkPermission}, then \code{requestPermission} only if it comes back denied.
+        \item If the result is \code{deniedForever}, open the app settings instead of asking again.
+        \item Read one position and show latitude, longitude and the accuracy radius in meters.
+      \end{steps}
+    \end{column}
+    \begin{column}{0.41\textwidth}
+      \kv{Done when}{}
+      \begin{checklist}
+        \item The screen shows a position with its accuracy in meters.
+        \item Denying once, then granting, works with no restart.
+        \item \code{deniedForever} opens Settings instead of looping.
+      \end{checklist}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=Task II]{Declare the permission before you ask}
+\begin{codeblock}[language=XML]
+<!-- android/app/src/main/AndroidManifest.xml -->
+<uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
+<uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
+
+<!-- ios/Runner/Info.plist -->
+<key>NSLocationWhenInUseUsageDescription</key>
+<string>Shows your position while the lab screen is open.</string>
+\end{codeblock}
+  \muted{An undeclared Android permission is denied forever, silently. A missing iOS usage string ends the app on its first call.}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=Task II]{Service, permission, request, deniedForever}
+\begin{dart}
+Future<Position?> readOnce() async {
+  if (!await Geolocator.isLocationServiceEnabled()) return null;
+  var p = await Geolocator.checkPermission();
+  if (p == LocationPermission.denied) {
+    p = await Geolocator.requestPermission();
+  }
+  if (p == LocationPermission.deniedForever) {
+    await Geolocator.openAppSettings();
+    return null;
+  }
+  return Geolocator.getCurrentPosition(
+    locationSettings: const LocationSettings(accuracy: LocationAccuracy.high));
+}
+\end{dart}
+\end{frame}
+
+\begin{frame}[eyebrow=Task II]{Precise or approximate, and what changes}
+  \vskip 2mm
+  \begin{columns}[T]
+    \begin{column}{0.48\textwidth}
+      \lead{Android 12 and later}{The permission dialog offers a separate Precise or Approximate choice. Approximate can return a fix with a radius of a kilometer or more.}
+    \end{column}
+    \begin{column}{0.48\textwidth}
+      \lead{iOS}{Precise Location is a per-app toggle in Settings. An app can request temporary full accuracy for one feature, with its own usage string.}
+    \end{column}
+  \end{columns}
+  \begin{takeaway}{Design for the approximate case first.}
+    A feature that only works under a small accuracy radius is broken for a share of your users on both platforms.
+  \end{takeaway}
+\end{frame}
+
+\begin{frame}[eyebrow=Task III]{A task that outlives the app}
+  \begin{columns}[T]
+    \begin{column}{0.55\textwidth}
+      \begin{steps}
+        \item Register a periodic task; the Android floor is 15 minutes.
+        \item In the callback, append a timestamp and the last step count to a list in \code{shared\_preferences}.
+        \item Mark the dispatcher \code{@pragma('vm:entry-point')} and keep it top-level.
+        \item On iOS the same code runs as background fetch, at the system's discretion.
+      \end{steps}
+    \end{column}
+    \begin{column}{0.41\textwidth}
+      \kv{Done when}{}
+      \begin{checklist}
+        \item Closing the app and waiting shows new timestamps on the next launch.
+        \item The dispatcher is top-level and marked as an entry point.
+        \item The screen lists timestamps, not just the latest one.
+      \end{checklist}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=Task III]{Write the result, then let the task end}
+\begin{dart}
+const _key = 'lab4_log';
+@pragma('vm:entry-point')
+void callbackDispatcher() {
+  Workmanager().executeTask((task, data) async {
+    final prefs = await SharedPreferences.getInstance();
+    final log = prefs.getStringList(_key) ?? [];
+    log.add('${DateTime.now()}: $lastStepCount steps');
+    await prefs.setStringList(_key, log);
+    return true;
+  });
+}
+Workmanager().initialize(callbackDispatcher);
+\end{dart}
+  \muted{\code{registerPeriodicTask(...)} elsewhere schedules it, every 15 minutes at best.}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=Task III]{Register the background modes}
+\begin{codeblock}[language=XML]
+<!-- android/app/src/main/AndroidManifest.xml -->
+<!-- No extra permission: never request a battery exemption. -->
+<!-- ios/Runner/Info.plist -->
+<key>UIBackgroundModes</key>
+<array>
+  <string>fetch</string>
+  <string>processing</string>
+</array>
+<key>BGTaskSchedulerPermittedIdentifiers</key>
+<array>
+  <string>com.yourteam.app.lab4Sync</string>
+</array>
+\end{codeblock}
+  \muted{The plist identifier must match the one workmanager registers.}
+\end{frame}
+
+\begin{frame}[eyebrow=Task III]{Two platforms, two guarantees}
+  \vskip 1mm
+  {\usebeamerfont{small}\begin{tabular}{@{}lp{38mm}p{38mm}@{}}
+    \toprule
+    \thead{Question} & \thead{Android} & \thead{iOS} \\
+    \midrule
+    How often at best & every 15 minutes, the floor & at the system's discretion \\
+    Under Doze, low power & deferred further, sometimes hours & may not run for a while \\
+    What you can promise & a run happened, not exactly when & the code path exists, not that it fired \\
+    \bottomrule
+  \end{tabular}}
+  \vskip 3mm
+  \muted{For the acceptance check, leave the app closed for at least fifteen minutes on Android before you look for a new timestamp.}
+\end{frame}
+
+\begin{frame}[eyebrow=Acceptance]{What the grader will do}
+  \vskip 2mm
+  \begin{checklist}
+    \item Close the app, wait past fifteen minutes, reopen it: a list of timestamps has grown while it was closed.
+    \item Shake the phone: the step count on screen increases, and standing still leaves it flat.
+    \item Read a location: the screen shows latitude, longitude and an accuracy value in meters.
+  \end{checklist}
+  \vskip 3mm
+  \begin{takeaway}{One screenshot per task is the cheapest proof you can leave.}
+    The timestamp list, a shake in progress, and a position with its accuracy, side by side in the PR.
+  \end{takeaway}
+\end{frame}
+
+\begin{frame}[eyebrow=Troubleshooting]{Four failures you will meet}
+  \vskip 1mm
+  \trouble{Sensor stream never fires on the emulator}{The emulated accelerometer sits still by default. Use a real device, or the emulator's virtual sensors panel.}
+  \trouble{The permission dialog never appears}{The manifest or the plist is missing the entry. Both must be declared before the dialog can show.}
+  \trouble{The workmanager task never runs}{Battery optimization, a non-top-level callback, or a missing \code{@pragma('vm:entry-point')}.}
+  \trouble{The iOS task never runs at all}{The identifier is missing from, or does not match, \code{BGTaskSchedulerPermittedIdentifiers}.}
+\end{frame}
+
+\closingframe{Push before you leave.}{Branch lab-4 · one commit per task · a screenshot of the timestamp list in the PR description}
+
+\end{document}

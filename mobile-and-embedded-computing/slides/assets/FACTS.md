@@ -66,3 +66,11 @@ Packages (use current names):
 HTTP semantics:
 - **Safe** = does not modify state (GET, HEAD, OPTIONS). **Idempotent** = repeating has the same
   effect (GET, HEAD, PUT, DELETE). PUT/DELETE are idempotent but NOT safe. Do not conflate them.
+
+Bluetooth Low Energy (checked against the tinygo.org/x/bluetooth support matrix, Sep 2026):
+- Peripheral role on device: Nordic nRF51/nRF52 (SoftDevice) and **ESP32-C3 / ESP32-S3 via `espradio`
+  over HCI**. The original Xtensa ESP32 needs an HCI co-processor.
+- Host side: Linux (BlueZ) and Windows (WinRT) can scan **and advertise**; **macOS (CoreBluetooth) is
+  central-only**, so a Mac cannot act as the lab peripheral.
+- Phone side: `flutter_blue_plus`. Android 12+ needs `BLUETOOTH_SCAN` (with `neverForLocation`) and
+  `BLUETOOTH_CONNECT` at runtime; iOS needs `NSBluetoothAlwaysUsageDescription`.

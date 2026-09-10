@@ -1,0 +1,585 @@
+% Mobile and Embedded Computing, Lecture 9. Compile: latexmk -xelatex lecture09.tex
+\documentclass[10pt,aspectratio=169,t]{beamer}
+\usetheme{upbminimal}
+
+\course{Mobile and Embedded Computing}
+\decklabel{Lecture 9}
+\title{Offline-first, part 2: conflicts and CRDTs}
+\subtitle{Ordering events without a clock, resolving edits, and data that cannot conflict}
+\author{Dinu-Ștefan Rusu}
+\institute{FILS, Universitatea Politehnica București}
+\date{Spring 2027}
+
+\begin{document}
+
+\titleframe
+
+\objectivesframe{
+  \cell[\faClock]{Order events honestly}{Why a wall clock cannot order two edits, and what a Lamport or vector clock gives you instead.}
+  \cell[\faIcon{code-branch}]{Pick a strategy}{Last writer wins, first writer wins, merge by field, ask the user, and what each one costs.}
+  \cell[\faCode]{Ship a resolver}{One Dart function that both devices run and that both devices agree on.}
+  \cell[\faLayerGroup]{Read a CRDT}{Counters, registers and sets whose merge is commutative, associative and idempotent.}
+}
+
+% =====================================================================
+\divider{Part 1 · Conflicts}{Two devices editing the same row}[Where a conflict comes from, and why your clock cannot settle it]
+
+\begin{frame}[eyebrow=Conflicts]{Where Lecture 8 left off}
+  \vskip 2mm
+  \begin{grid}[3]
+    \cell[\faDatabase]{The local database is the truth}{The UI reads a Drift query. Every synced row carries id, updatedAt, deletedAt, pendingSync and serverVersion.}
+    \cell[\faIcon{inbox}]{Every write goes to an outbox}{The row and the intent to sync it commit in one transaction, so the queue never drifts out of step with the data.}
+    \cell[\faIcon{sync-alt}]{Delta sync on a checkpoint}{Push the outbox oldest first, pull the rows changed since the cursor the server issued.}
+  \end{grid}
+  \begin{takeaway}{One line was left as a placeholder.}
+    In the pull loop, when an incoming row touches a row this device also edited, we called \code{resolve(local, remote)}. This lecture writes it.
+  \end{takeaway}
+  \note{Put the pull loop from Lecture 8 back on the projector and point at the resolve call. Say plainly that the rest of the sync engine is plumbing, and this one function is where the product decisions live.}
+\end{frame}
+
+\begin{frame}[eyebrow=Conflicts]{Where conflicts actually come from}
+  \vskip 3mm
+  \begin{columns}[T]
+    \begin{column}{0.50\textwidth}
+      \begin{itemize}
+        \item A conflict is not a race in your code. It is two edits to the same row, made while neither side could see the other.
+        \item Offline-first guarantees they happen: accept the write now, reconcile later.
+        \item One user with a phone and a laptop is enough.
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.46\textwidth}
+      \lead{Update and update}{Both devices set the title of the same note. The case everybody thinks of.}
+      \vskip 2mm
+      \lead{Update and delete}{One deletes the row, the other edits it. No value satisfies both users.}
+      \vskip 2mm
+      \lead{Create and create}{Two devices create the same record. Only a natural key catches this.}
+    \end{column}
+  \end{columns}
+  \note{Ask the room which shape is hardest. The answer is update and delete, because no merge exists: you are choosing between two users, not two values. Say that create and create is why Lecture 8 insisted on client-generated UUIDs.}
+\end{frame}
+
+\begin{frame}[eyebrow=Conflicts]{Device clocks cannot order events}
+  \vskip 2mm
+  \muted{Every device believes its own clock. Drift between time syncs, a user setting the time by hand, a cheap real-time clock: seconds of disagreement is normal, minutes is not rare.}
+  \vskip 4mm
+  \begin{tabular}{@{}llll@{}}
+    \toprule
+    \thead{Real time} & \thead{Device} & \thead{Its clock reads} & \thead{The edit} \\
+    \midrule
+    t = 0        & Phone, 12 s fast   & 09:14:07 & title becomes ``Milk'' \\
+    t = +40 s    & Laptop, 40 s slow  & 09:13:55 & title becomes ``Oat milk'' \\
+    \bottomrule
+  \end{tabular}
+  \begin{takeaway}{The later write carries the earlier timestamp.}
+    Last writer wins keeps ``Milk''. The newer edit goes with no error, no log and no undo, whenever two clocks disagree by more than the gap between two edits.
+  \end{takeaway}
+  \note{Make the arithmetic explicit: 09:14:07 is greater than 09:13:55, so the rule works exactly as designed and still throws away the right answer. Note that stamping on the server only helps for writes that arrive as they happen, which is what offline breaks.}
+\end{frame}
+
+\begin{frame}[eyebrow=Conflicts]{What ordering we actually need}
+  \vskip 2mm
+  \begin{grid}[3]
+    \cell[\faArrowRight]{Happens-before}{Event a happens-before b if a is earlier on the same device, or a is a message send and b its receipt. Then take the transitive closure.}
+    \cell[\faIcon{random}]{Concurrent}{If neither a happens-before b nor b happens-before a, the two events are concurrent. That is the formal name for a conflict.}
+    \cell[\faBan]{Not real time}{Happens-before says nothing about which edit came first by the wall clock. It only says which edit could have seen the other.}
+  \end{grid}
+  \vskip 3mm
+  \muted{If one edit could have seen the other, the newer one is an informed correction and should win. If neither could, no rule is right for both users, and you have to choose a policy in advance.}
+  \note{Write the two rules on the board and derive concurrency from them. The point students miss: a logical clock does not try to reconstruct real time, and that is a feature, because real time is exactly what the devices disagree about.}
+\end{frame}
+
+% =====================================================================
+\divider{Part 2 · Ordering}{Order without a clock}[Lamport counters, vector clocks, and the practical compromise]
+
+\begin{frame}[fragile,eyebrow=Ordering]{Lamport clocks: a counter, not a time}
+  \begin{columns}[T]
+    \begin{column}{0.52\textwidth}
+\begin{dart}
+class Lamport {
+  int l = 0;
+  int local() => ++l;   // any local event
+  int send()  => ++l;   // stamp the message
+  void receive(int theirs) {
+    l = (theirs > l ? theirs : l) + 1;
+  }
+}
+\end{dart}
+    \end{column}
+    \begin{column}{0.44\textwidth}
+      \lead{Three rules, one integer.}{Increment on a local event. Attach the counter to a message. On receipt, take the maximum and add one.}
+      \vskip 2mm
+      \muted{One way only: if a happens-before b, then L(a) is smaller.}
+    \end{column}
+  \end{columns}
+  \begin{takeaway}{The converse is false, and that is the problem.}
+    It does not prove causality: the two events may simply have been concurrent.
+  \end{takeaway}
+  \note{Walk one message exchange on the board with two counters. Then ask what L equals 4 here and 7 there tells you: nothing about causality. That gap is why the next slide exists.}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=Ordering]{Vector clocks: one counter per replica}
+\begin{dart}
+typedef Vc = Map<String, int>;      // replica id -> its own counter
+Vc tick(Vc v, String me) => {...v, me: (v[me] ?? 0) + 1};
+Vc join(Vc a, Vc b) =>
+    {for (final k in {...a.keys, ...b.keys}) k: max(a[k] ?? 0, b[k] ?? 0)};
+/// -1: a before b.  1: b before a.  0: equal.  null: concurrent.
+int? compare(Vc a, Vc b) {
+  final ks = {...a.keys, ...b.keys};
+  final aLe = ks.every((k) => (a[k] ?? 0) <= (b[k] ?? 0));
+  final bLe = ks.every((k) => (b[k] ?? 0) <= (a[k] ?? 0));
+  return aLe && bLe ? 0 : aLe ? -1 : bLe ? 1 : null;
+}
+\end{dart}
+  \muted{Ordering is component-wise, so null comes back exactly when the two edits are concurrent.}
+  \note{Point at the two every() calls. Two vectors are comparable only when one dominates the other in every slot. Mention that this is the same shape as the grow-only counter later in the deck.}
+\end{frame}
+
+\begin{frame}[eyebrow=Ordering]{A worked example: two devices, one note}
+  \vskip 2mm
+  {\usebeamerfont{small}
+  \begin{tabular}{@{}rlll>{\raggedright\arraybackslash}p{48mm}@{}}
+    \toprule
+    \thead{Step} & \thead{Where} & \thead{P clock} & \thead{L clock} & \thead{What happens} \\
+    \midrule
+    0 & both    & \{P:0, L:0\} & \{P:0, L:0\} & last common state, in sync \\
+    1 & phone   & \{P:1, L:0\} & \{P:0, L:0\} & offline, edits the title \\
+    2 & laptop  & \{P:1, L:0\} & \{P:0, L:1\} & offline, edits the body \\
+    3 & sync    & \multicolumn{2}{l}{compare returns null} & neither vector dominates \\
+    4 & resolve & \{P:2, L:1\} & \{P:0, L:1\} & merge by field, P bumps its slot \\
+    5 & laptop  & \{P:2, L:1\} & \{P:2, L:1\} & L is dominated: take it \\
+    \bottomrule
+  \end{tabular}}
+  \vskip 3mm
+  \muted{P is the phone, L the laptop. Step 5 is the payoff: L does not guess, its vector is smaller in every slot.}
+  \note{Walk the table row by row and pause on step 3. Ask what a wall clock would have said: it would have picked one edit and called it settled, with no signal that anything was lost. Step 5 shows that most pulls are not conflicts at all.}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=Ordering]{Hybrid logical clocks, the compromise}
+  \begin{columns}[T]
+    \begin{column}{0.56\textwidth}
+\begin{dart}
+class Hlc implements Comparable<Hlc> {
+  final int wallMs;   // ms since the epoch
+  final int counter;  // ties inside one ms
+  final String node;  // replica id, tiebreak
+
+  Hlc tick(int nowMs) => nowMs > wallMs
+      ? Hlc(nowMs, 0, node)
+      : Hlc(wallMs, counter + 1, node);
+
+  Hlc receive(Hlc r, int nowMs) =>
+      Hlc(max(nowMs, max(wallMs, r.wallMs)),
+          _tieBreak(r, nowMs), node);
+}
+\end{dart}
+    \end{column}
+    \begin{column}{0.40\textwidth}
+      \lead{Vector clocks cost state per device.}{The vector grows with every replica that ever existed: on a consumer app, every phone the user ever owned.}
+      \vskip 2mm
+      \lead{An HLC is 64 bits on the wire.}{The wall part keeps the value readable. The counter part never allows it to go backwards, so the order never contradicts causality.}
+      \vskip 2mm
+      \muted{Use it as your updatedAt.}
+    \end{column}
+  \end{columns}
+  \note{Say what an HLC buys and what it does not: an order safe to compare across devices, but no way to tell a conflict from an informed overwrite. That is the trade every production sync engine makes, and it is why merge by field usually sits on top of it.}
+\end{frame}
+
+% =====================================================================
+\divider{Part 3 · Strategies}{Four ways to resolve, honestly ranked}[Each one loses something. Decide what, in advance and in writing]
+
+\begin{frame}[eyebrow=Strategies]{Four strategies, honestly ranked}
+  \vskip 1mm
+  {\usebeamerfont{small}
+  \begin{tabular}{@{}l>{\raggedright\arraybackslash}p{30mm}>{\raggedright\arraybackslash}p{32mm}>{\raggedright\arraybackslash}p{33mm}@{}}
+    \toprule
+    \thead{Strategy} & \thead{How it decides} & \thead{What it costs} & \thead{Reach for it when} \\
+    \midrule
+    Last writer wins   & highest stamp takes the whole row & silent loss: nobody is told & one device at a time, low value fields \\
+    First writer wins  & the server keeps the row it has & a rejection you must show & claims, invites, created-once rows \\
+    Merge by field     & column by column, changed fields only & one resolver per entity & documents with independent fields \\
+    Ask the user       & keep both, show a chooser & UI work and an interruption & anything expensive to lose \\
+    \bottomrule
+  \end{tabular}}
+  \vskip 2mm
+  \muted{Most apps need two of these: merge by field for documents, first writer wins for money.}
+  \note{Insist that these are product decisions with a technical cost, not the other way round. Ask each project team which row their main entity needs, and make them say it out loud before Lab 5.}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=Strategies]{Last writer wins}
+  \begin{columns}[T]
+    \begin{column}{0.50\textwidth}
+\begin{dart}
+Note resolve(Note l, ServerNote r) =>
+    l.updatedAt.isAfter(r.updatedAt)
+        ? l
+        : fromServer(r);
+\end{dart}
+      \vskip 1mm
+      \muted{One comparison, no per-entity code. That is the entire appeal.}
+    \end{column}
+    \begin{column}{0.46\textwidth}
+      \lead{The example.}{A note reads ``Buy milk''. On the phone the user fixes the title to ``Buy oat milk''. On the laptop, a minute later, the same user adds three lines to the body.}
+      \vskip 2mm
+      \muted{The laptop row is newer, so the whole row wins. The title correction is gone.}
+    \end{column}
+  \end{columns}
+  \begin{takeaway}{The unit of loss is the row, not the field.}
+    Use it for one low value column, such as a read flag or a sort position. Never for text the user typed.
+  \end{takeaway}
+  \note{Show that the failure needs no clock skew at all: two honest timestamps and two different fields are enough. Then recall the skew slide, which makes even the title-versus-title case unreliable.}
+\end{frame}
+
+\begin{frame}[eyebrow=Strategies]{First writer wins}
+  \vskip 3mm
+  \begin{columns}[T]
+    \begin{column}{0.50\textwidth}
+      \lead{The example.}{A shared shopping list. Two housemates, both offline in the same supermarket, both create ``bread'' under the same natural key: list id plus lowercased name.}
+      \vskip 2mm
+      \muted{The first push to reach the server creates the row. The second gets a 409 back, drops its copy and adopts the server's id. The list has one bread.}
+    \end{column}
+    \begin{column}{0.46\textwidth}
+      \begin{warning}[The part people forget]
+        The losing device already showed the write to the user. When the server rejects it, the app has to fix the screen quietly and keep anything that was typed.
+      \end{warning}
+    \end{column}
+  \end{columns}
+  \begin{takeaway}{First writer wins needs a natural key.}
+    Without one the two creates are simply two different rows, and the rule never fires. A unique constraint on the server enforces it, not a timestamp.
+  \end{takeaway}
+  \note{Connect this back to the create-and-create shape from Part 1. Ask the teams what the natural key of their main entity is. If they cannot name one, duplicates will show up in the demo.}
+\end{frame}
+
+\begin{frame}[eyebrow=Strategies]{Merge by field}
+  \vskip 2mm
+  \muted{The same note and the same two offline edits. The row now stores a stamp per field, not one stamp for the whole row.}
+  \vskip 2mm
+  \begin{tabular}{@{}lllll@{}}
+    \toprule
+    \thead{Field} & \thead{Phone value} & \thead{Stamp} & \thead{Laptop value} & \thead{Result} \\
+    \midrule
+    title & ``Buy oat milk'' & 09:14 & ``Buy milk'' & phone wins the field \\
+    body  & unchanged        & 09:02 & three new lines & laptop wins the field \\
+    tags  & \{shopping\}      & 08:40 & \{shopping\} & unchanged on both sides \\
+    \bottomrule
+  \end{tabular}
+  \begin{takeaway}{The unit of loss shrinks from the row to the column.}
+    The cost is one resolver per entity plus a stamp per field, roughly eight bytes with an HLC. Test it with local and remote swapped: the same output, or the devices never converge.
+  \end{takeaway}
+  \note{Make the test point explicitly. Run the resolver with the two arguments exchanged and assert the same result. If it differs, the rule is not deterministic, and two devices will disagree forever.}
+\end{frame}
+
+\begin{frame}[eyebrow=Strategies]{Ask the user}
+  \vskip 3mm
+  \begin{columns}[T]
+    \begin{column}{0.50\textwidth}
+      \lead{The example.}{Two people edit the description of the same product while offline. Both texts are long and deliberate, and no field-level rule can pick between them.}
+      \vskip 2mm
+      \muted{Keep both. Store the remote version as a conflict row, mark it in the list, and open a two-pane chooser when the user taps it.}
+    \end{column}
+    \begin{column}{0.46\textwidth}
+      \lead{Never block the app}{The marker sits on one row. Everything else stays usable while it waits.}
+      \vskip 3mm
+      \lead{Resolve, then push}{The choice is a new write with a new stamp, so it goes through the outbox like any edit.}
+    \end{column}
+  \end{columns}
+  \begin{takeaway}{Ask rarely, and only where losing the text would hurt.}
+    A dialog on every sync trains the user to tap the first button.
+  \end{takeaway}
+  \note{Point at how few apps do this well. Git is the reference: it merges what it can, marks what it cannot, and never guesses on the hard case. This is the only strategy with no silent loss, which is exactly why it costs UI work.}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=Strategies]{A resolver you can ship}
+\begin{dart}
+Note resolve(Note local, ServerNote remote) {
+  if (!local.pendingSync) return fromServer(remote);  // they are newer
+  if (remote.version <= local.serverVersion) return local;  // we are ahead
+  return local.copyWith(   // both sides moved past the same version
+    title: _pick(local.title, local.titleAt, remote.title, remote.titleAt),
+    body:  _pick(local.body,  local.bodyAt,  remote.body,  remote.bodyAt),
+    deletedAt: local.deletedAt ?? remote.deletedAt,   // delete wins
+    serverVersion: remote.version, pendingSync: true, // push it back
+  );
+}
+\end{dart}
+  \begin{takeaway}{\code{\_pick} keeps the larger HLC.}
+    Push the merged row back, or the two sides never converge.
+  \end{takeaway}
+  \note{Draw attention to the last field. A resolver that only fixes the local copy leaves the two sides permanently different, because the server never hears about the merge. Delete beating edit is a product decision: write it down and offer an undo.}
+\end{frame}
+
+% =====================================================================
+\divider{Part 4 · CRDTs}{Data types that cannot conflict}[Move the decision out of the resolver and into the type]
+
+\begin{frame}[eyebrow=CRDTs]{Convergence without coordination}
+  \vskip 2mm
+  \muted{A conflict-free replicated data type, or CRDT, is a type whose merge is defined so that replicas holding the same updates hold the same state, with no leader and no round trip.}
+  \vskip 2mm
+  \begin{grid}[3]
+    \cell[\faIcon{exchange-alt}]{Commutative}{merge(a, b) equals merge(b, a). Updates may arrive in any order, over any path.}
+    \cell[\faIcon{object-group}]{Associative}{Grouping does not matter, so replicas can gossip in whatever topology the network gives them.}
+    \cell[\faIcon{redo}]{Idempotent}{merge(a, a) equals a. The same update twice is a no-op, which makes retries free.}
+  \end{grid}
+  \begin{takeaway}{Convergent is not the same as correct.}
+    A CRDT guarantees every replica agrees. It cannot enforce ``the balance never goes below zero'', because that needs coordination by definition.
+  \end{takeaway}
+  \note{Say the three properties map onto three network realities: reordering, arbitrary gossip topology, and at-least-once delivery. Repeat the takeaway, because students hear CRDT and assume it removes the product decision. It only moves it into the type.}
+\end{frame}
+
+\begin{frame}[eyebrow=CRDTs]{One slide of the underlying math}
+  \vskip 3mm
+  \begin{columns}[T]
+    \begin{column}{0.50\textwidth}
+      \lead{The state space is a join-semilattice.}{Order states by information: $x \le y$ means y contains every update x contains, and possibly more.}
+      \vskip 2mm
+      \lead{Merge is the least upper bound.}{$x \sqcup y$ is the smallest state containing both: nothing invented, nothing dropped. Concurrent states are simply incomparable.}
+    \end{column}
+    \begin{column}{0.46\textwidth}
+      \begin{hint}[Why this converges]
+        Every update moves the state upwards: $s \le u(s)$. The join is commutative, associative and idempotent, so two replicas holding the same updates compute the same bound.
+      \end{hint}
+    \end{column}
+  \end{columns}
+  \begin{takeaway}{Pick the order first, and the merge follows.}
+    Sets ordered by inclusion merge with union. Integers ordered by size merge with maximum. Maps merge slot by slot.
+  \end{takeaway}
+  \note{This is the only formal slide in the deck. Give the three concrete lattices at the bottom and move on. If somebody asks about the proof, name Shapiro and the strong eventual consistency result, and point at crdt.tech.}
+\end{frame}
+
+\begin{frame}[eyebrow=CRDTs]{State-based versus operation-based}
+  {\usebeamerfont{small}
+  \begin{tabular}{@{}l>{\raggedright\arraybackslash}p{32mm}>{\raggedright\arraybackslash}p{33mm}>{\raggedright\arraybackslash}p{32mm}@{}}
+    \toprule
+    & \thead{State-based} & \thead{Operation-based} & \thead{Delta-state} \\
+    \midrule
+    What travels & the whole state & one operation & the fragment that changed \\
+    Delivery & anything, even lossy & exactly once, causally ordered & anything, even lossy \\
+    A duplicate & harmless: merge is idempotent & corrupts the value & harmless \\
+    \bottomrule
+  \end{tabular}}
+  \begin{takeaway}{Prefer state-based or delta-state on a phone.}
+    A delta is a state in the same lattice, so a lost one still converges. Operation-based CRDTs push their hard problem into the transport.
+  \end{takeaway}
+  \note{Tie this back to Lecture 8: the outbox gives at-least-once delivery, not exactly-once. That single fact rules out a naive operation-based design unless the team builds causal delivery on top.}
+\end{frame}
+
+\begin{frame}[eyebrow=CRDTs]{A counter that survives being merged}
+  \vskip 2mm
+  \muted{A plain integer cannot merge. Phone says 4, laptop says 3: is the answer 4, or 7? Keep the history: one slot per replica, each incrementing only its own.}
+  \vskip 1mm
+  \begin{tabular}{@{}lrrrr@{}}
+    \toprule
+    \thead{State} & \thead{Phone slot} & \thead{Laptop slot} & \thead{Tablet slot} & \thead{Value = sum} \\
+    \midrule
+    Phone holds         & 3 & 1 & 0 & 4 \\
+    Laptop holds        & 1 & 2 & 0 & 3 \\
+    Merge, max per slot & 3 & 2 & 0 & 5 \\
+    Tablet then adds 1  & 3 & 2 & 1 & 6 \\
+    \bottomrule
+  \end{tabular}
+  \begin{takeaway}{The merge is a maximum, not an addition.}
+    That is why receiving the same state twice changes nothing. The value is the sum of the slots.
+  \end{takeaway}
+  \note{Do row three on the board slot by slot. Then ask what happens if the laptop state arrives a second time: nothing, because the maximum of a number with itself is itself. That is idempotence made concrete.}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=CRDTs]{The grow-only counter in Dart}
+\begin{dart}
+class GCounter {
+  final Map<String, int> slots;     // replica id -> that replica's count
+  const GCounter(this.slots);
+  int get value => slots.values.fold(0, (a, b) => a + b);
+  GCounter inc(String me) => GCounter({...slots, me: (slots[me] ?? 0) + 1});
+  GCounter merge(GCounter o) => GCounter({
+      for (final k in {...slots.keys, ...o.slots.keys})
+        k: max(slots[k] ?? 0, o.slots[k] ?? 0)});
+}
+\end{dart}
+  \begin{takeaway}{The map is the whole trick, and the value is derived.}
+    Generate the replica id once per install and never reuse it: two devices sharing an id lose increments.
+  \end{takeaway}
+  \note{Point out that the value is computed on read and never stored. Ask what breaks if merge used plus instead of max: every retry double-counts, which is the bug this type exists to prevent.}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=CRDTs]{Decrements, and a register}
+  \begin{columns}[T]
+    \begin{column}{0.52\textwidth}
+      \lead{PN-Counter}{Two grow-only counters, subtracted.}
+\begin{dart}
+class PnCounter {
+  final GCounter p, n;  // plus, minus
+  int get value => p.value - n.value;
+  PnCounter inc(String me) =>
+      PnCounter(p.inc(me), n);
+  PnCounter dec(String me) =>
+      PnCounter(p, n.inc(me));
+  PnCounter merge(PnCounter o) => PnCounter(
+      p.merge(o.p), n.merge(o.n));
+}
+\end{dart}
+    \end{column}
+    \begin{column}{0.44\textwidth}
+      \lead{LWW-Register}{One value, one stamp. Merge keeps the larger stamp.}
+\begin{dart}
+class LwwReg<T> {
+  final T value;
+  final Hlc at;
+  LwwReg<T> merge(LwwReg<T> o) =>
+      at.compareTo(o.at) >= 0
+          ? this : o;
+}
+\end{dart}
+      \muted{Merge by field is a map of these, one per column.}
+    \end{column}
+  \end{columns}
+  \note{Say that the LWW-register is a CRDT even though it loses data: convergence and correctness are separate properties. It buys the first and gives up the second, and it is still right for a sort position or a theme setting.}
+\end{frame}
+
+\begin{frame}[eyebrow=CRDTs]{Sets: add and remove do not commute}
+  \vskip 2mm
+  \begin{grid}[3]
+    \cell[\faPlus]{G-Set, grow-only}{State is a set, merge is union. Converges perfectly and can never remove anything.}
+    \cell[\faIcon{ban}]{2P-Set, two phases}{One set of adds, one of removes. Present when in adds and not in removes. Union both on merge.}
+    \cell[\faExclamationTriangle]{The re-add problem}{Once an element reaches the removed set it is dead forever. Adding ``milk'' again does nothing.}
+  \end{grid}
+  \vskip 3mm
+  \begin{takeaway}{Apply add(x) then remove(x), then the reverse order.}
+    The two answers differ. A set that supports both has to give every add its own identity.
+  \end{takeaway}
+  \note{Have the room apply the two orders to an empty 2P-Set and watch the answers differ. That is non-commutativity in one minute, and it motivates the tag on every add.}
+\end{frame}
+
+\begin{frame}[eyebrow=CRDTs]{The observed-remove set}
+  \vskip 3mm
+  \begin{columns}[T]
+    \begin{column}{0.50\textwidth}
+      \begin{itemize}
+        \item Every add gets a unique tag. An element is present when at least one of its tags is still live.
+        \item A remove takes away only the tags this replica observed. It cannot touch a tag it never saw.
+        \item Merge is the union of the adds and the union of the removed tags.
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.46\textwidth}
+      \begin{hint}[One worked case]
+        A adds ``milk'' as tag a1. B sees a1 and removes ``milk'', so removed is \{a1\}. A, concurrently, adds ``milk'' again as a2. Merge: adds are \{a1, a2\}, removed is \{a1\}, so a2 survives.
+      \end{hint}
+    \end{column}
+  \end{columns}
+  \begin{takeaway}{Add wins, because the remover could not have observed it.}
+    A defensible default for a shopping list and the wrong one for a bank ledger. It is a policy chosen by the type, not a law.
+  \end{takeaway}
+  \note{Emphasize that the rule is not arbitrary: the remover may only undo what it had seen, so a concurrent add is outside its intent. Ask what remove-wins would look like and why it needs the same machinery in reverse.}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=CRDTs]{The observed-remove set in Dart}
+\begin{dart}
+class OrSet<E> {
+  final Map<E, Set<String>> adds = {};   // element -> its unique tags
+  final Set<String> removed = {};        // tags seen as removed
+  Set<E> get value => {for (final e in adds.entries)
+      if (e.value.difference(removed).isNotEmpty) e.key};
+  void add(E e) => adds.putIfAbsent(e, () => {}).add(uuid.v4());
+  void remove(E e) => removed.addAll(adds[e] ?? const {});  // observed
+  void merge(OrSet<E> o) {
+    o.adds.forEach((e, t) => adds.putIfAbsent(e, () => {}).addAll(t));
+    removed.addAll(o.removed);}
+}
+\end{dart}
+  \begin{columns}[T]
+    \begin{column}{0.47\textwidth}
+      \lead{Both fields only grow.}{Merge is union twice.}
+    \end{column}
+    \begin{column}{0.47\textwidth}
+      \lead{remove reads the local adds.}{Only tags seen here go.}
+    \end{column}
+  \end{columns}
+  \note{Point at remove: it reads the local adds map, so it can only remove tags this replica has. That one line is the whole observed-remove semantics. It is state-based, so sending the same state twice is safe.}
+\end{frame}
+
+% =====================================================================
+\divider{Part 5 · Costs}{Tombstones, growth, and limits}[What convergence costs in bytes, and when to use something else]
+
+\begin{frame}[eyebrow=Costs]{Deleted is a row, not a missing row}
+  \vskip 3mm
+  \begin{columns}[T]
+    \begin{column}{0.50\textwidth}
+      \begin{itemize}
+        \item Delete locally and the next pull cannot tell ``deleted here'' from ``not reached me yet''. The server sends it back and the item reappears.
+        \item So a delete is a write: set deletedAt, keep the row, filter it out of every UI query. The tombstone is what propagates the deletion.
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.46\textwidth}
+      \begin{warning}[Collecting the garbage]
+        A tombstone is safe to drop only once every replica has seen the deletion. Proving that needs every device to report what it saw, and one device offline for months holds up the whole set.
+      \end{warning}
+    \end{column}
+  \end{columns}
+  \begin{takeaway}{Pick the retention window on day one.}
+    Purge tombstones older than, say, 90 days, and make a device offline longer than that do a full resync instead of a delta.
+  \end{takeaway}
+  \note{Say that the retention window is the honest engineering answer to a problem with no clean theoretical answer on a consumer device. Make the teams handle the full resync path: a phone left in a drawer over the summer will hit it.}
+\end{frame}
+
+\begin{frame}[eyebrow=Costs]{What a CRDT costs in space}
+  \vskip 3mm
+  \begin{grid}[3]
+    \bignum{1 slot}{per replica in a counter, forever, even for a device sold years ago}
+    \bignum{1 tag}{per add in an OR-Set, plus one entry per observed removal}
+    \bignum{2×}{roughly, a merge-by-field row against a plain row}
+  \end{grid}
+  \vskip 4mm
+  \muted{In a long-lived collaborative document the tombstones can outnumber the live elements by a large factor. Text CRDTs keep a node for every character ever typed, deleted ones included.}
+  \begin{takeaway}{The metadata is the product.}
+    A CRDT buys convergence by storing enough history to make every merge deterministic. If you cannot afford the history, you cannot have the guarantee.
+  \end{takeaway}
+  \note{Give the concrete comparison: a note row with five columns and an HLC per column costs roughly forty extra bytes, which is nothing. The same technique per character is what makes libraries like Automerge and Yjs hard engineering.}
+\end{frame}
+
+\begin{frame}[eyebrow=Costs]{When a CRDT is the wrong tool}
+  \vskip 2mm
+  \begin{grid}[3]
+    \cell[\faLock]{A global invariant}{Stock must never go below zero. That needs coordination, which is what a CRDT gives up.}
+    \cell[\faIcon{user-check}]{The user must be told}{A refund or a booking. Converging silently is worse than a rejection.}
+    \cell[\faIcon{sitemap}]{The shape does not fit}{An ordered list, or a tree with a move, is not a set.}
+    \cell[\faIcon{mobile-alt}]{One writer at a time}{If one device edits it, merge by field is smaller and simpler.}
+    \cell[\faServer]{The server can decide}{A server-authoritative rule is one comparison and no metadata.}
+    \cell[\faIcon{book}]{Nobody can maintain it}{A merge bug converges confidently on the wrong value, unseen by single-device tests.}
+  \end{grid}
+  \note{Repeat the strongest line: a CRDT cannot express an invariant that spans replicas, and no amount of cleverness changes that. A team that needs one needs a coordination point, which usually means the server owns that field.}
+\end{frame}
+
+\begin{frame}[eyebrow=Costs]{What to use in your project}
+  {\usebeamerfont{small}
+  \begin{tabular}{@{}lll@{}}
+    \toprule
+    \thead{Your data} & \thead{Use} & \thead{Why} \\
+    \midrule
+    A sensor reading & append only & nothing ever updates the row \\
+    A note or a form & merge by field on an HLC & the columns are independent \\
+    A view count & PN-Counter & retries are free \\
+    A shared tag list & OR-Set & add and remove both have an answer \\
+    A booking & first writer wins, on the server & one machine holds the invariant \\
+    \bottomrule
+  \end{tabular}}
+  \vskip 2mm
+  \begin{takeaway}{The project asks for a stated rule, not a clever one.}
+    Lab 5 in week 10 builds the outbox, the drain loop and delta sync. Name your rule per entity in the README, and let the demo show it firing.
+  \end{takeaway}
+  \note{Be concrete about the defense: the team will be asked to reproduce a conflict on two devices and explain which rule fired. A simple rule they can explain scores better than a CRDT they cannot.}
+\end{frame}
+
+\begin{frame}[eyebrow=Recap]{Three things to remember}
+  \vskip 2mm
+  \begin{enumerate}
+    \item Wall clocks cannot order events. \muted{Lamport counters respect causality, vector clocks also detect concurrency, and an HLC is the compromise that fits in 64 bits.}
+    \item Every strategy loses something. \muted{Last writer wins loses a row, merge by field loses a column, first writer wins loses a rejection you must show, asking costs an interruption.}
+    \item A CRDT converges, and that is all it promises. \muted{The merge must be commutative, associative and idempotent, the metadata never shrinks on its own, and no CRDT holds a global invariant.}
+  \end{enumerate}
+  \vskip 4mm
+  \kv{Further reading}{\link{https://crdt.tech}{crdt.tech, the catalog and the papers} · \link{https://www.inkandswitch.com/local-first/}{inkandswitch.com/local-first} · \link{https://jaredforsyth.com/posts/hybrid-logical-clocks/}{hybrid logical clocks, explained}}
+  \note{Close by asking every team to name their conflict rule out loud before they leave. Point at Lab 5 in week 10 as the place where the rule stops being a slide and starts being code they have to demonstrate.}
+\end{frame}
+
+\closingframe{Questions?}{dinu\_stefan.rusu@upb.ro · Microsoft Teams: course channel}
+
+\end{document}

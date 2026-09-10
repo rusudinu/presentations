@@ -1,0 +1,243 @@
+% Lab 3: Widgets, UI, and DevTools
+% Application Development for Mobile Devices
+\documentclass[10pt,aspectratio=169,t]{beamer}
+\usetheme[lab]{upbminimal}
+
+\course{Application Development for Mobile Devices}
+\decklabel{Lab 3}
+\title{Widgets, UI, and DevTools}
+\subtitle{Composing layouts, handling gestures, and debugging}
+\author{Dinu-Ștefan Rusu}
+\institute{FILS, Universitatea Politehnica București}
+\date{Week 6}
+
+\begin{document}
+
+\titleframe
+
+\begin{frame}[eyebrow=Today]{What this lab is for}
+  \vskip 2mm
+  \begin{grid}[2]
+    \cell[\faThLarge]{Compose a screen}{Build a todo list from layout widgets, then add swipe gestures with Dismissible.}
+    \cell[\faBug]{Attach the tools}{Launch DevTools, plant three bugs, find them with breakpoints and the inspector.}
+  \end{grid}
+  \vskip 6mm
+  \taskmeta{Time}{2 hours}{Submit}{Push to \code{admd-labs}, branch \code{lab-3}, before Lab 4}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=Setup]{Where your code goes}
+  \begin{steps}
+    \item Open the project from Lab 2 and create a branch: \code{git checkout -b lab-3}
+    \item Create \code{lib/screens/todo\_screen.dart}. All three tasks happen there.
+    \item Run the app once before changing anything. If it does not build, fix that first.
+    \item Keep the todo app. Task III debugs this exact app with DevTools.
+  \end{steps}
+  \begin{hint}
+    Hot reload keeps your list contents between edits. Hot restart drops them: use it after changing \code{initState} or dependencies.
+  \end{hint}
+\end{frame}
+
+\begin{frame}[eyebrow=Task I]{The todo screen, element by element}
+  \begin{columns}[T]
+    \begin{column}{0.55\textwidth}
+      \begin{steps}
+        \item A StatefulWidget that holds todos in State.
+        \item A ListView.builder with one Card per todo.
+        \item A checkbox in each Card, bound to \code{done}.
+        \item A FloatingActionButton that adds a new todo.
+        \item Extract the Card into a reusable \code{TodoTile} component.
+      \end{steps}
+    \end{column}
+    \begin{column}{0.41\textwidth}
+      \kv{Done when}{}
+      \begin{checklist}
+        \item Toggling a checkbox rebuilds only that tile.
+        \item Adding a todo scrolls smoothly.
+        \item \code{TodoTile} takes data through constructor.
+      \end{checklist}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}[eyebrow=Reference]{Layout widgets you need today}
+  \begin{columns}[T]
+    \begin{column}{0.55\textwidth}
+      \begin{itemize}
+        \item \code{Column} and \code{Row}: arrange children vertically or horizontally.
+        \item \code{Expanded}: takes remaining space inside a Row or Column.
+        \item \code{ListView.builder}: lazy list of items; only builds what is visible.
+        \item \code{Card} and \code{ListTile}: Material design containers.
+        \item \code{Padding}: space around a child; \code{EdgeInsets} specifies how much.
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.41\textwidth}
+      \begin{itemize}
+        \item \code{SizedBox}: fixed width or height.
+        \item \code{Container}: padding, margin, color, border in one widget.
+        \item \code{Stack}: children drawn on top of each other.
+        \item \code{Scaffold}: AppBar, body, FAB layout.
+      \end{itemize}
+      \begin{hint}
+        Every one takes children, not pixels.
+      \end{hint}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=Task I]{Stateless or stateful?}
+  \begin{columns}[T]
+    \begin{column}{0.55\textwidth}
+\begin{dart}
+class _TodoState extends State<TodoScreen> {
+  final _items = <Todo>[];
+  final _input = TextEditingController();
+  void _add() {
+    setState(() => _items.add(Todo(_input.text)));
+    _input.clear();
+  }
+  // Dispose the controller in dispose()
+}
+\end{dart}
+    \end{column}
+    \begin{column}{0.41\textwidth}
+      \begin{steps}
+        \item StatefulWidget for the screen.
+        \item StatelessWidget for TodoTile.
+        \item Pass data through constructor.
+        \item Call \code{dispose()} on controllers.
+      \end{steps}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=Task II]{The anatomy of one swipeable row}
+  \begin{columns}[T]
+    \begin{column}{0.55\textwidth}
+\begin{dart}
+Dismissible(
+  key: ValueKey(todo.id),
+  direction: DismissDirection.endToStart,
+  onDismissed: (_) => setState(
+      () => _items.removeWhere((t) => t.id == todo.id)),
+  background: Container(color: Colors.red),
+  child: TodoTile(todo: todo),
+)
+\end{dart}
+    \end{column}
+    \begin{column}{0.41\textwidth}
+      \begin{steps}
+        \item Wrap each tile in Dismissible.
+        \item Remove from the list in \code{onDismissed}.
+        \item Show a SnackBar for undo.
+      \end{steps}
+      \begin{warning}
+        Index as key causes wrong row to vanish.
+      \end{warning}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=Task III]{Launching DevTools}
+  \begin{columns}[T]
+    \begin{column}{0.55\textwidth}
+\begin{shell}
+# From the IDE (fastest, gives breakpoints)
+# VS Code: F5, then Cmd/Ctrl+Shift+P
+#          -> "Dart: Open DevTools"
+# Android Studio: Run > Debug,
+#         then Flutter Inspector
+
+# From terminal (no debugger):
+flutter run
+# Copy the printed URL into a browser
+\end{shell}
+    \end{column}
+    \begin{column}{0.41\textwidth}
+      \begin{steps}
+        \item Start from the IDE, not bare \code{flutter run}.
+        \item Open DevTools Inspector tab.
+        \item Plant three bugs one at a time.
+        \item Fix each before the next.
+      \end{steps}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}[eyebrow=Reference]{The DevTools tabs you need today}
+  \begin{columns}[T]
+    \begin{column}{0.55\textwidth}
+      \lead{Inspector}{The live widget tree. Select Widget Mode lets you tap a widget on screen. Track widget rebuilds counts how many times each widget rebuilt after an action.}
+      \vskip 3mm
+      \lead{Debugger}{Breakpoints, the call stack, and the Variables pane. Conditional breakpoints stop only when a condition is true.}
+      \vskip 3mm
+      \lead{Logging}{Everything \code{debugPrint} writes, plus framework events. Keep it open during debugging.}
+    \end{column}
+    \begin{column}{0.41\textwidth}
+      \lead{Performance}{Frame timeline and overlay. Only meaningful in a \code{--profile} build.}
+      \vskip 3mm
+      \lead{Memory}{Heap snapshots. Find controllers you forgot to dispose.}
+      \vskip 3mm
+      \lead{Network}{Every HTTP request the app makes. You will need this in Lab 4.}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=Task III]{The three bugs to plant}
+  \begin{columns}[T]
+    \begin{column}{0.55\textwidth}
+\begin{dart}
+// Bug 1: off-by-one
+for (var i = 0; i <= _items.length; i++) {
+  done += _items[i].done ? 1 : 0;
+}
+
+// Bug 2: no setState
+void _toggle(int i) =>
+    _items[i].done = !_items[i].done;
+
+// Bug 3: null access
+String? _filter;
+final visible = _items.where(
+    (t) => t.title.contains(_filter!));
+\end{dart}
+    \end{column}
+    \begin{column}{0.41\textwidth}
+      \begin{steps}
+        \item Plant Bug 1, run until it throws.
+        \item Set breakpoint, watch \code{i} and length.
+        \item Fix. Plant Bug 2. Use conditional breakpoint.
+        \item Plant Bug 3. Fix the null access.
+      \end{steps}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}[eyebrow=Reference]{What rebuilds, and why}
+  \code{setState} marks one element dirty. Only that subtree rebuilds on the next frame. The framework reuses the element and State when the new widget has the same \code{runtimeType} and key.
+  \vskip 3mm
+  \begin{columns}[T]
+    \begin{column}{0.55\textwidth}
+      Your list keeps scroll position when one item changes. Keys matter when items can be reordered or removed from the middle.
+    \end{column}
+    \begin{column}{0.41\textwidth}
+      \kv{One frame}{16.7 ms at 60 Hz · 8.3 ms at 120 Hz}
+      \vskip 2mm
+      \begin{takeaway}{Rebuilt is not repainted.}
+        Inspector counts rebuilds.
+      \end{takeaway}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}[eyebrow=Troubleshooting]{Layout errors and debugging issues}
+  \vskip 2mm
+  \trouble{RenderFlex overflowed by 42 pixels}{Wrap the growing child in Expanded.}
+  \trouble{Vertical viewport was given unbounded height}{Wrap the ListView in Expanded.}
+  \trouble{A dismissed Dismissible widget is still part of the tree}{Remove the item from the list in \code{onDismissed}.}
+  \trouble{Breakpoints are hollow and never hit}{Start from the IDE (F5), not bare \code{flutter run}.}
+  \trouble{The data changed, the screen did not}{You mutated state outside \code{setState}. No rebuilds.}
+\end{frame}
+
+\closingframe{Push before you leave.}{Branch lab-3 · one commit per task · screenshots of DevTools in the PR description}
+
+\end{document}

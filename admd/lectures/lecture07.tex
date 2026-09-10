@@ -1,0 +1,540 @@
+% Lecture 7: Networking: HTTP, JSON, and code generation. Compile: latexmk -xelatex lecture07.tex
+\documentclass[10pt,aspectratio=169,t]{beamer}
+\usetheme{upbminimal}
+
+\course{Application Development for Mobile Devices}
+\decklabel{Lecture 7}
+\title{Networking: HTTP, JSON, and code generation}
+\subtitle{Talking to a server from Flutter, without hand-writing JSON}
+\author{Dinu-Ștefan Rusu}
+\institute{FILS, Universitatea Politehnica București}
+\date{Autumn 2026}
+
+\begin{document}
+
+\titleframe
+
+\objectivesframe{
+  \cell[\faWifi]{Speak HTTP correctly}{Methods, safe vs idempotent, and the status codes and headers that change what your app does next.}
+  \cell[\faBolt]{Survive a flaky network}{dio's failure paths, interceptors, cancel tokens, and retrying with backoff and jitter.}
+  \cell[\faCode]{Stop hand-writing JSON}{json\_serializable and build\_runner generate the mapping code; freezed generates the model itself.}
+  \cell[\faDatabase]{Wrap the API in a repository}{One class that talks to dio and JSON, so the bloc from Lecture 6 never sees either.}
+}
+
+\divider{Part 1 · HTTP}{Talking to a server, correctly}[Methods, status codes, headers and timeouts]
+
+\begin{frame}[eyebrow=HTTP]{A request, and the response it earns}
+  \begin{itemize}
+    \item Every HTTP call is a \textbf{verb} and a \textbf{path}, a few \textbf{headers}, and an optional \textbf{body}, answered by a \textbf{status code} and a body.
+    \item A mobile round trip costs roughly 40--200 ms on a good connection, seconds on a bad one, and nothing at all inside a tunnel.
+    \item The client builds the request and reads the answer. What runs behind that URL is next semester's material.
+    \item Everything in this lecture is the client half of that line.
+  \end{itemize}
+  \vskip 1mm
+  \begin{takeaway}{One round trip is expensive on mobile.}
+    Timeouts, retries and generated JSON all exist because that round trip can be slow or simply fail.
+  \end{takeaway}
+  \note{Ask who has seen a request just hang with no error. That is a missing timeout, the subject of a slide soon. Frame the whole lecture as what happens on this one line between client and server.}
+\end{frame}
+
+\begin{frame}[eyebrow=HTTP]{Safe is not the same as idempotent}
+  \textbf{Safe}: does not modify state. \textbf{Idempotent}: sending it twice has the same effect as once.
+  {\renewcommand{\arraystretch}{1.0}\usebeamerfont{small}\begin{tabular}{@{}lccp{68mm}@{}}
+    \toprule
+    \thead{Method} & \thead{Safe} & \thead{Idemp.} & \thead{What you use it for} \\
+    \midrule
+    GET    & yes & yes & read a resource \\
+    HEAD   & yes & yes & headers only: size and caching \\
+    PUT    & no  & yes & replace a resource at a known URL \\
+    DELETE & no  & yes & remove it; repeating leaves it gone \\
+    POST   & no  & no  & create, or anything else \\
+    PATCH  & no  & no  & partial update, not idempotent \\
+    \bottomrule
+  \end{tabular}}
+  \begin{takeaway}{Every safe method is idempotent; the reverse is false.}
+    PUT and DELETE modify state, but repeating them does not change it further. That is what makes them safe to retry, and POST not.
+  \end{takeaway}
+  \note{This is the correction students often get wrong: PUT and DELETE are not safe, they are idempotent. The practical consequence lands two slides from now: a retry wrapper may repeat GET, PUT or DELETE freely, but repeating POST needs an idempotency key the server remembers.}
+\end{frame}
+
+\begin{frame}[eyebrow=HTTP]{Status codes that matter}
+  {\usebeamerfont{small}\begin{tabular}{@{}lp{80mm}@{}}
+    \toprule
+    \thead{Code} & \thead{What the client does about it} \\
+    \midrule
+    200 / 201 / 204 & success; 201 after a create, 204 after a delete with no body \\
+    301 / 302 & follow the new location; do not resend a POST body on 301 \\
+    400 / 422 & the request is malformed; fix it, do not retry \\
+    401 / 403 & not authenticated or not allowed; refresh the token or stop \\
+    404 & the resource is gone; show that, do not retry \\
+    429 & rate limited; back off and retry after the given delay \\
+    500 / 502 / 503 / 504 & the server failed; safe to retry with backoff \\
+    \bottomrule
+  \end{tabular}}
+  \vskip 1mm
+  \muted{The full range is 1xx informational, 2xx success, 3xx redirection, 4xx client error, 5xx server error.}
+  \note{Walk through the 4xx row by row: 400 and 422 are the app's fault, so retrying sends the same broken request again. 401 versus 403 is a common confusion: 401 means log in again, 403 means the account is not allowed here regardless of login.}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=HTTP]{Headers and timeouts}
+  \begin{columns}[T]
+    \begin{column}{0.52\textwidth}
+      \lead{Headers worth knowing}{}
+      \begin{itemize}
+        \item \code{Content-Type}: what the body is, almost always \code{application/json}.
+        \item \code{Authorization}: \code{Bearer <token>} on every authenticated call.
+        \item \code{Accept}: what format the client wants back.
+        \item \code{Idempotency-Key}: a client-generated id so a retried POST is not applied twice.
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.44\textwidth}
+\begin{dart}
+final dio = Dio(BaseOptions(
+  connectTimeout:
+      const Duration(seconds: 5),
+  receiveTimeout:
+      const Duration(seconds: 10),
+));
+\end{dart}
+      \muted{The default timeout on mobile is effectively none: a request can hang until the user force-closes the app.}
+    \end{column}
+  \end{columns}
+  \note{Ask what happens today in their own app if the Wi-Fi drops mid-request with no timeout set: nothing, forever. connectTimeout bounds the handshake, receiveTimeout bounds waiting for the body once connected.}
+\end{frame}
+
+\begin{frame}[eyebrow=Numbers]{Why a timeout budget matters}
+  \vskip 4mm
+  \begin{grid}[3]
+    \bignum{40--200 ms}{round trip on a good mobile connection}
+    \bignum{5 s}{a reasonable connect timeout to start from}
+    \bignum{0}{the default timeout with nothing set}
+  \end{grid}
+  \note{The last number is the one that matters: many HTTP clients ship with no default timeout at all, so a stalled connection can hold a request open indefinitely. Treat these as starting points to tune against the app's own measurements, not fixed rules.}
+\end{frame}
+
+\divider{Part 2 · dio and http}{The client side of the wire}[Requests, failure paths, interceptors and the minimal alternative]
+
+\begin{frame}[fragile,eyebrow=dio]{dio: a request, and its failure paths}
+  \begin{columns}[T]
+    \begin{column}{0.56\textwidth}
+\begin{dart}
+final dio = Dio(BaseOptions(
+  baseUrl: 'https://api.example.com',
+));
+
+Future<Reading> fetchReading(String id) async {
+  try {
+    final r = await dio.get('/readings/$id');
+    return Reading.fromJson(r.data);
+  } on DioException catch (e) {
+    throw ApiFailure(e.message ?? 'network error');
+  }
+}
+\end{dart}
+    \end{column}
+    \begin{column}{0.40\textwidth}
+      \lead{http or dio?}{}
+      \begin{itemize}
+        \item \code{package:http} is minimal: one function per request.
+        \item \code{dio} adds base URLs, timeouts, interceptors, cancellation.
+        \item Map \code{DioException} to your own error type at the edge.
+      \end{itemize}
+    \end{column}
+  \end{columns}
+  \note{Point at the catch block: the failure path ends in a type the app defines, ApiFailure, never DioException itself. That mapping is what makes the UI layer testable without a real network.}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=dio]{Interceptors: one place for shared behavior}
+  \begin{columns}[T]
+    \begin{column}{0.56\textwidth}
+\begin{dart}
+dio.interceptors.add(InterceptorsWrapper(
+  onRequest: (options, handler) {
+    options.headers['Authorization'] =
+        'Bearer $token';
+    handler.next(options);
+  },
+  onError: (e, handler) {
+    log('ERROR ${e.response?.statusCode}');
+    handler.next(e);
+  },
+));
+\end{dart}
+    \end{column}
+    \begin{column}{0.40\textwidth}
+      \lead{Why interceptors exist}{}
+      \begin{itemize}
+        \item Attach the auth header to every call in one place, not at every call site.
+        \item Log requests and responses without touching business code.
+        \item Chain them: auth, then logging, then retry.
+      \end{itemize}
+    \end{column}
+  \end{columns}
+  \note{An interceptor runs on every request and response that goes through this dio instance. Ask the room what happens without one: the auth header gets copy-pasted into every call, and eventually one gets missed.}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=dio]{Cancel tokens: stop a request in flight}
+  \begin{columns}[T]
+    \begin{column}{0.56\textwidth}
+\begin{dart}
+CancelToken? _token;
+
+Future<void> search(String query) async {
+  _token?.cancel('superseded');
+  _token = CancelToken();
+  final res = await dio.get('/search',
+      queryParameters: {'q': query},
+      cancelToken: _token);
+  render(res.data);
+}
+\end{dart}
+    \end{column}
+    \begin{column}{0.40\textwidth}
+      \lead{Search as you type}{}
+      \begin{itemize}
+        \item Every keystroke fires a new request. Cancel the previous one before sending the next.
+        \item A canceled request throws \code{DioExceptionType.cancel}, which you simply ignore.
+        \item Also cancel on \code{dispose()}, so a closed screen does not update dead state.
+      \end{itemize}
+    \end{column}
+  \end{columns}
+  \note{This is the fix for the classic bug where a slow first response arrives after a fast second one and overwrites it with stale results. Canceling the stale request removes the race entirely.}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=HTTP]{package:http, the minimal alternative}
+  \begin{columns}[T]
+    \begin{column}{0.56\textwidth}
+\begin{dart}
+final res = await http.get(
+    Uri.parse('$base/readings/$id'));
+
+if (res.statusCode == 200) {
+  return Reading.fromJson(
+      jsonDecode(res.body));
+}
+throw ApiFailure('status ${res.statusCode}');
+\end{dart}
+    \end{column}
+    \begin{column}{0.40\textwidth}
+      \lead{One function per request}{}
+      \begin{itemize}
+        \item No client object, no interceptors, no cancel tokens: check the status code yourself.
+        \item \code{RetryClient} from the same package wraps retries around any request.
+        \item Fine for a small app or a script. dio earns its weight once auth headers go on every call.
+      \end{itemize}
+    \end{column}
+  \end{columns}
+  \note{Show that http returns a plain Response with no exception hierarchy: a failed connection throws a generic SocketException, and a bad status code is just a number you check yourself. That is the trade for less ceremony.}
+\end{frame}
+
+\divider{Part 3 · Resilience}{When the network says no}[Retry with backoff and jitter, and when not to retry]
+
+\begin{frame}[fragile,eyebrow=Resilience]{Retry with exponential backoff and jitter}
+  \begin{columns}[T]
+    \begin{column}{0.56\textwidth}
+\begin{dart}
+Future<T> withRetry<T>(
+    Future<T> Function() call) async {
+  for (var a = 0; ; a++) {
+    try {
+      return await call();
+    } on DioException catch (e) {
+      if (!_retryable(e) || a == 4) rethrow;
+      final wait = Random().nextInt(200 << a);
+      await Future.delayed(
+          Duration(milliseconds: wait));
+    }
+  }
+}
+\end{dart}
+    \end{column}
+    \begin{column}{0.40\textwidth}
+      \lead{Why jitter}{}
+      \begin{itemize}
+        \item Doubling alone (200, 400, 800 ms) still lines up every client on the same millisecond.
+        \item The wait is a random draw from the interval, so retries spread out.
+      \end{itemize}
+    \end{column}
+  \end{columns}
+  \note{Read the loop aloud: the wait is a random draw from the interval, not the interval itself, so a thousand clients spread across it instead of retrying in lockstep. A naive version doubles the wait but keeps it fixed, which is the bug this fixes.}
+\end{frame}
+
+\begin{frame}[eyebrow=Resilience]{Which failures are worth retrying}
+  \vskip 1mm
+  {\renewcommand{\arraystretch}{1.0}\usebeamerfont{small}\begin{tabular}{@{}lp{85mm}@{}}
+    \toprule
+    \thead{Outcome} & \thead{What to do} \\
+    \midrule
+    408, 429, 5xx & transient, retry with backoff \\
+    connection reset, no response & the connection failed, retry with backoff \\
+    400, 422 & client error, fix the request, never retry \\
+    401, 403 & refresh the token or stop, do not blindly retry \\
+    404 & the resource is gone, do not retry \\
+    POST, no idempotency key & never retry; a repeat may create it twice \\
+    \bottomrule
+  \end{tabular}}
+  \vskip 1mm
+  \begin{takeaway}{Retrying is a decision, not a default.}
+    Wrap only calls where a repeat is provably harmless: safe methods, plus POST with an idempotency key.
+  \end{takeaway}
+  \note{Connect this back to the safe-vs-idempotent table from Part 1: everything in the retry rows is either safe or the client controls the URL, like PUT. POST is the one verb that needs extra machinery before it is safe to repeat.}
+\end{frame}
+
+\begin{frame}[eyebrow=Resilience]{Thundering herds and hedged requests}
+  \begin{itemize}
+    \item When a service fails briefly, thousands of clients fail at once. If every one retries after the same delay, the wave is larger than the original load: a thundering herd.
+    \item Full jitter, from the previous slide, spreads those retries across the interval, so the recovering server sees load ramp up instead of arriving all at once.
+    \item \textbf{Hedging is the opposite problem.} A few requests are simply slow. Send a second copy after a short delay, take whichever answers first, cancel the other.
+  \end{itemize}
+  \vskip 1mm
+  {\renewcommand{\arraystretch}{1.0}\usebeamerfont{small}\begin{tabular}{@{}lll@{}}
+    \toprule
+    \thead{Attempt} & \thead{Sent at} & \thead{Outcome} \\
+    \midrule
+    1 & t = 0 ms & silent at 250 ms, canceled \\
+    2, the hedge & t = 250 ms & answers 60 ms later, used \\
+    \bottomrule
+  \end{tabular}}
+  \begin{takeaway}{Retries fix failures. Hedges fix slowness.}
+    Both multiply load: cap it to one hedge, only past the slow tail, only for safe or idempotent calls.
+  \end{takeaway}
+  \note{The winner is whichever attempt replies first; the loser is simply canceled once the winner lands, the same cancel-token mechanism from Part 2. Keep the cap in mind: hedging every request would double load permanently for a marginal gain.}
+\end{frame}
+
+\divider{Part 4 · JSON}{Stop hand-writing the mapping}[Generated fromJson and toJson, and freezed]
+
+\begin{frame}[fragile,eyebrow=JSON]{JSON in Dart, the manual way}
+  \begin{columns}[T]
+    \begin{column}{0.56\textwidth}
+\begin{dart}
+class Reading {
+  final String deviceId;
+  final double tempC;
+  Reading({required this.deviceId,
+      required this.tempC});
+  factory Reading.fromJson(Map j) => Reading(
+    deviceId: j['device_id'] as String,
+    tempC: (j['temp_c'] as num).toDouble(),
+  );
+  Map toJson() =>
+      {'device_id': deviceId, 'temp_c': tempC};
+}
+\end{dart}
+    \end{column}
+    \begin{column}{0.40\textwidth}
+      \lead{Where this breaks}{}
+      \begin{itemize}
+        \item A renamed field silently becomes \code{null} at runtime, not at compile time.
+        \item Every model needs this twice, kept in sync by hand.
+        \item Nested objects multiply the boilerplate fast.
+      \end{itemize}
+    \end{column}
+  \end{columns}
+  \note{Ask the room to spot the bug if device\_id were renamed on the server without updating this file: nothing turns red, fromJson just returns null for that field and the crash shows up three screens later. That gap is exactly what the generator removes.}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=JSON]{@JsonSerializable and the generated half}
+  \begin{columns}[T]
+    \begin{column}{0.56\textwidth}
+\begin{dart}
+part 'reading.g.dart';
+@JsonSerializable()
+class Reading {
+  const Reading({required this.deviceId,
+      required this.tempC});
+  @JsonKey(name: 'device_id')
+  final String deviceId;
+  @JsonKey(name: 'temp_c')
+  final double tempC;
+  factory Reading.fromJson(Map j) =>
+      _$ReadingFromJson(j);
+  Map toJson() => _$ReadingToJson(this);
+}
+\end{dart}
+    \end{column}
+    \begin{column}{0.40\textwidth}
+\begin{shell}
+dart run build_runner build \
+  --delete-conflicting-outputs
+\end{shell}
+      \begin{itemize}
+        \item \code{part} links to the generated twin. Never edit a \code{.g.dart} file.
+        \item The generator fails the build instead of returning a silent null.
+        \item Commit \code{.g.dart} files, or generate them in CI.
+      \end{itemize}
+    \end{column}
+  \end{columns}
+  \note{Two files, one model: the developer writes the class and its annotations, build\_runner writes the mapping code into reading.g.dart. Run build\_runner watch during development so it regenerates on every save.}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=JSON]{Enums, dates and nested objects}
+  \begin{columns}[T]
+    \begin{column}{0.56\textwidth}
+\begin{dart}
+enum Status { pending, done }
+@JsonSerializable(explicitToJson: true)
+class Task {
+  final Status status;
+  @JsonKey(name: 'due_at')
+  final DateTime dueAt;
+  final Reading lastReading;
+  Task({required this.status,
+      required this.dueAt,
+      required this.lastReading});
+  factory Task.fromJson(Map j) => _$TaskFromJson(j);
+}
+\end{dart}
+    \end{column}
+    \begin{column}{0.40\textwidth}
+      \begin{itemize}
+        \item Enums serialize by name; \code{@JsonKey} still renames the wire field.
+        \item \code{DateTime} round-trips through ISO-8601 with no extra code.
+        \item \code{explicitToJson: true} calls a nested field's own \code{toJson}, not \code{toString}.
+      \end{itemize}
+    \end{column}
+  \end{columns}
+  \note{The explicitToJson flag is the mistake students make most: without it, a nested Reading field serializes through toString, a string that looks like an object but is not valid JSON for the server. Show that failure once before they hit it in Lab 4.}
+\end{frame}
+
+\begin{frame}[eyebrow=JSON]{The generators you will actually add}
+  \vskip 1mm
+  {\renewcommand{\arraystretch}{0.95}\usebeamerfont{small}\begin{tabular}{@{}p{28mm}p{46mm}p{46mm}@{}}
+    \toprule
+    \thead{Package} & \thead{Generates} & \thead{Why add it} \\
+    \midrule
+    json\_serializable & fromJson / toJson & every project with an API has this one \\
+    freezed & immutable classes, sealed unions & loading / data / error states, next slide \\
+    retrofit & a typed dio client & one place where endpoints are declared \\
+    riverpod\_generator & providers from functions & typos become build errors \\
+    drift & type-checked SQL & storage that survives offline \\
+    mockito & mocks for your interfaces & tests that skip the network \\
+    \bottomrule
+  \end{tabular}}
+  \vskip 1mm
+  \muted{build\_runner is slow on large projects and fails when generated files go stale. It still belongs in CI.}
+  \note{This table is the map for the rest of the semester: freezed is the very next slide, retrofit and riverpod\_generator are options once state management from Lecture 6 is in place, and drift belongs to the local storage lecture.}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=JSON]{freezed: the model writes itself}
+  \begin{columns}[T]
+    \begin{column}{0.56\textwidth}
+\begin{dart}
+part 'task_state.freezed.dart';
+
+@freezed
+class TaskState with _$TaskState {
+  const factory TaskState.loading() = Loading;
+  const factory TaskState.data(
+      List<Task> tasks) = Data;
+  const factory TaskState.error(
+      String message) = Error;
+}
+\end{dart}
+    \end{column}
+    \begin{column}{0.40\textwidth}
+      \begin{itemize}
+        \item One annotation generates \code{copyWith}, \code{==}, \code{hashCode}, and \code{toString}, for every case.
+        \item The three constructors form a sealed union: a \code{switch} over the state must handle all of them or the compiler complains.
+        \item This is the state shape Lecture 6 builds a Cubit around.
+      \end{itemize}
+    \end{column}
+  \end{columns}
+  \note{Because the three factories are the only ways to build a TaskState, Dart's exhaustiveness check on sealed classes catches a missing case at compile time, not in production. Compare this class to the hand-written state class from Lecture 6.}
+\end{frame}
+
+\begin{frame}[eyebrow=JSON]{Which JSON approach fits}
+  \vskip 1mm
+  {\usebeamerfont{small}\begin{tabular}{@{}p{30mm}p{44mm}p{50mm}@{}}
+    \toprule
+    \thead{Approach} & \thead{Cost} & \thead{Use when} \\
+    \midrule
+    Hand-written & no dependency, full control & one tiny model, or a one-off script \\
+    json\_serializable & one annotation, a build step & any model that talks to an API \\
+    freezed & json\_serializable plus copyWith and unions & state classes and models that need equality \\
+    \bottomrule
+  \end{tabular}}
+  \vskip 3mm
+  \muted{freezed can generate fromJson and toJson itself, by adding json\_serializable alongside it: the two packages compose.}
+  \note{Students default to hand-written models out of habit from other languages. Make the rule explicit: once a class has more than two or three fields, or needs equality, the generator pays for itself.}
+\end{frame}
+
+\divider{Part 5 · Architecture}{Where the network code lives}[A repository between the API and the bloc, and the secrets rule]
+
+\begin{frame}[fragile,eyebrow=Architecture]{A repository class wraps the API}
+\begin{dart}
+class TaskRepository {
+  TaskRepository(this._dio); final Dio _dio;
+  Future<List<Task>> fetchTasks() async {
+    final res = await withRetry(() => _dio.get('/tasks'));
+    return (res.data as List).map(Task.fromJson).toList();
+  }
+  Future<Task> addTask(Task task) async {
+    final res = await _dio.post('/tasks', data: task.toJson());
+    return Task.fromJson(res.data);
+  }
+}
+\end{dart}
+  \muted{The bloc from Lecture 6 calls \code{fetchTasks()} and \code{addTask()}, never Dio or a JSON key directly.}
+  \note{This is the seam that makes a bloc testable without a network: in bloc\_test, a fake TaskRepository returns fixed data, so the test exercises the state machine, not the HTTP stack. withRetry from Part 3 belongs inside this class, not scattered across call sites.}
+\end{frame}
+
+\begin{frame}[eyebrow=Architecture]{Why the layer earns its keep}
+  \vskip 2mm
+  {\usebeamerfont{small}\begin{tabular}{@{}lp{95mm}@{}}
+    \toprule
+    \thead{Layer} & \thead{Talks to} \\
+    \midrule
+    Widget & the Bloc, through \code{context.read} and \code{BlocBuilder} \\
+    Bloc / Cubit & the Repository's methods, never Dio or a JSON key directly \\
+    Repository & Dio, retry, and the model classes; the only layer that knows the API shape \\
+    \bottomrule
+  \end{tabular}}
+  \vskip 4mm
+  \begin{takeaway}{The repository is what you mock, not the network.}
+    A fake Repository in a test returns fixed Task objects instantly. Nothing else in the app changes to make that possible.
+  \end{takeaway}
+  \note{Draw the arrow chain on the board: Widget to Bloc to Repository to Dio. Each layer only calls the one directly below it. That discipline is why Lecture 6's bloc\_test suite can run without a real server.}
+\end{frame}
+
+\begin{frame}[eyebrow=Architecture]{API keys never live in the app}
+  \begin{itemize}
+    \item An APK can be unpacked and a release binary can be inspected. Anything shipped inside the app, including a key passed through \code{--dart-define}, can be extracted.
+    \item A key that must stay secret belongs on the server. The app calls your endpoint; your endpoint calls the third-party API and adds the key.
+    \item If the key must be reachable from the client anyway, a public rate-limited key, treat leaking it as expected and restrict it by package name or domain instead.
+    \item Cloud AI keys are the case students hit most often. Lecture 12 covers the correct shape end to end.
+  \end{itemize}
+  \vskip 2mm
+  \begin{takeaway}{The client is not a safe place for a secret.}
+    This applies to every key, token, or credential, not only the ones for AI APIs.
+  \end{takeaway}
+  \note{Ask if anyone has seen an API key committed straight into a Flutter repository, most have. --dart-define moves the string out of source control but not out of the compiled binary, which is the distinction worth making explicit here.}
+\end{frame}
+
+\begin{frame}[eyebrow=Architecture]{Putting it together: adding a task}
+  \begin{enumerate}
+    \item The UI calls \code{context.read<TaskCubit>().add(task)}.
+    \item The Cubit calls \code{repository.addTask(task)} and emits a loading state.
+    \item The Repository serializes \code{task.toJson()}, sends it through dio wrapped in \code{withRetry}, and parses the response with \code{Task.fromJson}.
+    \item A failure becomes an \code{ApiFailure}, the Cubit emits an error state, and \code{BlocBuilder} shows it. No layer above the Repository ever saw Dio.
+  \end{enumerate}
+  \begin{takeaway}{Every topic from today lives inside one method.}
+    Status codes, retry with jitter, and generated JSON all sit inside the Repository. Every layer above it stays free of network detail.
+  \end{takeaway}
+  \note{Walk this chain top to bottom on the board. Every topic from today, status codes, retry, JSON generation, sits inside one method of one class, and every layer above it stays free of network detail.}
+\end{frame}
+
+\begin{frame}[eyebrow=Recap]{Three things to remember}
+  \vskip 2mm
+  \begin{enumerate}
+    \item Safe and idempotent are different properties. \muted{Only safe or idempotent calls, or a POST with an idempotency key, are safe to retry.}
+    \item Retry with jitter, not a fixed backoff. \muted{A thundering herd is a synchronized retry wave, and jitter is what breaks the synchronization.}
+    \item Generate the JSON mapping, do not hand-write it. \muted{json\_serializable catches a renamed field at build time; a hand-written cast fails silently at runtime.}
+  \end{enumerate}
+  \vskip 5mm
+  \kv{Further reading}{\link{https://pub.dev/packages/dio}{pub.dev/packages/dio} \textperiodcentered\ \link{https://pub.dev/packages/json_serializable}{pub.dev/packages/json\_serializable} \textperiodcentered\ \link{https://pub.dev/packages/freezed}{pub.dev/packages/freezed}}
+  \note{Close by pointing forward: the repository built today is exactly what Lecture 6's bloc calls, and Lecture 8 puts Firebase behind the same seam. Ask if there are questions before moving to the lab.}
+\end{frame}
+
+\closingframe{Questions?}{dinu\_stefan.rusu@upb.ro \textperiodcentered\ Microsoft Teams: course channel}
+
+\end{document}

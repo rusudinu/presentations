@@ -1,0 +1,564 @@
+% Mobile and Embedded Computing, Lecture 6. Compile: latexmk -xelatex lecture06.tex
+\documentclass[10pt,aspectratio=169,t]{beamer}
+\usetheme{upbminimal}
+
+\course{Mobile and Embedded Computing}
+\decklabel{Lecture 6}
+\title{Phone sensors and hardware APIs}
+\subtitle{Motion, location, camera and NFC, and what each one costs}
+\author{Dinu-Ștefan Rusu}
+\institute{FILS, Universitatea Politehnica București}
+\date{Spring 2027}
+
+\begin{document}
+
+\titleframe
+
+\objectivesframe{
+  \cell[\faMicrochip]{Know the sensor deck}{What each sensor in a phone measures, in which unit, and at what rate.}
+  \cell[\faCode]{Read a sensor from Dart}{The sensors\_plus streams, the sampling period, and where the processing belongs.}
+  \cell[\faIcon{map-marker-alt}]{Location, done properly}{Accuracy modes, the permission flow on both platforms, and the background rules.}
+  \cell[\faBatteryHalf]{Pay for what you use}{The energy cost of each sensor, batching, and when to drop to a platform channel.}
+}
+
+% =====================================================================
+\divider{Part 1 · Sensors}{The hardware already in your pocket}[What each sensor measures, its unit, and what fusion adds]
+
+\begin{frame}[embedded,eyebrow=Sensors]{The sensors a phone gives you}
+  \begin{grid}[3]
+    \cell[\faIcon{arrows-alt}]{Accelerometer}{Acceleration per axis, gravity included.}
+    \cell[\faIcon{sync-alt}]{Gyroscope}{Angular velocity per axis. It drifts when integrated.}
+    \cell[\faCompass]{Magnetometer}{The local magnetic field. Also finds every metal desk.}
+    \cell[\faIcon{tachometer-alt}]{Barometer}{Air pressure. Not on every phone. Relative altitude.}
+    \cell[\faLightbulb]{Ambient light}{Illuminance at the screen. The OS reads it first.}
+    \cell[\faIcon{mobile-alt}]{Proximity}{Near or far, over the earpiece. Two states in practice.}
+  \end{grid}
+  \begin{takeaway}{These are the sensors, not the features.}
+    Step counts, orientation and compass headings are computed from these six, mostly outside your app.
+  \end{takeaway}
+  \note{Ask the room which of these six they think their own phone has. The barometer is the surprise: common on flagships, missing on cheap devices, so any feature built on it needs a fallback. Proximity is the reason the screen goes dark during a call.}
+\end{frame}
+
+\begin{frame}[embedded,eyebrow=Sensors]{What each one measures, and in what unit}
+  \vskip 1mm
+  {\usebeamerfont{small}\begin{tabular}{@{}lp{40mm}lll@{}}
+    \toprule
+    \thead{Sensor} & \thead{Quantity} & \thead{Unit} & \thead{Typical rate} & \thead{At rest} \\
+    \midrule
+    Accelerometer & acceleration per axis   & m/s$^2$ & 50--200 Hz & one axis near 9.81 \\
+    Gyroscope     & angular velocity        & rad/s   & 50--200 Hz & near 0 on all three \\
+    Magnetometer  & magnetic flux density   & $\mu$T  & 10--100 Hz & 25--65 in total \\
+    Barometer     & air pressure            & hPa     & 1--25 Hz   & near 1013 at sea level \\
+    Ambient light & illuminance             & lx      & on change  & follows the room \\
+    Proximity     & distance to an obstacle & cm      & on change  & far \\
+    \bottomrule
+  \end{tabular}}
+  \vskip 3mm
+  \muted{One hectopascal is roughly eight meters of altitude, so a barometer resolves a staircase but not a street address.}
+  \note{Make the students write down the resting values. Those are the sanity check for the lab: if the accelerometer magnitude is not near 9.81 with the phone flat on the desk, the units or the axes are wrong. Which axis carries gravity depends on how the phone lies.}
+\end{frame}
+
+\begin{frame}[embedded,eyebrow=Sensors]{A sampling rate is a request, not a promise}
+  \vskip 2mm
+  \begin{columns}[T]
+    \begin{column}{0.50\textwidth}
+      \lead{Three delivery models}{Continuous sensors push a sample every period. On-change sensors push only when the value moves. One-shot sensors fire once and disarm.}
+      \vskip 2mm
+      \muted{Motion sensors and the barometer are continuous. Light and proximity are on-change.}
+    \end{column}
+    \begin{column}{0.46\textwidth}
+      \lead{What you actually get}{The rate is a hint. The platform rounds it to what the hardware supports, and another app asking for a faster rate raises yours too.}
+      \vskip 2mm
+      \muted{Samples arrive with jitter. Never assume the gap equals the period you asked for.}
+    \end{column}
+  \end{columns}
+  \begin{takeaway}{Measure the real interval before you trust it.}
+    Anything that integrates a signal, such as turning angular velocity into an angle, needs the true time step.
+  \end{takeaway}
+  \note{This is the mistake that costs a lab afternoon. Students hard-code the period, integrate, and get an angle off by a constant factor. Tell them to log the gaps between arrivals for ten seconds on a real phone and look at the spread.}
+\end{frame}
+
+\begin{frame}[embedded,eyebrow=Sensors]{Fusion: what the platform computes for you}
+  \vskip 1mm
+  \begin{grid}[3]
+    \cell[\faIcon{arrow-down}]{Gravity}{Which way is down, in m/s$^2$. A slow low-pass over the accelerometer, corrected by the gyroscope.}
+    \cell[\faBolt]{Linear acceleration}{The accelerometer with gravity subtracted. Near zero when the phone is still, on any face.}
+    \cell[\faCompass]{Rotation vector}{Device orientation as a quaternion, fused from accelerometer, gyroscope and magnetometer.}
+  \end{grid}
+  \vskip 3mm
+  \kv{Two cheaper variants}{Game rotation vector drops the magnetometer: no absolute north, but immune to a metal desk. Geomagnetic rotation vector drops the gyroscope: lower power, slower to settle.}
+  \begin{takeaway}{Fusion runs below your app, often on a separate sensor hub.}
+    Writing your own filter in Dart is a good exercise and almost always the wrong production answer.
+  \end{takeaway}
+  \note{Explain the trade in one sentence: the accelerometer is stable but noisy, the gyroscope is smooth but drifts, so fusion uses each where it is good. Mention that the sensor hub is a small always-on core, which is the microcontroller from Lecture 3 living inside the phone.}
+\end{frame}
+
+\begin{frame}[embedded,eyebrow=Sensors]{The sensor axes do not rotate with the screen}
+  \vskip 2mm
+  \begin{columns}[T]
+    \begin{column}{0.48\textwidth}
+      \lead{The device frame}{X points right, Y to the top of the screen, Z out of the display, all defined for the natural orientation of the device.}
+      \vskip 2mm
+      \muted{A tablet's natural orientation is landscape, so the same code reports swapped axes there.}
+    \end{column}
+    \begin{column}{0.48\textwidth}
+      \lead{Two frames, not one}{Sensor values live in the device frame. What you draw on a map lives in the world frame. The rotation vector converts between them.}
+      \vskip 2mm
+      \muted{Turning the phone rotates your widgets. It does not rotate the sensor axes.}
+    \end{column}
+  \end{columns}
+  \begin{takeaway}{Prefer a magnitude over a single axis.}
+    The length of the acceleration vector is the same however the user holds the phone.
+  \end{takeaway}
+  \note{Hold a phone up and rotate it while naming the axes. Then ask what happens to a feature keyed on the Z axis when the user puts the phone face down in a pocket. The answer is why the worked example uses magnitude.}
+\end{frame}
+
+% =====================================================================
+\divider{Part 2 · Reading sensors}{From the sensor hub into your Dart code}[sensors\_plus, sampling periods, and a step counter you can ship]
+
+\begin{frame}[fragile,eyebrow=Reading sensors]{Four streams, one shape}
+\begin{dart}
+import 'package:sensors_plus/sensors_plus.dart';
+
+// Raw accelerometer, gravity included. Near 9.81 at rest.
+_raw = accelerometerEventStream().listen(_onRaw);
+// Gravity removed by the platform. Near zero when still.
+_linear = userAccelerometerEventStream().listen(_onLinear);
+// Angular velocity, radians per second, one value per axis.
+_spin = gyroscopeEventStream().listen(_onSpin);
+// Magnetic field in microtesla. Expect noise indoors.
+_field = magnetometerEventStream().listen(_onField);
+\end{dart}
+  \vskip 1mm
+  \muted{Every event carries \code{x}, \code{y} and \code{z}; the barometer carries one pressure value. Keep each subscription and cancel it in \code{dispose}, or the sensor stays on.}
+  \note{Point out that this is the same Stream API as Lecture 2, so everything they know about listening, pausing and cancelling applies. Ask what happens if they call listen inside build: a new subscription on every rebuild, and a sensor that never turns off.}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=Reading sensors]{samplingPeriod: the only knob that matters}
+\begin{dart}
+accelerometerEventStream(
+  samplingPeriod: SensorInterval.gameInterval,   // about 50 Hz
+).listen(_onSample);
+
+SensorInterval.normalInterval    // about 5 Hz: a value on a screen
+SensorInterval.uiInterval        // about 15 Hz: a live gauge
+SensorInterval.gameInterval      // about 50 Hz: step detection
+SensorInterval.fastestInterval   // whatever the hardware can do
+\end{dart}
+  \begin{takeaway}{Halving the period roughly doubles the cost.}
+    Not the cost of the sensor die, which is tiny, but of waking the application processor twice as often to hand a sample to Dart.
+  \end{takeaway}
+  \note{The parameter is a Duration, not a frequency, so a shorter period means more events. Make them justify a rate: step detection needs about 50 Hz because a footfall lasts a fraction of a second, a tilt indicator needs 15 Hz. Nothing in the lab needs the fastest interval.}
+\end{frame}
+
+\begin{frame}[eyebrow=Reading sensors]{Keep the samples off the UI isolate}
+  \vskip 2mm
+  \begin{columns}[T]
+    \begin{column}{0.48\textwidth}
+      \lead{What every event costs}{Each sample crosses from the platform into Dart and wakes the event loop. At 50 Hz that is fifty wake-ups a second competing with your frame budget.}
+      \vskip 2mm
+      \muted{Calling \code{setState} per sample is the classic mistake.}
+    \end{column}
+    \begin{column}{0.48\textwidth}
+      \lead{Where the work goes}{Filters, thresholds and counters are a few floating point operations. Keep them here and emit to the widget tree at a human rate.}
+      \vskip 2mm
+      \muted{A window going through an FFT or a model belongs in an isolate (Lecture 2).}
+    \end{column}
+  \end{columns}
+  \begin{takeaway}{Sample fast, render slow.}
+    Consume every sample the algorithm needs, then throttle what reaches the widget tree to something the eye can follow.
+  \end{takeaway}
+  \note{Draw the two rates on the board: the algorithm rate and the render rate. They are almost never the same number. Mention that isolates cannot receive platform channel events directly, so the stream is always read on the main isolate and the payload forwarded from there.}
+\end{frame}
+
+\begin{frame}[eyebrow=Step counter]{A step, seen from the accelerometer}
+  \vskip 2mm
+  \begin{columns}[T]
+    \begin{column}{0.48\textwidth}
+      \lead{What a footfall looks like}{The magnitude of the acceleration vector sits near 9.81 while you stand still, then rises and falls once per step.}
+      \vskip 2mm
+      \muted{Walking is roughly 1.5 to 2.5 steps a second. Running is faster and much larger.}
+    \end{column}
+    \begin{column}{0.48\textwidth}
+      \lead{Three parts to the algorithm}{A slowly moving baseline, so the phone can be held any way. A threshold above it. A debounce, so one footfall cannot count twice.}
+      \vskip 2mm
+      \muted{Nothing here integrates anything. Integration is where drift enters.}
+    \end{column}
+  \end{columns}
+  \begin{takeaway}{Peak counting beats anything clever, at this size.}
+    A threshold with hysteresis and a minimum interval is about twenty lines and gets within a few percent on a walk.
+  \end{takeaway}
+  \note{Sketch the magnitude signal on the board: a flat line at 9.81, then a rough sine at two hertz. Mark the threshold and the debounce window on the sketch. Students who see the picture write the code in ten minutes, and students who do not, do not.}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=Step counter]{Part one: magnitude and a moving baseline}
+\begin{dart}
+import 'dart:math';
+
+double _baseline = 9.81;   // slow estimate of "standing still"
+bool _above = false;       // hysteresis state
+DateTime _last = DateTime.fromMillisecondsSinceEpoch(0);
+int steps = 0;
+
+void _onSample(AccelerometerEvent e) {
+  final m = sqrt(e.x * e.x + e.y * e.y + e.z * e.z);
+  _baseline = 0.9 * _baseline + 0.1 * m;   // a one-pole low-pass
+  _detect(m, _baseline);
+}
+\end{dart}
+  \vskip 1mm
+  \muted{The magnitude discards orientation, so pocket, hand and bag behave the same.}
+  \note{Explain the low-pass in one line: the new value gets ten percent of the say, the history keeps ninety. Ask what happens with 0.5 instead of 0.9. The baseline then follows the step itself and the threshold is never crossed.}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=Step counter]{Part two: a threshold and a debounce}
+\begin{dart}
+const _minGap = Duration(milliseconds: 250);  // at most 4 steps a second
+void _detect(double m, double baseline) {
+  final now = DateTime.now();
+  if (!_above && m > baseline + 1.2) {           // rising edge
+    _above = true;
+    if (now.difference(_last) < _minGap) return; // debounce
+    steps++;
+    _last = now;
+  } else if (_above && m < baseline + 0.4) {     // hysteresis band
+    _above = false;
+  }
+}
+\end{dart}
+  \muted{Two thresholds, not one: rearming below 0.4 stops a noisy peak counting twice.}
+  \note{Point at the early return: it rearms the detector without counting, which is what makes a bounce harmless. Ask what the 250 millisecond gap implies about the maximum count. Four a second, which is faster than any human runs.}
+\end{frame}
+
+\begin{frame}[eyebrow=Step counter]{Tuning it, and what will break}
+  \vskip 2mm
+  \begin{columns}[T]
+    \begin{column}{0.48\textwidth}
+      \lead{The three numbers}{The rise threshold sets sensitivity, the fall threshold sets noise immunity, the gap sets the ceiling. Change one at a time over a known hundred steps.}
+      \vskip 2mm
+      \muted{Log the raw magnitude during a walk, then replay the file into the detector.}
+    \end{column}
+    \begin{column}{0.48\textwidth}
+      \lead{Known failure modes}{A phone on a table during a bus ride counts steps. A swinging bag double counts. A phone held still while the user walks counts almost nothing.}
+      \vskip 2mm
+      \muted{Both platforms ship a hardware step counter on the sensor hub.}
+    \end{column}
+  \end{columns}
+  \begin{takeaway}{Write this once to understand it, then use the platform's counter.}
+    The hardware counter survives your app being killed and never wakes the main processor.
+  \end{takeaway}
+  \note{Be direct: the lab asks them to write the detector because the reasoning is the lesson, not because it beats the built-in one. Reaching the hardware counter from Flutter needs a plugin or a platform channel, which is the topic that closes this lecture.}
+\end{frame}
+
+% =====================================================================
+\divider{Part 3 · Location}{Where the phone thinks it is}[Accuracy modes, the permission flow, and the background rules]
+
+\begin{frame}[eyebrow=Location]{Where a position actually comes from}
+  \vskip 1mm
+  \begin{grid}[3]
+    \cell[\faSatelliteDish]{Satellites}{GNSS: GPS, Galileo, GLONASS, BeiDou. Meters outdoors, nothing indoors, slow from cold.}
+    \cell[\faWifi]{Wi-Fi and cell}{Nearby network identifiers matched against a database. Coarse, fast, and works indoors.}
+    \cell[\faMicrochip]{Motion sensors}{Dead reckoning between fixes, and why a map pin keeps moving inside a tunnel.}
+  \end{grid}
+  \vskip 3mm
+  \kv{You do not pick the source}{You state an accuracy and the platform's fused provider picks the cheapest combination that meets it. Asking for less accuracy is how you ask for less power.}
+  \begin{takeaway}{Every position carries its own error estimate.}
+    \code{Position.accuracy} is a radius in meters. A fix with a two kilometer radius is not a location.
+  \end{takeaway}
+  \note{Ask why a maps app finds you instantly indoors and a GNSS logger does not. Wi-Fi scanning is the answer. Point at the accuracy field and say that any app which ignores it eventually shows the user standing in the sea.}
+\end{frame}
+
+\begin{frame}[eyebrow=Location]{geolocator accuracy modes and what they cost}
+  \vskip 1mm
+  {\usebeamerfont{small}\begin{tabular}{@{}lllp{46mm}@{}}
+    \toprule
+    \thead{Accuracy mode} & \thead{Roughly} & \thead{Power} & \thead{Use it for} \\
+    \midrule
+    reduced           & kilometers     & lowest  & the approximate mode on iOS \\
+    lowest            & a few km       & lowest  & a country or city guess \\
+    low               & about 1 km     & low     & coarse analytics, a time zone \\
+    medium            & 100--500 m     & medium  & a "near you" list \\
+    high              & under 100 m    & high    & a map pin, geofencing, the lab \\
+    bestForNavigation & best available & highest & turn by turn, on screen only \\
+    \bottomrule
+  \end{tabular}}
+  \vskip 3mm
+  \muted{The mode is a request. With no satellite lock, asking for \code{high} gets a network fix and a large accuracy radius, not an error.}
+  \note{Make them choose a mode for the project before they write any code. Most student features need medium and ask for bestForNavigation out of habit. That habit is worth several percent of the battery every hour.}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=Location]{Declare first, then ask}
+\begin{codeblock}[language=XML]
+<!-- android/app/src/main/AndroidManifest.xml -->
+<uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
+<uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
+
+<!-- ios/Runner/Info.plist -->
+<key>NSLocationWhenInUseUsageDescription</key>
+<string>Shows the route you walked while the app is open.</string>
+\end{codeblock}
+  \vskip 1mm
+  \muted{An undeclared Android permission is denied forever, with no dialog. A missing iOS usage string terminates the app the moment it touches the API.}
+  \begin{takeaway}{The sentence in the plist is the product.}
+    The user sees it once, inside a dialog you cannot restyle. Say what they gain, not what the app needs.
+  \end{takeaway}
+  \note{This is the same two-step shape as every other runtime permission, so remind them of ADMD Lecture 8 and move fast. The one thing to dwell on is the usage string. Read a bad and a good version out loud and ask which one they would accept.}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=Location]{The permission flow, in code}
+\begin{dart}
+Future<bool> ensureLocation() async {
+  var p = await Geolocator.checkPermission();
+  if (p == LocationPermission.denied) {
+    p = await Geolocator.requestPermission();   // one dialog, in context
+  }
+  if (p == LocationPermission.deniedForever) {
+    await Geolocator.openAppSettings();         // request() is a no-op now
+    return false;
+  }
+  return p == LocationPermission.whileInUse || p == LocationPermission.always;
+}
+\end{dart}
+  \vskip 1mm
+  \muted{Check \code{isLocationServiceEnabled} first: a granted permission with the radio off returns nothing.}
+  \note{Students read a granted permission with the location service off as a bug in their own code, so make the service check explicit. Mention that after openAppSettings the user may come back granted, denied or not at all, so re-check the status on resume.}
+\end{frame}
+
+\begin{frame}[eyebrow=Location]{Precise or approximate, while using or always}
+  \vskip 1mm
+  {\usebeamerfont{small}\begin{tabular}{@{}l>{\raggedright\arraybackslash}p{40mm}>{\raggedright\arraybackslash}p{40mm}@{}}
+    \toprule
+    \thead{Question} & \thead{Android} & \thead{iOS} \\
+    \midrule
+    How exact & Android 12 adds a Precise or Approximate choice in the dialog & Precise Location can be switched off per app \\
+    How long & While using the app, or Only this time, which expires & While Using the App, or Always, prompted later \\
+    Getting more & Ask again with a rationale; a second refusal is final & Ask for temporary full accuracy, with its own plist key \\
+    \bottomrule
+  \end{tabular}}
+  \vskip 3mm
+  \muted{Design for approximate first, or the feature is broken for a large share of your users.}
+  \note{Ask the room how many have Precise Location turned off for at least one app. There are always a few hands. Then ask what their project app does when the accuracy radius is two kilometers, because that is the case they have to handle.}
+\end{frame}
+
+\begin{frame}[eyebrow=Location]{Background location: what is allowed at all}
+  \vskip 2mm
+  \begin{columns}[T]
+    \begin{column}{0.48\textwidth}
+      \lead{Android}{A foreground service with the location type and its visible notification keeps updates running. A truly background fix also needs the separate background permission.}
+      \vskip 2mm
+      \muted{From Android 11 that one is granted only from Settings, not from your dialog.}
+    \end{column}
+    \begin{column}{0.48\textwidth}
+      \lead{iOS}{Always authorization, the location background mode, and an explicit opt-in on the settings object. The status bar tells the user you are tracking.}
+      \vskip 2mm
+      \muted{Significant location change and region monitoring can relaunch a terminated app.}
+    \end{column}
+  \end{columns}
+  \begin{takeaway}{If the user cannot see why you track them, you will lose the permission.}
+    Both platforms show periodic reminders naming apps that used location in the background.
+  \end{takeaway}
+  \note{Say plainly that background location is the hardest permission to keep on either platform, and that Lecture 7 covers the background execution machinery in full. For Lab 4, foreground location is enough and the periodic task does not need a fix.}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=Location]{A position stream, with a distance filter}
+\begin{dart}
+const settings = LocationSettings(
+  accuracy: LocationAccuracy.high,
+  distanceFilter: 10,   // meters moved before the next event
+);
+
+_positions = Geolocator.getPositionStream(locationSettings: settings)
+    .listen((Position p) => _show(p.latitude, p.longitude, p.accuracy));
+
+@override
+void dispose() { _positions?.cancel(); super.dispose(); }
+\end{dart}
+  \vskip 1mm
+  \muted{The distance filter is the cheapest optimization here: a phone on a desk produces no events at all. Use \code{getCurrentPosition} when one fix is enough, and never leave a stream behind a screen the user has left.}
+  \note{Compare the two calls: a one-shot fix for a form, a stream for a live route. Ask what distance filter suits a walking route and what suits a driving one. Then remind them that cancelling the subscription is what actually powers the receiver down.}
+\end{frame}
+
+% =====================================================================
+\divider{Part 4 · Camera and NFC}{Two hardware APIs with very different rules}[Controllers, frames, tags, and what iOS will not let you do]
+
+\begin{frame}[fragile,eyebrow=Camera]{The camera controller and its lifecycle}
+\begin{dart}
+late CameraController _c;
+Future<void> _start() async {
+  final cameras = await availableCameras();   // back, front, external
+  _c = CameraController(cameras.first, ResolutionPreset.medium);
+  await _c.initialize();                      // opens the hardware
+  if (mounted) setState(() {});
+}
+Widget build(BuildContext ctx) =>
+    _c.value.isInitialized ? CameraPreview(_c) : const SizedBox();
+\end{dart}
+  \muted{Call \code{dispose} on the controller, always. The camera is exclusive: another app taking it, or the phone locking, invalidates the controller.}
+  \note{Point at initialize and dispose as the whole story. Ask what happens if a student forgets dispose and pushes a new route: the preview freezes, the camera stays powered, and on some devices the next open fails outright.}
+\end{frame}
+
+\begin{frame}[eyebrow=Camera]{Two ways to get pixels out}
+  \vskip 2mm
+  \begin{columns}[T]
+    \begin{column}{0.48\textwidth}
+      \lead{takePicture}{Returns an \code{XFile} on disk at full sensor resolution, with the pipeline's processing applied. One call, one image, no back-pressure.}
+      \vskip 2mm
+      \muted{Use it for anything the user chose to capture: a photo, a document, a receipt.}
+    \end{column}
+    \begin{column}{0.48\textwidth}
+      \lead{startImageStream}{Hands you a \code{CameraImage} per preview frame, in the sensor's native format, roughly thirty times a second. No file, no encoding.}
+      \vskip 2mm
+      \muted{Use it when the app decides what is interesting: a barcode, a face, a gauge.}
+    \end{column}
+  \end{columns}
+  \begin{takeaway}{Pick the stream only when a photo will not do.}
+    A live stream keeps the sensor, the image pipeline and your analysis running together, which is the most expensive thing in this lecture.
+  \end{takeaway}
+  \note{Tie this back to ADMD Lecture 12, which taught ML Kit over a captured photo. The step from a photo to a stream is not an ML problem, it is a scheduling problem, and the next slide is why.}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=Camera]{An image stream is a back-pressure problem}
+\begin{dart}
+bool _busy = false;
+
+await _c.startImageStream((CameraImage frame) async {
+  if (_busy) return;        // drop frames, never queue them
+  _busy = true;
+  try {
+    await _analyze(frame);  // a detector, a model, your own math
+  } finally {
+    _busy = false;
+  }
+});
+\end{dart}
+  \muted{Thirty frames a second is one every 33 milliseconds. If the analysis takes longer, a queue grows without bound. Call \code{stopImageStream} once the screen is hidden.}
+  \note{This flag is the most useful pattern on the slide. Ask what the alternative looks like: an unbounded queue, growing memory, and a barcode result for something that left the frame seconds ago. Dropping is correct, because the next frame is nearly identical.}
+\end{frame}
+
+\begin{frame}[eyebrow=NFC]{NFC: tags, NDEF, and two very different platforms}
+  \vskip 2mm
+  \begin{columns}[T]
+    \begin{column}{0.48\textwidth}
+      \lead{What a tag is}{A passive chip with a few hundred bytes, powered by the reader's own field. It holds one NDEF message: a list of records, each with a type and a payload.}
+      \vskip 2mm
+      \muted{NDEF is the NFC Data Exchange Format. Common records are a URI and a text string.}
+    \end{column}
+    \begin{column}{0.48\textwidth}
+      \lead{What each platform allows}{Android reads and writes tags in the foreground and can also act as a card. iOS reads and writes NDEF, shows its own scan sheet, and offers you no card emulation.}
+      \vskip 2mm
+      \muted{iOS also needs the tag reading capability and an entitlement.}
+    \end{column}
+  \end{columns}
+  \begin{takeaway}{Design for a tap, not for a session.}
+    On both platforms a scan is a short, user-initiated moment. Nothing about NFC gives you a link you can keep open.
+  \end{takeaway}
+  \note{Bring a transport card or a hotel key to the lecture and tap it. Ask why the phone can read the card but cannot become one on iOS. The answer is policy, not hardware, and it is worth saying that out loud.}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=NFC]{One session, one tag, in Dart}
+\begin{dart}
+if (!await NfcManager.instance.isAvailable()) return;  // no reader, or off
+
+NfcManager.instance.startSession(onDiscovered: (NfcTag tag) async {
+  final ndef = Ndef.from(tag);
+  if (ndef == null) {
+    await NfcManager.instance.stopSession(errorMessage: 'Not an NDEF tag');
+    return;
+  }
+  _show(ndef.cachedMessage);
+  await NfcManager.instance.stopSession();
+});
+\end{dart}
+  \muted{Check availability, start a session, inspect the tag, always stop it. Signatures in nfc\_manager have moved across major releases, so read the README.}
+  \note{A session left open on iOS keeps the system sheet on screen and blocks every other scan, so the stop call belongs on every path out. Writing a tag is the same shape with an ndef.write call instead of a read.}
+\end{frame}
+
+% =====================================================================
+\divider{Part 5 · Energy}{Paying for what you switch on}[Cost per sensor, batching, and the platform boundary]
+
+\begin{frame}[embedded,eyebrow=Energy]{What each sensor costs, roughly}
+  \vskip 1mm
+  {\usebeamerfont{small}\begin{tabular}{@{}llp{58mm}@{}}
+    \toprule
+    \thead{What is on} & \thead{Order of draw} & \thead{What that means for your app} \\
+    \midrule
+    Barometer, slow rate      & well under a milliamp & effectively free, leave it on \\
+    Accelerometer at 50 Hz    & around a milliamp     & cheap, but the wake-ups are not \\
+    Gyroscope, continuous     & a few milliamps       & the priciest motion sensor \\
+    Magnetometer plus fusion  & a few milliamps       & plus continuous work on the processor \\
+    GNSS fix, continuous      & tens of milliamps     & the largest single sensor cost \\
+    Camera preview and encode & hundreds of milliamps & budget it in minutes, not hours \\
+    \bottomrule
+  \end{tabular}}
+  \begin{takeaway}{The sensor die is rarely the bill.}
+    What costs is keeping the processor awake to receive samples, and keeping a radio or an image pipeline powered.
+  \end{takeaway}
+  \note{Give the ordering rather than the numbers: barometer, accelerometer, gyroscope, GNSS, camera, each roughly ten times the previous one. That ranking is stable across phones even when the exact figures are not, and Lecture 7 puts real numbers on it.}
+\end{frame}
+
+\begin{frame}[embedded,eyebrow=Energy]{Batching: let the sensor hub hold the samples}
+  \vskip 2mm
+  \begin{columns}[T]
+    \begin{column}{0.48\textwidth}
+      \lead{The idea}{The hub has a small hardware queue. Ask for a maximum report latency and it fills the queue while the processor sleeps, then delivers the batch in one wake-up.}
+      \vskip 2mm
+      \muted{Every sample keeps its own timestamp, so nothing is lost.}
+    \end{column}
+    \begin{column}{0.48\textwidth}
+      \lead{When it applies}{Only to work that can wait: a fitness log, an activity history, a vibration record. Never to anything you draw on screen right now.}
+      \vskip 2mm
+      \muted{The queue is finite. When it fills, the hub wakes early or drops the oldest samples.}
+    \end{column}
+  \end{columns}
+  \begin{takeaway}{This is the same wake, send, sleep loop as the microcontroller.}
+    A sensor hub is a small always-on core with the budget logic from Lecture 3, hidden behind the OS.
+  \end{takeaway}
+  \note{Connect this to the device side of the course. Students who understood batching on the board understand it here immediately. Note that sensors\_plus does not expose report latency, which is the setup for the next slide.}
+\end{frame}
+
+\begin{frame}[eyebrow=Energy]{When a platform channel is the right tool}
+  \vskip 1mm
+  \begin{grid}[3]
+    \cell[\faLightbulb]{Sensors with no plugin}{Ambient light and proximity are not in sensors\_plus. Both are one native call.}
+    \cell[\faIcon{shoe-prints}]{The hardware step counter}{It keeps counting while your app is dead. No Dart API reaches it.}
+    \cell[\faBatteryHalf]{Batching and wake control}{Report latency and significant motion are native concepts with no Dart surface.}
+  \end{grid}
+  \vskip 3mm
+  \kv{The shape}{A \code{MethodChannel} for one-off calls, an \code{EventChannel} for a stream of sensor events. Lecture 12 covers both, and what a channel call costs.}
+  \begin{takeaway}{Search pub.dev before you write native code.}
+    A channel is right when no maintained plugin exists, or when the plugin hides the knob you need.
+  \end{takeaway}
+  \note{Give the decision rule out loud: plugin first, channel second, and never a channel per sample because each crossing costs. The project's fourth requirement can be satisfied exactly here, with a channel that reads a sensor no package exposes.}
+\end{frame}
+
+\begin{frame}[eyebrow=Energy]{Design rules for the lab and the project}
+  \vskip 1mm
+  \begin{grid}[3]
+    \cell[\faClock]{Ask late, stop early}{Subscribe when the screen appears, cancel when it leaves.}
+    \cell[\faIcon{compress-arrows-alt}]{Ask for less}{The slowest rate and coarsest accuracy that still works.}
+    \cell[\faLock]{Ask in context}{Request it when the user taps the feature, never on launch.}
+    \cell[\faDatabase]{Summarize at the edge}{Send a step count, not a sample stream.}
+    \cell[\faBolt]{Degrade, do not dead-end}{A denied camera must still leave a working feature.}
+    \cell[\faIcon{ruler}]{Measure one number}{Sensor rate against battery drain is easy to defend.}
+  \end{grid}
+  \begin{takeaway}{Every rule here is checkable in a code review.}
+    That is how Lab 4 is graded.
+  \end{takeaway}
+  \note{Read these as the acceptance criteria for Lab 4. Every one of them is checkable in a code review, which is how the lab is graded. Point at the last cell as the cheapest route to the project's measurement requirement.}
+\end{frame}
+
+\begin{frame}[eyebrow=Recap]{Three things to remember}
+  \vskip 2mm
+  \begin{enumerate}
+    \item A sensor subscription is an energy decision. \muted{The rate and the duration cost far more than the code that reads it.}
+    \item Ask for the least you can work with. \muted{The coarsest accuracy, the slowest interval, the narrowest permission, requested in context.}
+    \item Fusion, batching and step counting already exist below your app. \muted{Reach for the platform before you write the math yourself.}
+  \end{enumerate}
+  \vskip 5mm
+  \kv{Further reading}{\link{https://pub.dev/packages/sensors_plus}{pub.dev/packages/sensors\_plus} · \link{https://pub.dev/packages/geolocator}{geolocator} · \link{https://pub.dev/packages/camera}{camera} · \link{https://developer.android.com/develop/sensors-and-location/sensors}{Android sensors guide}}
+  \note{Close by naming what Lab 4 asks for: a step counter, a location fix under a correct permission flow, and a background task. Two of the three are on these slides. The third is Lecture 7, next week.}
+\end{frame}
+
+\closingframe{Questions?}{dinu\_stefan.rusu@upb.ro · Microsoft Teams: course channel}
+
+\end{document}

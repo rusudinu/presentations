@@ -1,0 +1,291 @@
+% Mobile and Embedded Computing, Lab 3. Compile: latexmk -xelatex lab03.tex
+\documentclass[10pt,aspectratio=169,t]{beamer}
+\usetheme[lab]{upbminimal}
+
+\course{Mobile and Embedded Computing}
+\decklabel{Lab 3}
+\title{Bluetooth Low Energy}
+\subtitle{A peripheral in Go and a Flutter central}
+\author{Dinu-Ștefan Rusu}
+\institute{FILS, Universitatea Politehnica București}
+\date{Week 6}
+
+\begin{document}
+
+\titleframe
+
+\begin{frame}[eyebrow=Today]{What this lab is for}
+  \vskip 2mm
+  \begin{grid}[2]
+    \cell[\faMicrochip]{Run a peripheral}{Advertise one service with one notifying characteristic from a Go program, on an nRF52840 or ESP32-C3 board or on a Linux or Windows laptop.}
+    \cell[\faBluetoothB]{Write the central}{Scan, connect, subscribe and show the value live in Flutter, and keep working after the peripheral disappears.}
+  \end{grid}
+  \vskip 6mm
+  \taskmeta{Time}{2 hours}{Submit}{Branch \code{lab-3} in the team repository, pushed before the next lab}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=Setup]{Where your code goes}
+  \begin{steps}
+    \item Branch the team repository and add the two packages:
+\begin{shell}
+git checkout -b lab-3
+flutter pub add flutter_blue_plus permission_handler
+\end{shell}
+    \item The peripheral lives in \code{peripheral/main.go}, in its own Go module.
+    \item The app screen lives in \code{lib/lab3/ble\_screen.dart}, reached from your home screen.
+  \end{steps}
+  \begin{warning}
+    Neither the Android emulator nor the iOS simulator has a Bluetooth radio. Everything in this lab runs on a physical phone, over a cable.
+  \end{warning}
+\end{frame}
+
+\begin{frame}[embedded,fragile,eyebrow=Peripheral]{Pick a peripheral, then start it}
+  \begin{columns}[T]
+    \begin{column}{0.52\textwidth}
+\begin{shell}
+# Laptop: Linux or Windows
+cd peripheral
+go mod init lab3
+go get tinygo.org/x/bluetooth
+go run .
+
+# Board: nRF52840, same source
+tinygo flash -target=pca10056-s140v7 .
+\end{shell}
+    \end{column}
+    \begin{column}{0.44\textwidth}
+      \lead{One source file, two ways to run it}{The same program runs under \code{go run} on a laptop and on a board after \code{tinygo flash}. The Flutter side cannot tell the difference.}
+      \vskip 2mm
+      \begin{warning}
+        The ESP32-C3 and ESP32-S3 work through the espradio package; the original ESP32 does not. macOS is supported as a central only, so a Mac cannot host the peripheral.
+      \end{warning}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}[embedded,fragile,eyebrow=Reference]{The peripheral, part 1: advertise}
+\begin{golang}
+package main
+import "time"
+import "tinygo.org/x/bluetooth"
+var adapter = bluetooth.DefaultAdapter
+var value bluetooth.Characteristic
+var svc, _ = bluetooth.ParseUUID("0000fff0-0000-1000-8000-00805f9b34fb")
+var chr, _ = bluetooth.ParseUUID("0000fff1-0000-1000-8000-00805f9b34fb")
+
+func main() {
+    must(adapter.Enable())   // must panics on a non-nil error
+    adv := adapter.DefaultAdvertisement()
+    must(adv.Configure(bluetooth.AdvertisementOptions{
+        LocalName: "MEC Lab 3", ServiceUUIDs: []bluetooth.UUID{svc}}))
+\end{golang}
+\end{frame}
+
+\begin{frame}[embedded,fragile,eyebrow=Reference]{The peripheral, part 2: notify}
+\begin{golang}
+    must(adv.Start())
+    must(adapter.AddService(&bluetooth.Service{UUID: svc,
+        Characteristics: []bluetooth.CharacteristicConfig{{
+            Handle: &value, UUID: chr,
+            Flags: bluetooth.CharacteristicReadPermission |
+                bluetooth.CharacteristicNotifyPermission}}}))
+    go func() {                  // writing the handle notifies
+        for i := byte(0); ; i++ {
+            value.Write([]byte{i}); time.Sleep(time.Second)
+        }
+    }()
+    select {}
+}
+\end{golang}
+\end{frame}
+
+\begin{frame}[eyebrow=Task I]{Ask for the radio, then list what you find}
+  \begin{columns}[T]
+    \begin{column}{0.55\textwidth}
+      \begin{steps}
+        \item Declare the Android permissions in the manifest and the iOS usage string in Info.plist.
+        \item Request BLUETOOTH\_SCAN and BLUETOOTH\_CONNECT at runtime with permission\_handler.
+        \item Wait for the adapter state to be on, then scan with flutter\_blue\_plus.
+        \item Show one row per device: name and RSSI, sorted by RSSI.
+      \end{steps}
+    \end{column}
+    \begin{column}{0.41\textwidth}
+      \kv{Done when}{}
+      \begin{checklist}
+        \item A clean install shows the system dialog before any scan starts.
+        \item \code{MEC Lab 3} appears in the list within five seconds of opening the screen.
+        \item The RSSI number changes when you walk away from the peripheral.
+        \item Denying the permission shows a message, not a crash.
+      \end{checklist}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=Reference]{The two files no Dart code can replace}
+\begin{codeblock}
+<!-- android/app/src/main/AndroidManifest.xml, inside <manifest> -->
+<uses-permission android:name="android.permission.BLUETOOTH_SCAN"
+                 android:usesPermissionFlags="neverForLocation"/>
+<uses-permission android:name="android.permission.BLUETOOTH_CONNECT"/>
+<uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"
+                 android:maxSdkVersion="30"/>
+
+<!-- ios/Runner/Info.plist, inside the top-level <dict> -->
+<key>NSBluetoothAlwaysUsageDescription</key>
+<string>Shows the live reading from your lab peripheral.</string>
+\end{codeblock}
+  \vskip 2mm
+  \muted{An undeclared Android permission is denied with no dialog. A missing iOS usage string terminates the app the moment it touches the Bluetooth API.}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=Reference]{Request, wait for the adapter, scan}
+\begin{dart}
+if (Platform.isAndroid) {
+  await [Permission.bluetoothScan,
+         Permission.bluetoothConnect].request();
+}
+await FlutterBluePlus.adapterState
+    .where((s) => s == BluetoothAdapterState.on).first;
+
+final sub = FlutterBluePlus.onScanResults
+    .listen((r) => setState(() => _found = r));
+FlutterBluePlus.cancelWhenScanComplete(sub);
+await FlutterBluePlus.startScan(
+    withServices: [Guid(kServiceUuid)],   // drop once, to debug
+    timeout: const Duration(seconds: 15));
+\end{dart}
+\end{frame}
+
+\begin{frame}[eyebrow=Task II]{Connect, discover, and show the value}
+  \begin{columns}[T]
+    \begin{column}{0.55\textwidth}
+      \begin{steps}
+        \item Tapping a row stops the scan and connects, with a ten-second timeout.
+        \item Discover the services and find the characteristic by its UUID.
+        \item Listen to the value stream, then call \code{setNotifyValue(true)}.
+        \item Show the decoded counter and the time of the last update.
+      \end{steps}
+    \end{column}
+    \begin{column}{0.41\textwidth}
+      \kv{Done when}{}
+      \begin{checklist}
+        \item The number on screen increases by one every second.
+        \item No two updates in a row show the same number.
+        \item Leaving the screen stops notifications and disconnects.
+        \item The UUIDs appear once, as constants, not typed in two places.
+      \end{checklist}
+    \end{column}
+  \end{columns}
+  \begin{takeaway}{Listen first, then enable.}
+    Enabling notifications before the listener exists loses what arrives in between.
+  \end{takeaway}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=Reference]{Find the characteristic and listen}
+\begin{dart}
+await device.connect(timeout: const Duration(seconds: 10));
+final services = await device.discoverServices();
+
+final c = services
+    .firstWhere((s) => s.uuid == Guid(kServiceUuid))
+    .characteristics
+    .firstWhere((x) => x.uuid == Guid(kCharUuid));
+
+final sub = c.onValueReceived.listen(
+    (v) => setState(() => _value = v.isEmpty ? null : v.first));
+device.cancelWhenDisconnected(sub);
+
+await c.setNotifyValue(true);   // writes the descriptor for you
+\end{dart}
+\end{frame}
+
+\begin{frame}[eyebrow=Task III]{Survive a disconnect without a restart}
+  \begin{columns}[T]
+    \begin{column}{0.55\textwidth}
+      \begin{steps}
+        \item Subscribe to \code{connectionState} before the first connect.
+        \item On a disconnect, clear the value and show \emph{disconnected}.
+        \item Retry after a two-second delay, and keep retrying while the screen is open.
+        \item Rediscover the services after every reconnection.
+      \end{steps}
+    \end{column}
+    \begin{column}{0.41\textwidth}
+      \kv{Done when}{}
+      \begin{checklist}
+        \item Killing the peripheral turns the screen to \emph{disconnected} within five seconds.
+        \item No stale number is left on screen after the disconnect.
+        \item Restarting the peripheral resumes updates without restarting the app.
+        \item The retry survives three kill and restart cycles in a row.
+      \end{checklist}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=Reference]{A reconnect loop that stops when you leave}
+\begin{dart}
+device.connectionState.listen((s) async {
+  if (s != BluetoothConnectionState.disconnected) return;
+  setState(() { _value = null; _online = false; });
+  await Future.delayed(const Duration(seconds: 2));
+  if (mounted && _wanted) _tryConnect();  // _wanted: false in dispose
+});
+
+Future<void> _tryConnect() async {
+  try {
+    await device.connect(timeout: const Duration(seconds: 10));
+    await _subscribe();       // rediscover: old objects are dead
+  } catch (_) { /* the listener above schedules the next try */ }
+}
+\end{dart}
+\end{frame}
+
+\begin{frame}[eyebrow=Troubleshooting]{Scanning and connecting}
+  \vskip 2mm
+  \trouble{The device list stays empty}{Permission denied, or location is off on Android 11 and earlier. Grant Nearby devices, switch location on.}
+  \trouble{connect, android-code: 133}{The peripheral is not advertising, or another central still holds it. Restart it, wait two seconds, retry.}
+  \trouble{The app quits on the first scan on iOS}{NSBluetoothAlwaysUsageDescription is missing. Add it, then rebuild: a hot restart does not reread Info.plist.}
+  \trouble{Every row in the list is unnamed}{The advertisement carries no local name, or you read the wrong field. Use platformName.}
+\end{frame}
+
+\begin{frame}[eyebrow=Troubleshooting]{Nothing arrives}
+  \vskip 2mm
+  \trouble{Bad state: No element}{A UUID in the app differs from the one in the Go file, or you reused services from the previous connection.}
+  \trouble{Connected, no value arrives}{setNotifyValue(true) was never called, or the listener was added after it.}
+  \trouble{The counter moves, the phone is idle}{A notification only reaches a subscribed central, and the characteristic needs the notify flag.}
+  \trouble{One value arrives, then nothing}{The subscription died with the connection. Discover and subscribe again inside the reconnect path.}
+\end{frame}
+
+\begin{frame}[embedded,eyebrow=Troubleshooting]{The peripheral side}
+  \trouble{Bluetooth adapter not found}{On Linux the service is down or the radio is blocked. Start bluetoothd, unblock with rfkill, run again.}
+  \trouble{It runs, nothing scans it}{macOS is central-only in this package. Use Linux, Windows, or the board.}
+  \trouble{tinygo flash: unknown target}{Use the SoftDevice target of your board, pca10056-s140v7 on the nRF52840 development kit.}
+  \trouble{Nothing works on an ESP32}{Only the ESP32-C3 and ESP32-S3 work, through espradio. Otherwise use the nRF52840 or a laptop.}
+\end{frame}
+
+\begin{frame}[eyebrow=Submission]{What the grader will do}
+  \vskip 2mm
+  \begin{columns}[T]
+    \begin{column}{0.52\textwidth}
+      \kv{Checked on your branch}{}
+      \begin{checklist}
+        \item \code{peripheral/main.go} builds and advertises.
+        \item The manifest and Info.plist entries are committed.
+        \item The scan list shows name and RSSI.
+        \item The live value updates once per second.
+        \item The peripheral is killed and restarted, and the app recovers.
+      \end{checklist}
+    \end{column}
+    \begin{column}{0.44\textwidth}
+      \kv{How to submit}{}
+      \muted{Branch \code{lab-3} in the team repository, one commit per task, pushed before the next lab. Put your two UUIDs and the byte encoding in the README, and three screenshots in the pull request.}
+      \vskip 2mm
+      \begin{hint}[Before you leave]
+        Run the whole path once from a fresh install of the app, with the phone unplugged from the laptop.
+      \end{hint}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\closingframe{Push before you leave.}{Branch lab-3 · peripheral, scan, live value, reconnect}
+
+\end{document}

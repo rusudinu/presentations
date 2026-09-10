@@ -1,0 +1,657 @@
+% ADMD Lecture 3. Compile: latexmk -xelatex lecture03.tex
+\documentclass[10pt,aspectratio=169,t]{beamer}
+\usetheme{upbminimal}
+
+\course{Application Development for Mobile Devices}
+\decklabel{Lecture 3}
+\title{Widgets and layout}
+\subtitle{Composition, constraints, scrolling, and Material scaffolding}
+\author{Dinu-Ștefan Rusu}
+\institute{FILS, Universitatea Politehnica București}
+\date{Autumn 2026}
+
+\begin{document}
+
+\titleframe
+
+\objectivesframe{
+  \cell[\faIcon{layer-group}]{Read a widget tree}{Explain what a widget is, why it is immutable, and which of the three trees holds state.}
+  \cell[\faIcon{ruler-combined}]{Lay out a screen}{Use Container, Padding, Row, Column, Expanded and Stack, and read the constraint rules.}
+  \cell[\faIcon{list-ul}]{Scroll a long list}{Choose between ListView, ListView.builder, GridView and SingleChildScrollView.}
+  \cell[\faIcon{mobile-alt}]{Assemble a Material screen}{Wrap content in a Scaffold with an AppBar, a floating action button, and a SnackBar.}
+}
+
+\divider{Part 1 · Widgets}{Everything is a widget}[Immutable blueprints, the three trees, and what rebuilds]
+
+\begin{frame}[eyebrow=Widgets]{Everything is a widget}
+  \vskip 2mm
+  \begin{grid}[3]
+    \cell[\faIcon{cube}]{A description of UI}{A widget is an immutable description of a piece of screen. It is not the pixels.}
+    \cell[\faIcon{sitemap}]{Nesting is the tree}{A Scaffold holds a Column, which holds a Text and a button. That nesting is the widget tree.}
+    \cell[\faIcon{recycle}]{Cheap and disposable}{Widgets are created and thrown away constantly. Creating one allocates a small object, nothing more.}
+    \cell[\faIcon{th-large}]{Structure is a widget too}{Padding, Center, Row and Column are widgets. So is the whole app.}
+    \cell[\faIcon{paint-brush}]{Style is a widget too}{Opacity, DecoratedBox and Transform are widgets. There is no separate style language.}
+    \cell[\faIcon{hand-pointer}]{Behavior is a widget too}{GestureDetector and Focus are widgets. Interaction is wrapped around content.}
+  \end{grid}
+  \note{Say this once and repeat it all lecture: there is no separate layout file, no XML, no markup language. Ask the room what a Padding widget could possibly be if padding were a property. Point out that this is why Flutter trees get deep.}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=Widgets]{Widgets are immutable blueprints}
+  \begin{columns}[T]
+    \begin{column}{0.54\textwidth}
+\begin{dart}
+// Every field is final. Nothing in a
+// widget is edited after construction.
+const Text('Todos')   // canonicalized:
+                      // same instance
+                      // every build
+
+Text('Todos')         // a new instance
+                      // every build
+\end{dart}
+    \end{column}
+    \begin{column}{0.42\textwidth}
+      \lead{Change means rebuild.}{Changing the screen means constructing a new description, never editing the old one.}
+      \muted{Comparing two immutable descriptions is fast, so the framework can skip whole subtrees that did not change.}
+      \muted{Write \code{const} wherever the analyzer allows it. It is free performance.}
+    \end{column}
+  \end{columns}
+  \begin{takeaway}{Immutability is what makes rebuilding cheap.}
+    A rebuild hands Flutter a new blueprint. It does not repaint the screen.
+  \end{takeaway}
+  \note{Turn on the const lint in the lab and watch how many places it fires. Ask why a mutable widget would break the framework: because Flutter would have no way to know the old description is stale.}
+\end{frame}
+
+\begin{frame}[eyebrow=Widgets]{The three trees}
+  \vskip 1mm
+  \muted{Every Flutter app keeps three parallel trees. Almost every rebuild question is answered by naming which one you mean.}
+  \vskip 3mm
+  \begin{grid}[3]
+    \cell[\faIcon{cube}]{Widget}{Immutable configuration. Created and thrown away on every build. You write this one.}
+    \cell[\faIcon{layer-group}]{Element}{One per position in the tree. Holds your State object. Decides whether to reuse or rebuild.}
+    \cell[\faIcon{paint-roller}]{RenderObject}{Layout, paint and hit-testing. Expensive to create, so it is mutated in place.}
+  \end{grid}
+  \begin{takeaway}{You build the left tree.}
+    The middle tree decides how little of the right tree has to change. The cost model is MEC Lecture 13.
+  \end{takeaway}
+  \note{The common misconception is that Flutter rebuilds everything every frame. It does not. Widgets are rebuilt, elements are reused, render objects are mutated. That asymmetry is where the performance comes from.}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=Widgets]{Composition, not inheritance}
+  \begin{columns}[T]
+    \begin{column}{0.54\textwidth}
+\begin{dart}
+// You do not subclass Text to give it
+// padding and a border. You wrap it.
+Padding(
+  padding: const EdgeInsets.all(16),
+  child: DecoratedBox(
+    decoration: BoxDecoration(
+      border: Border.all(
+        color: Colors.black12,
+      ),
+    ),
+    child: const Text('Hello'),
+  ),
+)
+\end{dart}
+    \end{column}
+    \begin{column}{0.42\textwidth}
+      \lead{One widget, one job.}{Layout comes from nesting small widgets, not from one widget with fifty properties.}
+      \muted{That is why trees get deep. Deep trees are normal and cheap.}
+      \muted{There is no inheritance hierarchy to learn. There is a catalog of widgets to combine.}
+    \end{column}
+  \end{columns}
+  \note{Compare with Android XML or UIKit, where you configure one view object with many attributes. Ask the room which is easier to test. Mention that the same nesting reads badly at first and reads fine after a week.}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=Widgets]{StatelessWidget: configuration only}
+  \begin{columns}[T]
+    \begin{column}{0.56\textwidth}
+\begin{dart}
+class Greeting extends StatelessWidget {
+  const Greeting({
+    super.key,
+    required this.name,
+  });
+
+  final String name;  // always final
+
+  @override
+  Widget build(BuildContext context) {
+    return Text('Hello, $name');
+  }
+}
+\end{dart}
+    \end{column}
+    \begin{column}{0.40\textwidth}
+      \lead{It does not build once.}{A StatelessWidget rebuilds whenever its parent rebuilds, or whenever something it reads changes.}
+      \muted{What it does not have is mutable state of its own. Everything it needs arrives through its constructor.}
+      \muted{Give it a \code{const} constructor whenever you can.}
+    \end{column}
+  \end{columns}
+  \note{Stress the wording: stateless means owns no state, not is never rebuilt. Students who believe the second version write bugs where the UI never updates. Show it rebuilding in the inspector during the lab.}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=Widgets]{StatefulWidget and setState}
+\begin{dart}
+class CounterView extends StatefulWidget {
+  const CounterView({super.key});
+  @override
+  State<CounterView> createState() => _CounterViewState();
+}
+class _CounterViewState extends State<CounterView> {
+  int _count = 0;                    // the mutable state
+  @override
+  Widget build(BuildContext context) => TextButton(
+      onPressed: () => setState(() => _count++),
+      child: Text('Count: $_count'));
+}
+\end{dart}
+  \vskip 1mm
+  \muted{Two classes, one widget. The State object survives every parent rebuild.}
+  \note{Point at the underscore: the State class is private by convention. Say that setState mutates the field and marks the element dirty, and Flutter rebuilds that subtree on the next frame. Warn against naming a stateful widget something that starts with Stateless.}
+\end{frame}
+
+\begin{frame}[eyebrow=Widgets]{What actually rebuilds}
+  \begin{columns}[T]
+    \begin{column}{0.54\textwidth}
+      \muted{Flutter does not rebuild the whole tree each frame. \code{setState} marks one element dirty, and only that subtree rebuilds.}
+      \vskip 3mm
+      \muted{On rebuild, new widgets are matched against existing elements by runtime type first, then by key. A match reuses the element and its State. No match discards both.}
+    \end{column}
+    \begin{column}{0.42\textwidth}
+      \kv{Keys}{}
+      \muted{\code{ValueKey(id)} takes identity from a value.}
+      \vskip 2mm
+      \muted{\code{UniqueKey()} never matches, so it forces a fresh element.}
+      \vskip 2mm
+      \muted{You need a key when list items are reordered, inserted or removed. Otherwise State follows position, not item.}
+    \end{column}
+  \end{columns}
+  \begin{takeaway}{Introduced here, finished in Lecture 5.}
+    Today: keys exist and lists need them. Lecture 5 covers the full reconciliation rules.
+  \end{takeaway}
+  \note{Do not go deep here. The one thing to leave with is that a rebuild is cheap and that elements, not widgets, carry state. Promise the room that the reordering demo comes back in Lecture 5.}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=Widgets]{Extract a widget as soon as it repeats}
+  \begin{columns}[T]
+    \begin{column}{0.56\textwidth}
+\begin{dart}
+class UserListItem extends StatelessWidget {
+  const UserListItem(this.user, {super.key});
+
+  final User user;
+
+  @override
+  Widget build(BuildContext context) => Row(
+        children: [
+          Avatar(url: user.avatarUrl),
+          const SizedBox(width: 12),
+          Expanded(child: UserInfo(user)),
+        ],
+      );
+}
+\end{dart}
+    \end{column}
+    \begin{column}{0.40\textwidth}
+      \lead{Two rules of thumb.}{Extract when a subtree repeats, and extract when \code{build} stops fitting on your screen.}
+      \muted{Small widgets rebuild in smaller pieces, so extraction is a performance tool too.}
+      \muted{Prefer a named widget class over a method that returns a Widget. Only the class gets its own element.}
+    \end{column}
+  \end{columns}
+  \note{Show the opposite version from the shared repository, where one build method is eighty lines deep. Ask the room where they would put a breakpoint in it. The widget class versus helper method rule comes back in Lecture 5.}
+\end{frame}
+
+\divider{Part 2 · Layout}{Constraints down, sizes up}[Container, Row, Column, Expanded, Stack, and the overflow error]
+
+\begin{frame}[eyebrow=Layout]{Constraints go down, sizes go up}
+  \vskip 3mm
+  \begin{grid}[3]
+    \cell[\faIcon{arrow-down}]{1. Constraints go down}{A parent tells each child the minimum and maximum width and height it may take.}
+    \cell[\faIcon{arrow-up}]{2. Sizes go up}{The child picks its own size inside those limits and reports it back to the parent.}
+    \cell[\faIcon{crosshairs}]{3. Parent sets position}{The child never chooses where it sits. The parent places it in its own coordinate space.}
+  \end{grid}
+  \begin{takeaway}{One pass down, one pass up.}
+    Layout is a single walk of the tree, which is why it is fast and why it cannot backtrack.
+  \end{takeaway}
+  \note{Write the three sentences on the board and leave them there. Every layout question a student asks today is answered by one of them. A widget cannot know its own position and cannot ignore its constraints, which explains most surprises.}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=Layout]{Padding, SizedBox and Container}
+  \begin{columns}[T]
+    \begin{column}{0.54\textwidth}
+\begin{dart}
+// Reach for these two first.
+const Padding(
+  padding: EdgeInsets.all(16),
+  child: Text('Todos'),
+)
+const SizedBox(height: 12)   // a gap
+// Container bundles several widgets.
+Container(
+  padding: const EdgeInsets.all(12),
+  decoration: BoxDecoration(color: card),
+  child: const Text('Todos'),
+)
+\end{dart}
+    \end{column}
+    \begin{column}{0.42\textwidth}
+      \lead{Container is a convenience.}{It wraps Padding, DecoratedBox, ConstrainedBox and Align in one constructor.}
+      \muted{Use it when you need most of them. Use Padding or SizedBox when you need one.}
+      \begin{hint}[Gaps]
+        A \code{SizedBox} with only a height is the idiomatic spacer.
+      \end{hint}
+    \end{column}
+  \end{columns}
+  \note{Students reach for Container for everything because it is the first widget they meet. Show that a Container with only padding renders one extra widget for nothing. Mention that Row and Column also take a spacing argument.}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=Layout]{Row and Column}
+  \begin{columns}[T]
+    \begin{column}{0.54\textwidth}
+\begin{dart}
+Column(
+  mainAxisAlignment:
+      MainAxisAlignment.center,
+  crossAxisAlignment:
+      CrossAxisAlignment.start,
+  mainAxisSize: MainAxisSize.min,
+  children: const [
+    Text('Todos'),
+    SizedBox(height: 8),
+    Text('3 items left'),
+  ],
+)
+\end{dart}
+    \end{column}
+    \begin{column}{0.42\textwidth}
+      \lead{Same widget, two axes.}{Row lays children out horizontally, Column vertically. Everything else is identical.}
+      \muted{\code{mainAxisAlignment} moves children along the axis. \code{crossAxisAlignment} moves them across it.}
+      \muted{\code{MainAxisSize.min} shrinks the Row or Column to its children instead of taking all the space offered.}
+    \end{column}
+  \end{columns}
+  \note{Draw the two axes on the board for a Row and then rotate them for a Column. The single most common confusion is main versus cross when the axis changes. Ask the room which axis is horizontal in a Column.}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=Layout]{Expanded and Flexible}
+  \begin{columns}[T]
+    \begin{column}{0.54\textwidth}
+\begin{dart}
+Row(children: [
+  const Icon(Icons.person),
+  const SizedBox(width: 8),
+  // Takes all the leftover width.
+  Expanded(child: Text(user.name)),
+  // Takes twice as much as flex: 1.
+  Expanded(flex: 2, child: Chart()),
+])
+\end{dart}
+    \end{column}
+    \begin{column}{0.42\textwidth}
+      \lead{They divide leftover space.}{The Row first sizes its unflexible children, then splits what is left by flex factor.}
+      \muted{\code{Expanded} forces the child to fill its share. \code{Flexible} allows a smaller child.}
+      \muted{Both work only as a direct child of a Row, Column or Flex. Anywhere else they throw.}
+    \end{column}
+  \end{columns}
+  \note{This is the fix for most overflow errors, so introduce it before the error slide. Show what happens when you put an Expanded inside a Stack: the framework asserts and names the offending parent.}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=Layout]{Stack, Positioned and Align}
+  \begin{columns}[T]
+    \begin{column}{0.54\textwidth}
+\begin{dart}
+Stack(
+  children: [
+    const Avatar(),    // painted first
+    const Positioned(
+      right: 0, bottom: 0,
+      child: OnlineDot(),
+    ),
+    const Align(
+      alignment: Alignment.topCenter,
+      child: Text('online'),
+    ),
+  ],
+)
+\end{dart}
+    \end{column}
+    \begin{column}{0.42\textwidth}
+      \lead{Overlay, not flow.}{A Stack paints its children on top of each other. The first child is at the bottom.}
+      \muted{\code{Positioned} pins a child to one or more edges. Only a direct child may be Positioned.}
+      \muted{\code{Align} places a child by a fraction of the parent box, which reads better than four offsets.}
+    \end{column}
+  \end{columns}
+  \note{Badges, online dots and gradient overlays on images are the everyday uses. Warn that a Stack sizes itself to its largest child that is not positioned, so a Stack of only Positioned children collapses.}
+\end{frame}
+
+\begin{frame}[eyebrow=Layout]{The layout widgets you will use every day}
+  \vskip 2mm
+  {\usebeamerfont{small}\begin{tabular}{@{}lp{38mm}p{50mm}@{}}
+    \toprule
+    \thead{Widget} & \thead{What it does} & \thead{The knobs you turn} \\
+    \midrule
+    Container & padding, decoration, size & padding, decoration, alignment \\
+    Row / Column & children along one axis & main and cross axis alignment \\
+    Expanded / Flexible & split leftover space & flex: fill versus may shrink \\
+    Stack / Positioned & overlay children & top, left, right, bottom \\
+    SizedBox & impose a size or a gap & width, height, constraints \\
+    ListView / GridView & scroll a list or a grid & builder, separated, direction \\
+    \bottomrule
+  \end{tabular}}
+  \vskip 4mm
+  \muted{Keep this table open during the lab. Six widgets cover almost every screen you will build this semester.}
+  \note{Tell the room the full catalog has hundreds of widgets and that nobody memorizes it. The Flutter widget catalog page is the reference. These six are the ones worth knowing by heart.}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=Layout]{RenderFlex overflowed by 42 pixels}
+  \begin{columns}[T]
+    \begin{column}{0.54\textwidth}
+\begin{dart}
+// Breaks: the Text asks for more width
+// than the Row can give it.
+Row(children: [
+  const Icon(Icons.person),
+  Text(user.veryLongDisplayName),
+])
+
+// Fixes: give the Text a share
+Row(children: [
+  const Icon(Icons.person),
+  Expanded(child: Text(user.name)),
+])
+\end{dart}
+    \end{column}
+    \begin{column}{0.42\textwidth}
+      \begin{warning}[Read the box]
+        The yellow and black stripes name the widget and the axis. The console names the file and line.
+      \end{warning}
+      \muted{Three usual fixes: wrap the child in \code{Expanded}, wrap it in \code{Flexible}, or make the Row scroll.}
+      \muted{For text, \code{maxLines} with an ellipsis overflow is often what you actually wanted.}
+    \end{column}
+  \end{columns}
+  \note{Trigger this live by renaming a todo to something long. Say that the error is a normal part of building layouts, not a sign of broken code. The console line number is the fastest way in.}
+\end{frame}
+
+\divider{Part 3 · Scrolling}{Lists that build only what you see}[ListView, builders, grids, and one scroll view per screen]
+
+\begin{frame}[fragile,eyebrow=Scrolling]{ListView and ListView.builder}
+  \begin{columns}[T]
+    \begin{column}{0.56\textwidth}
+\begin{dart}
+// Eager: every child is built up front.
+ListView(
+  children: todos.map(TodoTile.new).toList(),
+)
+
+// Lazy: only the visible slice is built.
+ListView.builder(
+  itemCount: todos.length,
+  itemBuilder: (context, i) => TodoTile(
+    key: ValueKey(todos[i].id),
+    todo: todos[i],
+  ),
+)
+\end{dart}
+    \end{column}
+    \begin{column}{0.40\textwidth}
+      \lead{The builder is lazy.}{It calls \code{itemBuilder} only for items near the viewport, and discards them as they leave.}
+      \muted{\code{ListView.separated} is the same thing with a divider between items.}
+      \muted{A list of ten fixed rows can use the eager form. Anything that grows with your data must be a builder.}
+    \end{column}
+  \end{columns}
+  \note{Ask what happens with ten thousand rows in the eager form: ten thousand widgets built before the first frame. Show the difference in the performance overlay if there is time. This rule comes back in every later lab.}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=Scrolling]{GridView and SingleChildScrollView}
+\begin{dart}
+// Lazy in two dimensions: only visible cells are ever built.
+GridView.builder(
+  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+    crossAxisCount: 2,
+    childAspectRatio: 1.4,
+  ),
+  itemCount: photos.length,
+  itemBuilder: (context, i) => PhotoTile(photos[i]),
+)
+// Scrolls exactly one child, and builds all of it.
+SingleChildScrollView(child: Column(children: fields))
+\end{dart}
+  \vskip 1mm
+  \muted{One scrollable per axis per screen. Nesting two vertical scroll views is a bug.}
+  \note{The nesting warning matters: students put a ListView inside a Column inside a SingleChildScrollView and get an unbounded height error. A scroll view is right for a long form and wrong for a feed.}
+\end{frame}
+
+\begin{frame}[eyebrow=Scrolling]{Choosing a scrolling widget}
+  \vskip 2mm
+  {\usebeamerfont{small}\begin{tabular}{@{}lp{40mm}p{46mm}@{}}
+    \toprule
+    \thead{You have} & \thead{Use} & \thead{Why} \\
+    \midrule
+    A long form & SingleChildScrollView & every field must exist \\
+    A feed or a data list & ListView.builder & only visible rows are built \\
+    A list with dividers & ListView.separated & a builder runs between items \\
+    A photo or card grid & GridView.builder & lazy, with a delegate per cell \\
+    A collapsing header & CustomScrollView & header and list share one scroll \\
+    A fixed short list & Column in a scroll view & no laziness needed at ten rows \\
+    \bottomrule
+  \end{tabular}}
+  \vskip 4mm
+  \muted{Slivers are the low-level pieces every scroll view is built from. You need them only for the fifth row.}
+  \note{Point at the fifth row and say that CustomScrollView looks intimidating and is mostly a list of the widgets they already know, prefixed with Sliver. Lecture 13 comes back to it for the polish pass.}
+\end{frame}
+
+\divider{Part 4 · Material}{The scaffolding around content}[Scaffold, AppBar, buttons, SnackBars and dialogs]
+
+\begin{frame}[fragile,eyebrow=Material]{Scaffold: the skeleton of a screen}
+  \begin{columns}[T]
+    \begin{column}{0.56\textwidth}
+\begin{dart}
+Scaffold(
+  appBar: AppBar(
+    title: const Text('Todos'),
+    actions: const [SearchButton()],
+  ),
+  body: const TodoList(),
+  floatingActionButton: FloatingActionButton(
+    onPressed: _addTodo,
+    child: const Icon(Icons.add),
+  ),
+  bottomNavigationBar: const HomeNavBar(),
+)
+\end{dart}
+    \end{column}
+    \begin{column}{0.40\textwidth}
+      \lead{One Scaffold per screen.}{It gives you the app bar, the body, the floating button, the drawer and the SnackBar host.}
+      \muted{Every slot is optional. A screen with only a body is a valid Scaffold.}
+      \muted{The Scaffold also keeps your content clear of the keyboard and the system bars.}
+    \end{column}
+  \end{columns}
+  \note{Open a fresh app and delete the Scaffold to show black text on a black background. Say that MaterialApp at the root is what supplies the theme, the text direction and the navigator.}
+\end{frame}
+
+\begin{frame}[eyebrow=Material]{AppBar, buttons and navigation bars}
+  \vskip 2mm
+  \begin{grid}[3]
+    \cell[\faIcon{window-maximize}]{AppBar}{Title, actions, and a back button that appears on its own when the route can pop.}
+    \cell[\faIcon{plus-circle}]{FloatingActionButton}{One primary action per screen. Add a todo, compose a message, start a scan.}
+    \cell[\faIcon{hand-point-up}]{Buttons}{FilledButton for the main action, OutlinedButton and TextButton for the rest, IconButton in bars.}
+    \cell[\faIcon{compass}]{NavigationBar}{The Material 3 bottom bar. Three to five destinations, one selected index.}
+    \cell[\faIcon{bars}]{Drawer}{A side panel for secondary destinations. Pass it to the Scaffold and the AppBar adds the handle.}
+    \cell[\faIcon{palette}]{ThemeData}{Colors and typography come from the theme, not from each widget. Lecture 13 goes deeper.}
+  \end{grid}
+  \note{Say that a bottom navigation bar and a drawer solve the same problem and you rarely want both. The selected index is state, which is the bridge to Lecture 5.}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=Material]{SnackBars and dialogs}
+  \begin{columns}[T]
+    \begin{column}{0.56\textwidth}
+\begin{dart}
+ScaffoldMessenger.of(context).showSnackBar(
+  SnackBar(
+    content: const Text('Todo deleted'),
+    action: SnackBarAction(
+        label: 'Undo', onPressed: _restore),
+  ),
+);
+final ok = await showDialog<bool>(
+  context: context,
+  builder: (_) => const ConfirmDelete(),
+);
+\end{dart}
+    \end{column}
+    \begin{column}{0.40\textwidth}
+      \lead{Two different jobs.}{A SnackBar reports what already happened. A dialog blocks until the user decides.}
+      \muted{\code{showDialog} returns a Future. It completes with whatever \code{Navigator.pop} was given.}
+      \begin{warning}[Async gap]
+        After an \code{await}, check \code{context.mounted} before using the context again.
+      \end{warning}
+    \end{column}
+  \end{columns}
+  \note{The mounted check is the most common lint students hit in the labs, so name it now. Say that Futures and await are Lecture 4 and that today they only need to recognize the shape.}
+\end{frame}
+
+\begin{frame}[eyebrow=Material]{Cupertino and adaptive widgets}
+  \vskip 3mm
+  \begin{grid}[3]
+    \cell[\faIcon{apple-alt}]{Cupertino exists}{CupertinoApp, CupertinoPageScaffold, CupertinoNavigationBar and CupertinoButton mirror the iOS look.}
+    \cell[\faIcon{clone}]{Adaptive constructors}{Switch.adaptive and CircularProgressIndicator.adaptive pick the platform look at runtime.}
+    \cell[\faIcon{mobile-alt}]{Pick one and commit}{Most teams ship Material on both platforms. Two full designs is two designs to maintain.}
+  \end{grid}
+  \begin{takeaway}{This course uses Material.}
+    Page transitions already adapt. The labs are graded on Material widgets.
+  \end{takeaway}
+  \note{Ask who has an iPhone and who has an Android phone, then ask whether they would notice a Material app on iOS. Most would not. Say that Cupertino matters when the client asks for it, not by default.}
+\end{frame}
+
+\divider{Part 5 · Worked example}{Building the Lab 3 todo screen}[Five steps from an empty Scaffold to a working list]
+
+\begin{frame}[fragile,eyebrow=Worked example]{Step 1: the screen and its state}
+  \begin{columns}[T]
+    \begin{column}{0.56\textwidth}
+\begin{dart}
+class Todo {
+  Todo(this.id, this.title);
+  final int id;
+  final String title;
+  bool done = false;
+}
+class TodoPage extends StatefulWidget {
+  const TodoPage({super.key});
+  @override
+  State<TodoPage> createState() =>
+      _TodoPageState();
+}
+\end{dart}
+    \end{column}
+    \begin{column}{0.40\textwidth}
+      \lead{Start from the data.}{One plain Dart class holds a todo. There are no framework types in it.}
+      \muted{The screen is stateful because the list of todos changes while the screen is on the tree.}
+      \muted{In Lecture 6 this same list moves into a Cubit and the screen goes back to stateless.}
+    \end{column}
+  \end{columns}
+  \note{Say out loud that a mutable done field is fine today and will be replaced by an immutable model with copyWith in Lecture 7. Building it the simple way first makes the later change meaningful.}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=Worked example]{Step 2: the list}
+\begin{dart}
+class _TodoPageState extends State<TodoPage> {
+  final _todos = <Todo>[];
+  @override
+  Widget build(BuildContext context) => Scaffold(
+        body: ListView.builder(
+          itemCount: _todos.length,
+          itemBuilder: (context, i) => TodoTile(
+              key: ValueKey(_todos[i].id), todo: _todos[i],
+              onToggle: () => _toggle(_todos[i])),
+        ),
+      );
+}
+\end{dart}
+  \vskip 1mm
+  \muted{The \code{ValueKey} ties State to the todo, not to the row position.}
+  \note{Point at the key and remind the room of the earlier slide. Without it, ticking one checkbox and then deleting a row above it moves the tick to the wrong item. That is the bug they will plant in the lab.}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=Worked example]{Step 3: extract TodoTile}
+\begin{dart}
+class TodoTile extends StatelessWidget {
+  const TodoTile({super.key, required this.todo, required this.onToggle});
+  final Todo todo;
+  final VoidCallback onToggle;
+
+  @override
+  Widget build(BuildContext context) => ListTile(
+        leading: Checkbox(
+            value: todo.done, onChanged: (_) => onToggle()),
+        title: Text(todo.title),
+      );
+}
+\end{dart}
+  \vskip 1mm
+  \muted{Data flows down the constructor, events flow up the callback.}
+  \note{This is the reusable widget the lab asks for. Say that the one pattern here, data down and events up, survives every state management library they will meet later in the course.}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=Worked example]{Step 4: adding and removing an item}
+\begin{dart}
+int _nextId = 0;
+
+void _add(String title) {
+  final todo = Todo(_nextId++, title);
+  setState(() => _todos.add(todo));
+}
+
+void _toggle(Todo todo) => setState(() => todo.done = !todo.done);
+
+void _remove(Todo todo) => setState(() => _todos.remove(todo));
+\end{dart}
+  \begin{takeaway}{Mutate, then setState.}
+    Every change to the list happens inside the callback, so Flutter schedules a frame. Change the list outside it and the screen never updates.
+  \end{takeaway}
+  \note{Demonstrate the bug on purpose: mutate the list without setState, tap the button, nothing moves, then hot reload and the item appears. That sequence explains the whole mechanism in ten seconds.}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=Worked example]{Step 5: the empty state and a SnackBar}
+  \begin{columns}[T]
+    \begin{column}{0.56\textwidth}
+\begin{dart}
+body: _todos.isEmpty
+    ? const Center(
+        child: Text('Nothing to do yet.'),
+      )
+    : ListView.builder(...),
+
+// after _remove(todo)
+ScaffoldMessenger.of(context).showSnackBar(
+  const SnackBar(content: Text('Removed')),
+);
+\end{dart}
+    \end{column}
+    \begin{column}{0.40\textwidth}
+      \lead{A screen is never only its happy path.}{Empty, loading and error states are part of the design.}
+      \muted{Today the empty state is a Text. In Lecture 6 the same branch becomes a switch over bloc states.}
+      \begin{hint}[Lab 3]
+        You build this screen, then add swipe to delete.
+      \end{hint}
+    \end{column}
+  \end{columns}
+  \note{Close the section by scrolling back through the five steps in the editor so the room sees the whole file. Say that the lab starts exactly here and that the repository has the finished version to compare against afterwards.}
+\end{frame}
+
+\begin{frame}[eyebrow=Recap]{Three things to remember}
+  \vskip 2mm
+  \begin{enumerate}
+    \item Widgets are immutable descriptions. \muted{You compose small ones instead of configuring big ones.}
+    \item Constraints go down, sizes go up, the parent sets position. \muted{Every layout surprise comes from one of those three.}
+    \item If the list grows with your data, it has to be a builder. \muted{Eager lists build everything before the first frame.}
+  \end{enumerate}
+  \vskip 5mm
+  \kv{Further reading}{\link{https://docs.flutter.dev/ui/widgets}{Flutter widget catalog} · \link{https://docs.flutter.dev/ui/layout/constraints}{Understanding constraints} · \link{https://docs.flutter.dev/ui/layout/scrolling}{Scrolling}}
+  \note{Ask the room to name the three layout rules back to you before they leave. Point at Lab 3, where the todo screen is built from scratch and DevTools is attached to it.}
+\end{frame}
+
+\closingframe{Questions?}{dinu\_stefan.rusu@upb.ro · Microsoft Teams: course channel}
+
+\end{document}

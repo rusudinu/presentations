@@ -1,0 +1,178 @@
+% Lab 1: Orientation, set-up, and your first pull request
+% Application Development for Mobile Devices
+\documentclass[10pt,aspectratio=169,t]{beamer}
+\usetheme[lab]{upbminimal}
+
+\course{Application Development for Mobile Devices}
+\decklabel{Lab 1}
+\title{Orientation, set-up, and your first pull request}
+\subtitle{Environment, tooling and the GitHub workflow}
+\author{Dinu-Ștefan Rusu}
+\institute{FILS, Universitatea Politehnica București}
+\date{Week 2}
+
+\begin{document}
+
+\titleframe
+
+\begin{frame}[eyebrow=Today]{What this lab is for}
+  \vskip 2mm
+  \begin{grid}[2]
+    \cell[\faWrench]{Install a working toolchain}{Flutter and Dart on your laptop, with flutter doctor reporting no blocking issues.}
+    \cell[\faServer]{Run an app on a device}{An emulator or simulator that boots, with the default Flutter app running on it.}
+  \end{grid}
+  \vskip 6mm
+  \taskmeta{Time}{2 hours}{Submit}{Push to \code{admd-labs}, branch \code{lab-1}, before Lab 2}
+\end{frame}
+
+\begin{frame}[eyebrow=Setup]{The cumulative lab app}
+  \begin{steps}
+    \item One repository per student, named \code{admd-labs}.
+    \item One branch per lab. One pull request per lab, merged after grading.
+    \item Create the branch and install tools before starting.
+  \end{steps}
+  \vskip 4mm
+  \begin{takeaway}{Seven labs build one app that grows from empty to networked and authenticated.}
+    Lab 1 sets up the machine. Lab 7 is the test. Labs 2 to 6 add features.
+  \end{takeaway}
+\end{frame}
+
+\begin{frame}[eyebrow=Grading]{How you earn points}
+  {\usebeamerfont{small}
+  \begin{tabular}[t]{lp{6cm}r}
+    \thead{Work} & \thead{Description} & \thead{Points} \\
+    Lab assignments & One point per lab, cumulative app & 5 \\
+    Practical test & Lab 7, 90 minutes, individual & 4 \\
+    Participation & Attendance and engagement & 1 \\
+    \midrule
+    & \textbf{Pass mark} & \textbf{5 of 10} \\
+  \end{tabular}
+  }
+  \vskip 4mm
+  \begin{hint}
+    Your grader checks the repository history, not just the final state. Commit early and often, with clear messages.
+  \end{hint}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=Setup]{Installation links}
+  \begin{columns}[T]
+    \begin{column}{0.55\textwidth}
+\begin{shell}
+# Flutter SDK: https://docs.flutter.dev/install
+# Add flutter/bin to your PATH
+
+flutter --version
+flutter doctor -v
+
+# Android Studio or Xcode
+# Pick one IDE: VS Code or IntelliJ
+\end{shell}
+    \end{column}
+    \begin{column}{0.41\textwidth}
+      \kv{Before starting}{}
+      Install Flutter, an IDE, and either Android Studio or Xcode.
+      \\[2mm]
+      \kv{Target}{}
+      The current stable Flutter channel.
+      \\[2mm]
+      \kv{Important}{}
+      Type URLs exactly. They are complete on one line.
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}[eyebrow=Task I]{Set up your environment}
+  \begin{columns}[T]
+    \begin{column}{0.55\textwidth}
+      \begin{steps}
+        \item Install Flutter from \link{https://docs.flutter.dev/install}{docs.flutter.dev/install}.
+        \item Follow Install manually for your OS.
+        \item Add flutter/bin to your PATH.
+        \item Install Android Studio or Xcode (macOS).
+        \item Install an editor: VS Code or IntelliJ.
+        \item Run \code{flutter doctor}, fix every blocking issue.
+      \end{steps}
+    \end{column}
+    \begin{column}{0.41\textwidth}
+      \kv{Done when}{}
+      \begin{checklist}
+        \item \code{flutter --version} works in a new terminal.
+        \item \code{flutter doctor} shows no red warnings for Flutter or Android.
+        \item You can explain one warning you fixed.
+      \end{checklist}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}[eyebrow=Task II]{Run the default app}
+  \begin{columns}[T]
+    \begin{column}{0.55\textwidth}
+      \begin{steps}
+        \item Boot an emulator or simulator.
+        \item Run \code{flutter devices} to confirm it appears.
+        \item Create the project: \code{flutter create lab1\_app}.
+        \item Run it: \code{flutter run}.
+        \item Change the app title string in \code{lib/main.dart}.
+        \item Press r to hot-reload and see it update.
+        \item Take a screenshot.
+      \end{steps}
+    \end{column}
+    \begin{column}{0.41\textwidth}
+      \kv{Done when}{}
+      \begin{checklist}
+        \item The counter app runs and the button increments it.
+        \item Your edited title appears after hot reload.
+        \item A screenshot is in \code{/screenshots}.
+      \end{checklist}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=Troubleshooting]{When flutter doctor fails}
+  \trouble{cmdline-tools missing}{Android Studio > SDK Manager > SDK Tools > Android SDK Command-line Tools. Install, then run \code{flutter doctor} again.}
+  \trouble{License unknown}{Run \code{flutter doctor --android-licenses} and answer \code{y} to all prompts.}
+  \trouble{Unable to locate SDK}{Open Android Studio once. The SDK downloads on first launch. On Mac, accept the Xcode license first.}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=Troubleshooting]{Emulators and devices}
+  \trouble{Emulator never boots}{Enable hardware acceleration (VT-x / AMD-V) in BIOS. On Apple silicon Macs, pick arm64 images only.}
+  \trouble{No devices listed}{Run \code{flutter devices}. Start the emulator with \code{flutter emulators --launch <id>}. Physical Android phones work with USB debugging on.}
+  \trouble{Xcode but no simulator}{Open Xcode once and accept the license, then run \code{open -a Simulator}. If it still fails, run \code{xcode-select --install}.}
+\end{frame}
+
+\begin{frame}[eyebrow=GitHub]{The pull request workflow}
+  \begin{steps}
+    \item Create a repository on GitHub.
+    \item Clone it: \code{git clone <url>}.
+    \item Create a branch: \code{git checkout -b lab-N}.
+    \item Work on your code, commit often with clear messages.
+    \item Push the branch: \code{git push -u origin lab-N}.
+    \item Open a pull request on GitHub to merge into \code{main}.
+    \item Wait for grading. Do not merge yourself.
+  \end{steps}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=Submit]{Push your first pull request}
+  \begin{columns}[T]
+    \begin{column}{0.55\textwidth}
+\begin{shell}
+git add .
+git commit -m "Lab 1: app runs"
+git push -u origin lab-1
+\end{shell}
+      \vskip 2mm
+      On GitHub, open a PR from lab-1 to main. Paste your screenshot in the description.
+    \end{column}
+    \begin{column}{0.41\textwidth}
+      \kv{In the PR description}{}
+      Add your screenshot and write: \emph{``App runs and hot reload works.''}
+      \\[2mm]
+      \kv{Do not merge}{}
+      Wait for grading. The instructor merges.
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\closingframe{Before you leave}{Push to branch \code{lab-1} with a screenshot and one commit}
+
+\end{document}

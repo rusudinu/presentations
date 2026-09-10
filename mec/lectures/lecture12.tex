@@ -1,0 +1,576 @@
+% Mobile and Embedded Computing, Lecture 12. Compile: latexmk -xelatex lecture12.tex
+\documentclass[10pt,aspectratio=169,t]{beamer}
+\usetheme{upbminimal}
+
+\course{Mobile and Embedded Computing}
+\decklabel{Lecture 12}
+\title{Platform channels, FFI, and Kotlin Multiplatform}
+\subtitle{Crossing into native code, and across platforms at compile time}
+\author{Dinu-Ștefan Rusu}
+\institute{FILS, Universitatea Politehnica București}
+\date{Spring 2027}
+
+\begin{document}
+
+\titleframe
+
+\objectivesframe{
+  \cell[\faIcon{exchange-alt}]{Cross with a message}{MethodChannel and EventChannel: calling into native code and receiving a native stream.}
+  \cell[\faBolt]{Cross without encoding}{dart:ffi and ffigen: calling C directly, and generating the bindings instead of hand-writing them.}
+  \cell[\faLayerGroup]{Share code at compile time}{Kotlin Multiplatform: one module, expect/actual, consumed natively by Android and iOS.}
+  \cell[\faIcon{balance-scale}]{Place the boundary}{Channels for control, FFI for compute, and what a compile-time boundary buys over a run-time one.}
+}
+
+\begin{frame}[eyebrow=Framing]{Three boundaries inside your app}
+  \vskip 2mm
+  \begin{grid}[3]
+    \cell[\faIcon{envelope}]{A message}{A platform channel encodes a call, hands it to the other side, and decodes the reply. Convenient, and it costs what it costs to encode.}
+    \cell[\faBolt]{A direct call}{dart:ffi jumps straight into machine code already in your address space. No encoding, no thread hop, no safety net.}
+    \cell[\faLayerGroup]{A build step}{Kotlin Multiplatform pays the cost once, at compile time. What ships is native code on both platforms.}
+  \end{grid}
+  \begin{takeaway}{Lecture 11 crossed the network.}
+    This lecture stays inside one process, then crosses to a second platform at build time instead of at run time.
+  \end{takeaway}
+  \note{Recall the network boundary from Lecture 11 in one sentence, then point at the three boxes: today is about what happens once the bytes are already on the phone. Ask which of the three the room's project already uses without having named it.}
+\end{frame}
+
+% =====================================================================
+\divider{Part 1 · Channels}{Two runtimes, one process}[MethodChannel, EventChannel, and what a call costs]
+
+\begin{frame}[eyebrow=Channels]{Two runtimes, two heaps}
+  \vskip 1mm
+  \begin{grid}[2]
+    \cell[\faIcon{layer-group}]{The Dart isolate}{Your widgets, your state, your heap. Its own garbage collector, and it cannot see any other heap in the process.}
+    \cell[\faMicrochip]{The platform runtime}{ART on Android, the Objective-C and Swift runtime on iOS. Every native API lives here, with its own objects.}
+  \end{grid}
+  \vskip 3mm
+  \muted{Two more threads share the process: raster, which submits frames to the GPU, and I/O, which loads assets and decodes images. Neither one runs your widget code.}
+  \begin{takeaway}{So every crossing is one of exactly two things.}
+    Encode a message and hand it to the other side, or drop to the one thing both runtimes already agree on: the C ABI.
+  \end{takeaway}
+  \note{Draw the process as one box with two heaps if you have a whiteboard. The point students need to leave with: a platform channel and dart:ffi are not two arbitrary APIs, they are the only two ways across this specific wall.}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=Channels]{MethodChannel: calling from Dart}
+  \begin{columns}[T]
+    \begin{column}{0.55\textwidth}
+\begin{dart}
+class Battery {
+  static const _ch = MethodChannel(
+      'dev.upb.mec/battery');
+  static Future<int> level() async {
+    try {
+      final v = await _ch
+          .invokeMethod<int>('getLevel');
+      return v ?? -1;
+    } on PlatformException catch (e) {
+      debugPrint('failed: ${e.code}');
+      return -1;
+    }
+  }
+}
+\end{dart}
+    \end{column}
+    \begin{column}{0.41\textwidth}
+      \lead{The channel name is just a string.}{Both sides must agree on it byte for byte. A typo compiles fine and fails at run time.}
+      \muted{\code{PlatformException} carries a code the native side chose. \code{MissingPluginException} means nothing answered on this platform.}
+    \end{column}
+  \end{columns}
+  \note{Point out that this looks like an ordinary async call. It is not: every argument gets encoded, and the answer comes back on the same message channel. Ask what happens if the app runs on a platform where the handler was never registered.}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=Channels]{MethodChannel: answering in Kotlin}
+  \begin{columns}[T]
+    \begin{column}{0.55\textwidth}
+\begin{kotlin}
+override fun configureFlutterEngine(e: FlutterEngine) {
+  super.configureFlutterEngine(e)
+  val msgr = e.dartExecutor.binaryMessenger
+  val ch = MethodChannel(msgr, "dev.upb.mec/battery")
+  ch.setMethodCallHandler { call, r ->
+    if (call.method == "getLevel")
+      r.success(batteryLevel())
+    else r.notImplemented()
+  }
+}
+\end{kotlin}
+    \end{column}
+    \begin{column}{0.41\textwidth}
+      \lead{Registered in MainActivity.}{\code{configureFlutterEngine} runs once, when the engine attaches. The handler stays alive for the life of that engine.}
+      \muted{\code{r.notImplemented()} is what the Dart side sees as a \code{MissingPluginException} if it calls an unknown method.}
+    \end{column}
+  \end{columns}
+  \note{The handler runs on the platform's main thread. Anything slow has to hop off it and call result later, or the native UI stalls exactly like blocking the Dart isolate would.}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=Channels]{MethodChannel: answering in Swift}
+  \begin{columns}[T]
+    \begin{column}{0.55\textwidth}
+\begin{codeblock}
+let ch = FlutterMethodChannel(
+    name: "dev.upb.mec/battery",
+    binaryMessenger: messenger)
+ch.setMethodCallHandler { call, r in
+  guard call.method == "getLevel" else {
+    r(FlutterMethodNotImplemented)
+    return
+  }
+  r(batteryLevel())
+}
+\end{codeblock}
+    \end{column}
+    \begin{column}{0.41\textwidth}
+      \lead{Registered in AppDelegate.}{The same channel name, the same handler shape: a \code{call} in, a \code{result} closure to answer with.}
+      \muted{\code{guard} plays the role of Kotlin's \code{if}/\code{else}: fail fast on an unknown method.}
+    \end{column}
+  \end{columns}
+  \note{Point out the symmetry with the Kotlin slide: same channel name, same method check, same shape of handler. That symmetry is the whole point of a platform channel contract.}
+\end{frame}
+
+\begin{frame}[eyebrow=Channels]{Three platform channel pitfalls}
+  \vskip 2mm
+  \begin{grid}[3]
+    \cell[\faIcon{sync-alt}]{Hot reload skips native code}{Only the Dart side reloads. A change in Kotlin or Swift needs a full stop and restart of the app.}
+    \cell[\faIcon{hourglass-half}]{The handler is on the main thread}{Do real work on another thread and call \code{result} later, or the native UI itself will freeze.}
+    \cell[\faLock]{Channel names are not namespaced}{Prefix them with your package, as \code{dev.upb.mec/battery} does, or two plugins will collide.}
+  \end{grid}
+  \begin{takeaway}{Register once, per platform, per engine.}
+    A channel with no handler registered on a platform fails with \code{MissingPluginException}, not a compile error.
+  \end{takeaway}
+  \note{These three are the bugs students actually hit in the lab: editing Kotlin and expecting hot reload to pick it up, freezing the native UI from inside a handler, and two packages both claiming the same channel name.}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=Channels]{EventChannel: a sensor stream, Dart side}
+  \begin{columns}[T]
+    \begin{column}{0.58\textwidth}
+\begin{dart}[aboveskip=1mm,belowskip=1mm]
+class StepStream {
+  static const _ch = EventChannel(
+      'dev.upb.mec/steps');
+  static Stream<int> steps() => _ch
+      .receiveBroadcastStream()
+      .map((e) => e as int);
+}
+StreamBuilder<int>(
+  stream: StepStream.steps(),
+  builder: (c, s) => Text('${s.data ?? 0}'),
+);
+\end{dart}
+    \end{column}
+    \begin{column}{0.38\textwidth}
+      \muted{No \code{invokeMethod}. The native side pushes a value whenever it has one; \code{receiveBroadcastStream} turns that into a Stream.}
+    \end{column}
+  \end{columns}
+  \begin{takeaway}{An EventChannel is a MethodChannel for a value that repeats.}
+    The listen and cancel handshake is handled for you.
+  \end{takeaway}
+  \note{Contrast with MethodChannel: one request one reply, versus a native side that pushes values whenever it has one. The Dart API is still just a Stream, so everything from Lecture 2 about listening and canceling applies unchanged.}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=Channels]{EventChannel: a sensor stream, Kotlin side}
+\begin{kotlin}[aboveskip=1mm,belowskip=1mm]
+class StepStreamHandler(private val mgr: SensorManager) :
+    EventChannel.StreamHandler {
+  private var l: SensorEventListener? = null
+  override fun onListen(a: Any?, events: EventSink) {
+    val sensor = mgr.getDefaultSensor(TYPE_STEP_COUNTER)
+    l = object : SensorEventListener {
+      override fun onSensorChanged(e: SensorEvent) =
+          events.success(e.values[0].toInt())
+      override fun onAccuracyChanged(s: Sensor, a: Int) {}
+    }
+    mgr.registerListener(l, sensor, SENSOR_DELAY_NORMAL)
+  }
+  override fun onCancel(a: Any?) = mgr.unregisterListener(l)
+}
+\end{kotlin}
+  \note{onListen fires once, when Dart starts listening, and onCancel fires once, when it stops. Register the sensor listener in onListen, tear it down in onCancel, never leak it.}
+\end{frame}
+
+\begin{frame}[eyebrow=Channels]{What a channel call actually costs}
+  \begin{columns}[T]
+    \begin{column}{0.58\textwidth}
+      \lead{Two things are being paid for.}{The thread hop is roughly fixed: two queue posts, two context switches. The call is asynchronous, so it also waits behind whatever the UI thread is already doing.}
+      \lead{The encoding is not fixed at all.}{The codec walks the object graph. A small map costs nothing; a hundred thousand doubles is a different matter.}
+    \end{column}
+    \begin{column}{0.38\textwidth}
+      \begin{warning}[The Android trap]
+        A Dart \code{List<double>} decodes into boxed objects. Send a \code{Float64List} instead: it passes through as one raw copy.
+      \end{warning}
+    \end{column}
+  \end{columns}
+  \begin{takeaway}{A channel call is a message, not a function call.}
+    Its cost scales with what you put in the message, not with how simple the call looks in Dart.
+  \end{takeaway}
+  \note{This is the slide that explains why a channel that felt fine in testing gets slow once a real sensor feed or a real image is attached. The fix is almost always the typed-data fast path, not a different transport.}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=Channels]{Measuring channel and FFI cost yourself}
+  \begin{columns}[T]
+    \begin{column}{0.55\textwidth}
+\begin{dart}[aboveskip=1mm,belowskip=1mm]
+// release build, on a real device
+const ch = MethodChannel('bench');
+const n = 10000;
+for (var i = 0; i < 200; i++) {
+  await ch.invokeMethod('x');   // warm up
+}
+var sw = Stopwatch()..start();
+for (var i = 0; i < n; i++) {
+  await ch.invokeMethod('x');
+}
+print('${sw.elapsedMicroseconds / n} us');
+\end{dart}
+    \end{column}
+    \begin{column}{0.41\textwidth}
+      \muted{Repeat with a direct FFI call instead of \code{invokeMethod}.}
+    \end{column}
+  \end{columns}
+  \begin{takeaway}{Report the shape you find, not a number from a slide.}
+    A channel call runs microseconds to low milliseconds. An FFI call stays flat.
+  \end{takeaway}
+  \note{Have every student run this on their own phone and compare the noop numbers across the room. The spread between devices is the actual lesson: neither number is a constant of nature, so never quote one without saying which phone produced it.}
+\end{frame}
+
+% =====================================================================
+\divider{Part 2 · dart:ffi}{Crossing without encoding}[Calling C directly, and generating the bindings with ffigen]
+
+\begin{frame}[fragile,eyebrow=FFI]{dart:ffi: calling C directly}
+  \begin{columns}[T]
+    \begin{column}{0.56\textwidth}
+\begin{dart}[aboveskip=1mm,belowskip=1mm]
+final class Stats extends Struct {
+  @Double() external double mean;
+  @Double() external double peak;
+}
+final lib = Platform.isAndroid
+    ? DynamicLibrary.open('libsig.so')
+    : DynamicLibrary.process();
+typedef _CSig = Void Function(
+    Pointer<Double>, Int32, Pointer<Stats>);
+typedef _DSig = void Function(
+    Pointer<Double>, int, Pointer<Stats>);
+final _analyze = lib.lookupFunction<
+    _CSig, _DSig>('analyze');
+\end{dart}
+    \end{column}
+    \begin{column}{0.40\textwidth}
+      \lead{You own the memory.}{No garbage collector on the other side. Use an \code{Arena} or a \code{NativeFinalizer}.}
+      \muted{The call blocks the isolate: run a slow one on a worker isolate.}
+    \end{column}
+  \end{columns}
+  \note{The struct declaration mirrors the C layout field for field. On Android, dart:ffi reaches C, not Kotlin: calling into Kotlin from here still means going through JNI, which is its own cost. On iOS the C symbols are already in the process, so DynamicLibrary.process finds them directly.}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=FFI]{ffigen: start from a C header}
+\begin{codeblock}[language=C]
+// sig.h
+typedef struct {
+    double mean;
+    double peak;
+} Stats;
+
+void analyze(const double *xs, int32_t n, Stats *out);
+void free_stats(Stats *s);
+\end{codeblock}
+  \begin{takeaway}{Do not hand-write the struct and the lookup.}
+    ffigen reads this header and generates the Dart \code{Struct}, the typedefs and the lookup calls for every function in it. Hand-written bindings are exactly the kind of code a tool should own.
+  \end{takeaway}
+  \note{A header is the contract, same idea as the .proto file from Lecture 11. Whoever owns the C library changes the header; the Dart side regenerates instead of hand-editing pointer types.}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=FFI]{ffigen: the config and the generated code}
+  \begin{columns}[T]
+    \begin{column}{0.52\textwidth}
+\begin{yaml}
+# pubspec.yaml
+dev_dependencies:
+  ffigen: any   # dart pub add dev:ffigen
+ffigen:
+  name: SigBindings
+  output: 'lib/src/sig_bindings.dart'
+  headers:
+    entry-points:
+      - 'src/sig.h'
+\end{yaml}
+\begin{shell}
+dart run ffigen
+\end{shell}
+    \end{column}
+    \begin{column}{0.44\textwidth}
+\begin{dart}
+// generated: sig_bindings.dart
+final class Stats extends Struct {
+  @Double() external double mean;
+  @Double() external double peak;
+}
+
+class SigBindings {
+  final DynamicLibrary _lib;
+  SigBindings(this._lib);
+  late final analyze = _lib.lookupFunction<
+      _AnalyzeC, _AnalyzeDart>('analyze');
+}
+\end{dart}
+    \end{column}
+  \end{columns}
+  \note{One command regenerates the whole file. Point out that the generated class name, SigBindings, is exactly what was set in the ffigen config, and that this file should be treated as build output: never hand-edit it.}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=FFI]{Calling the generated bindings}
+  \begin{columns}[T]
+    \begin{column}{0.56\textwidth}
+\begin{dart}
+final _b = SigBindings(Platform.isAndroid
+    ? DynamicLibrary.open('libsig.so')
+    : DynamicLibrary.process());
+
+(double, double) analyze(Float64List xs) {
+  final arena = Arena();
+  try {
+    final buf = arena<Double>(xs.length)
+      ..asTypedList(xs.length).setAll(0, xs);
+    final out = arena<Stats>();
+    _b.analyze(buf, xs.length, out);
+    return (out.ref.mean, out.ref.peak);
+  } finally { arena.releaseAll(); }
+}
+\end{dart}
+    \end{column}
+    \begin{column}{0.40\textwidth}
+      \muted{ffigen generated \code{SigBindings} and \code{Stats}. It did not generate the \code{Arena}, the copy in, or the \code{finally}: memory management is still yours.}
+    \end{column}
+  \end{columns}
+  \note{This is the same shape as the hand-written version two slides back, minus the struct and lookupFunction boilerplate. That boilerplate is exactly what scales badly as a C library grows past a handful of functions.}
+\end{frame}
+
+\begin{frame}[eyebrow=FFI]{Big buffers: move the pointer, not the bytes}
+  \lead{A 4K camera frame is roughly 33 MB, thirty times a second.}{Through a platform channel it is copied at least three times: native buffer, codec buffer, Dart heap.}
+  \begin{grid}[3]
+    \cell[\faIcon{memory}]{External typed data}{A \code{Uint8List} that is a view onto native memory, not a copy of it. Dart reads the bytes the native side wrote. A finalizer frees them later.}
+    \cell[\faIcon{exchange-alt}]{Ownership transfer}{\code{TransferableTypedData} hands a buffer to another isolate as a page remap, not a deep copy. The sender loses access, which is what makes it safe.}
+    \cell[\faIcon{image}]{Texture registry}{The native side renders into a GPU texture and registers it. Flutter composites it directly; the pixels never touch the Dart heap.}
+  \end{grid}
+  \begin{takeaway}{Data big enough to matter should not be serialized at all.}
+    Share it through a pointer, or transfer ownership of it. Do not encode it twice.
+  \end{takeaway}
+  \note{Camera preview and video are the running example: both use the texture registry path today, which is exactly why a camera preview does not visibly tax a platform channel.}
+\end{frame}
+
+\begin{frame}[eyebrow=FFI]{Channels for control, FFI for compute}
+  {\usebeamerfont{small}\begin{tabular}{@{}lp{45mm}p{45mm}@{}}
+    \toprule
+    \thead{ } & \thead{Platform channels} & \thead{dart:ffi} \\
+    \midrule
+    Call style & asynchronous message & synchronous direct call \\
+    Cost       & encoding plus a thread hop & a function call, flat in payload \\
+    Data       & copied and re-encoded & shared through a pointer \\
+    Threading  & hops to the platform thread & runs on the calling isolate \\
+    Reaches    & any Kotlin or Swift API & the C ABI only \\
+    Fails as   & a catchable exception & a crash that takes the app down \\
+    \bottomrule
+  \end{tabular}}
+  \begin{columns}[T]
+    \begin{column}{0.48\textwidth}
+      \lead{Channels for control.}{One crossing per user action: open a document, read the battery, start a scan.}
+    \end{column}
+    \begin{column}{0.48\textwidth}
+      \lead{FFI for compute.}{Anything per-frame or per-sample: signal processing, inference, image pipelines.}
+    \end{column}
+  \end{columns}
+  \note{If a student remembers one sentence from this whole section, it should be this one. Ask for an example from their own project of something that is clearly control, and something that is clearly compute.}
+\end{frame}
+
+% =====================================================================
+\divider{Part 3 · Kotlin Multiplatform}{Sharing code at compile time}[expect/actual, source sets, and how the iOS app consumes it]
+
+\begin{frame}[eyebrow=KMP]{Share the logic, keep the UI}
+  \lead{One shared Kotlin module: models, networking, storage, business rules.}{Android keeps Jetpack Compose; iOS keeps SwiftUI, or Compose Multiplatform. \code{expect}/\code{actual} covers the handful of pieces that must differ.}
+  \vskip 1mm
+  \begin{grid}[2]
+    \cell[\faAndroid]{Android app}{Consumes the module as an ordinary Kotlin library, compiled by Kotlin/JVM.}
+    \cell[\faApple]{iOS app}{Consumes the same module, compiled by Kotlin/Native into a framework.}
+  \end{grid}
+  \begin{takeaway}{Lecture 1 named this the third strategy.}
+    Stable since November 2023, Compose Multiplatform for iOS since May 2025, already in production at McDonald's, Netflix and Forbes.
+  \end{takeaway}
+  \note{The Kotlin in the shared module is not interpreted and not bridged at run time: it is compiled straight to native code for each platform. That single fact is what makes it a compile-time boundary instead of a run-time one.}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=KMP]{expect and actual: the shared shape}
+  \begin{columns}[T]
+    \begin{column}{0.6\textwidth}
+\begin{kotlin}[aboveskip=1mm,belowskip=1mm]
+// commonMain: the shape, no implementation
+expect class KeyValueStore(name: String) {
+    fun put(key: String, value: String)
+    fun get(key: String): String?
+}
+// ordinary Kotlin, shared as-is
+class ReadingsRepository(val http: HttpClient, val store: KeyValueStore) {
+    suspend fun latest(id: String) = runCatching {
+        http.get("$BASE/$id").body<Reading>()
+    }.getOrElse { store.get(id) ?: throw it }
+}
+\end{kotlin}
+    \end{column}
+    \begin{column}{0.41\textwidth}
+      \muted{\code{HttpClient} is Ktor, multiplatform already. Only the key-value store needs a platform-specific body, so only it is declared \code{expect}.}
+    \end{column}
+  \end{columns}
+  \note{The expect class declares only the shape. The compiler enforces that every target supplies an actual for it, so a missing implementation is a build error, not a crash discovered on one platform in production.}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=KMP]{expect and actual: the platform bodies}
+  \begin{columns}[T]
+    \begin{column}{0.48\textwidth}
+\begin{kotlin}[aboveskip=1mm,belowskip=1mm]
+// androidMain
+actual class KeyValueStore
+    actual constructor(name: String) {
+  val p = ctx.getSharedPreferences(name, 0)
+  actual fun put(k: String, v: String) =
+      p.edit().putString(k, v).apply()
+  actual fun get(k: String) =
+      p.getString(k, null)
+}
+\end{kotlin}
+    \end{column}
+    \begin{column}{0.48\textwidth}
+\begin{kotlin}[aboveskip=1mm,belowskip=1mm]
+// iosMain
+actual class KeyValueStore
+    actual constructor(name: String) {
+  val d = NSUserDefaults(suiteName = name)
+  actual fun put(k: String, v: String) =
+      d.setObject(v, forKey = k)
+  actual fun get(k: String) =
+      d.stringForKey(k)
+}
+\end{kotlin}
+    \end{column}
+  \end{columns}
+  \begin{takeaway}{iosMain calls NSUserDefaults directly.}
+    No bridge, ordinary Kotlin APIs on both platforms.
+  \end{takeaway}
+  \note{Most projects need far less expect/actual than students assume, because Ktor and kotlinx already ship a multiplatform engine for networking, JSON and dates. Reach for expect/actual only for the genuinely platform-specific sliver.}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=KMP]{Source sets: where the code lives}
+  \begin{columns}[T]
+    \begin{column}{0.42\textwidth}
+\begin{shell}[aboveskip=1mm,belowskip=1mm]
+shared/src/
+  commonMain/kotlin/
+  androidMain/kotlin/
+  iosMain/kotlin/
+androidApp/   # Compose UI
+iosApp/       # Xcode, SwiftUI
+\end{shell}
+    \end{column}
+    \begin{column}{0.54\textwidth}
+\begin{kotlin}[aboveskip=1mm,belowskip=1mm]
+// shared/build.gradle.kts
+kotlin {
+  androidTarget()
+  iosArm64(); iosSimulatorArm64()
+  sourceSets {
+    commonMain.dependencies {
+      implementation(libs.ktor.core)
+    }
+    androidMain.dependencies {
+      implementation(libs.ktor.okhttp)
+    }
+    // iosMain: libs.ktor.darwin
+  }
+}
+\end{kotlin}
+    \end{column}
+  \end{columns}
+  \note{A source set is just a folder the compiler includes for a given target. Anything platform-specific written inside commonMain is a compile error, which is the entire point: the build file is the architecture diagram.}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=KMP]{How the iOS app consumes it}
+  \begin{columns}[T]
+    \begin{column}{0.48\textwidth}
+\begin{shell}[aboveskip=1mm,belowskip=1mm]
+./gradlew :shared:assembleSharedXCFramework
+\end{shell}
+\begin{codeblock}[aboveskip=1mm,belowskip=1mm]
+import Shared
+struct DeviceView: View {
+  @State var reading: Reading?
+  var body: some View {
+    Text("\(reading?.tempC ?? 0)")
+      .task { reading = try? await repo() }
+  }
+}
+\end{codeblock}
+    \end{column}
+    \begin{column}{0.48\textwidth}
+      \lead{No bridge at run time.}{Kotlin classes compile to native code and appear as Objective-C classes, called the way Swift calls any framework.}
+      \muted{\code{repo()} is a \code{ReadingsRepository}. A Kotlin \code{suspend} function arrives as Swift \code{async}/\code{await}.}
+    \end{column}
+  \end{columns}
+  \note{The iOS build still needs a Mac with Xcode, exactly like a Flutter iOS build does. Kotlin/Native's tracing garbage collector runs across threads, so no manual freeing, but an object graph held from Swift keeps the Kotlin side of it alive.}
+\end{frame}
+
+\begin{frame}[eyebrow=KMP]{Flutter and Kotlin Multiplatform}
+  {\usebeamerfont{small}\renewcommand{\arraystretch}{1.05}\begin{tabular}{@{}lp{50mm}p{50mm}@{}}
+    \toprule
+    \thead{ } & \thead{Flutter} & \thead{Kotlin Multiplatform} \\
+    \midrule
+    UI       & one UI, Impeller draws both & native per platform, or Compose \\
+    Shared   & everything, incl. pixels & whatever is in commonMain \\
+    Boundary & run time, per call & compile time, per build \\
+    Language & Dart for the whole app & Kotlin, plus Swift for iOS \\
+    Team     & one team ships both & comfort on each platform \\
+    Maturity & stable, large plugin ecosystem & stable since 2023 \\
+    \bottomrule
+  \end{tabular}}
+  \begin{takeaway}{Neither approach deletes the boundary. They move it.}
+    Flutter crosses at run time. Kotlin Multiplatform crosses at compile time.
+  \end{takeaway}
+  \note{Be even-handed. If a team already has separate native apps and native engineers, Kotlin Multiplatform usually fits better. If a small team wants one UI everywhere, Flutter does. Neither answer criticizes the other.}
+\end{frame}
+
+\begin{frame}[eyebrow=Project]{Where this fits your project}
+  \vskip 2mm
+  \lead{Graded requirement 4 asks for gRPC, or FFI, or a platform channel.}{Lecture 11 gave you gRPC. Today gave you the other option: native code called from Dart.}
+  \vskip 2mm
+  \begin{grid}[2]
+    \cell[\faIcon{exchange-alt}]{Reach for a platform channel}{If the work is a one-shot call into an OS feature you cannot reach from Dart: a native sensor API, a permission dialog, a vendor SDK.}
+    \cell[\faBolt]{Reach for dart:ffi}{If the work is per-sample computation you already have as C, C++ or Rust: a filter, a codec, a small inference kernel.}
+  \end{grid}
+  \begin{takeaway}{Pick the one your measured claim can say something about.}
+    Requirement 5 wants one number you measured. A channel call's latency or an FFI call's throughput are both defensible choices, if you show the method.
+  \end{takeaway}
+  \note{Point students at their own project's device component. Most of the class already has a native sensor read they are doing through a plugin; ask whether that plugin is a platform channel or FFI under the hood, and whether they have ever checked.}
+\end{frame}
+
+\begin{frame}[eyebrow=Recap]{Three things to remember}
+  \vskip 2mm
+  \begin{enumerate}
+    \item Every crossing inside the process is a message or a direct call. \muted{A platform channel encodes and hops threads; dart:ffi jumps straight into machine code you already share.}
+    \item Channels are for control, FFI is for compute. \muted{Low-frequency intents versus anything on a per-frame or per-sample path.}
+    \item Kotlin Multiplatform moves the boundary to build time. \muted{The shared module is native code on both platforms, not a bridge crossed on every call.}
+  \end{enumerate}
+  \note{Ask the room to name, out loud, which of the three crossings their own project already uses. Most will realize a plugin they depend on is a platform channel they never had to write by hand.}
+\end{frame}
+
+\begin{frame}[eyebrow=Recap]{Further reading}
+  \vskip 2mm
+  \kv{Platform channels and FFI}{\link{https://docs.flutter.dev/platform-integration}{docs.flutter.dev/platform-integration} · \link{https://dart.dev/interop/c-interop}{dart.dev/interop/c-interop}}
+  \vskip 4mm
+  \kv{ffigen}{\link{https://pub.dev/packages/ffigen}{pub.dev/packages/ffigen}}
+  \vskip 4mm
+  \kv{Kotlin Multiplatform}{\link{https://kotlinlang.org/docs/multiplatform.html}{kotlinlang.org/docs/multiplatform}}
+  \begin{takeaway}{Before the exam.}
+    Run the channel-versus-FFI benchmark from this lecture on your own phone, in a release build.
+  \end{takeaway}
+  \note{Point students at the ffigen link specifically: it is the one most of them will actually need for the project's FFI requirement, more than the raw dart:ffi documentation.}
+\end{frame}
+
+\closingframe{Questions?}{dinu\_stefan.rusu@upb.ro · Microsoft Teams: course channel}
+
+\end{document}

@@ -1,0 +1,296 @@
+% Mobile and Embedded Computing, Lab 5. Compile: latexmk -xelatex lab05.tex
+\documentclass[10pt,aspectratio=169,t]{beamer}
+\usetheme[lab]{upbminimal}
+
+\course{Mobile and Embedded Computing}
+\decklabel{Lab 5}
+\title{Offline-first sync}
+\subtitle{An outbox, a drain loop, and one conflict rule}
+\author{Dinu-Ștefan Rusu}
+\institute{FILS, Universitatea Politehnica București}
+\date{Week 10}
+
+\begin{document}
+
+\titleframe
+
+\begin{frame}[eyebrow=Today]{What this lab is for}
+  \vskip 2mm
+  \begin{grid}[2]
+    \cell[\faDatabase]{Write once, sync later}{Every note write commits to the notes table and an outbox row, in one transaction. No edit is ever lost to a dropped connection.}
+    \cell[\faIcon{exchange-alt}]{Resolve one conflict, visibly}{Two devices editing the same note converge on the server's version, and the device that lost the race shows a marker.}
+  \end{grid}
+  \vskip 6mm
+  \taskmeta{Time}{2 hours}{Submit}{Push to your team repo, branch \code{lab-5}, before next lab}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=Setup]{Where your code goes}
+  \begin{steps}
+    \item Branch the repository, add Drift, and generate the boilerplate:
+\begin{shell}
+git checkout -b lab-5
+flutter pub add drift sqlite3_flutter_libs
+flutter pub add -d drift_dev build_runner
+dart run build_runner build \
+    --delete-conflicting-outputs
+\end{shell}
+    \item Local code lives in \code{lib/lab5/}. Server code lives in \code{server/lab5/main.go}.
+  \end{steps}
+  \begin{hint}[Regenerate after every schema change]
+    Adding a column to Notes or Outbox needs a fresh build and a bumped schema version, or an existing install crashes on the next launch.
+  \end{hint}
+\end{frame}
+
+\begin{frame}[eyebrow=Task I]{Schema and outbox, one transaction}
+  \begin{columns}[T]
+    \begin{column}{0.55\textwidth}
+      \begin{steps}
+        \item Model \code{Notes}: id, title, body, updatedAt, version, isDirty, deletedAt.
+        \item Model \code{Outbox}: id, entityId, op, payload, queuedAt.
+        \item Write \code{saveNote} so both tables commit inside one \code{db.transaction}.
+        \item Make delete a write: set \code{deletedAt}, never issue a SQL DELETE.
+      \end{steps}
+    \end{column}
+    \begin{column}{0.41\textwidth}
+      \kv{Done when}{}
+      \begin{checklist}
+        \item Editing a note updates \code{notes} and inserts one \code{outbox} row.
+        \item Killing the app mid-save leaves either both rows, or neither.
+        \item Deleting a note still leaves an outbox row for the delete.
+      \end{checklist}
+    \end{column}
+  \end{columns}
+  \begin{takeaway}{A write is not durable until the outbox has it too.}
+    An outbox row inserted outside the transaction can vanish if the app dies between the two writes.
+  \end{takeaway}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=Task I]{Two tables, one purpose}
+  \begin{columns}[T]
+    \begin{column}{0.48\textwidth}
+\begin{dart}
+class Notes extends Table {
+  TextColumn get id => text()();
+  TextColumn get title => text()();
+  TextColumn get body => text()();
+  DateTimeColumn get updatedAt =>
+      dateTime()();
+  IntColumn get version => integer()();
+  BoolColumn get isDirty => boolean()();
+  DateTimeColumn get deletedAt =>
+      dateTime().nullable()();
+}
+\end{dart}
+    \end{column}
+    \begin{column}{0.48\textwidth}
+\begin{dart}
+class Outbox extends Table {
+  TextColumn get id => text()();
+  TextColumn get entityId => text()();
+  TextColumn get op => text()();
+  TextColumn get payload => text()();
+  DateTimeColumn get queuedAt =>
+      dateTime()();
+}
+\end{dart}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=Task I]{Both writes, one transaction}
+  \vskip 1mm
+\begin{dart}
+Future<void> saveNote(Note n) => db.transaction(() async {
+  final row = n.copyWith(
+      updatedAt: DateTime.now(), isDirty: true);
+  await into(notes).insertOnConflictUpdate(row);
+  await into(outbox).insert(OutboxCompanion.insert(
+    id: uuid.v4(), entityId: n.id,
+    op: 'upsert', payload: jsonEncode(row.toJson()),
+  ));
+});
+\end{dart}
+  \muted{watch() on notes fires the moment this commits. The outbox row leaves later, but the edit is already on screen.}
+\end{frame}
+
+\begin{frame}[eyebrow=Task II]{Drain the outbox, then pull the delta}
+  \begin{columns}[T]
+    \begin{column}{0.55\textwidth}
+      \begin{steps}
+        \item Add \code{drainOutbox()}: read the outbox oldest first, POST each payload.
+        \item On success, delete the row and clear \code{isDirty} in one transaction.
+        \item On start, and when connectivity returns, call \code{pull()} with the last saved version.
+        \item Trigger both from a connectivity listener, never a timer.
+      \end{steps}
+    \end{column}
+    \begin{column}{0.41\textwidth}
+      \kv{Done when}{}
+      \begin{checklist}
+        \item Airplane mode on, edit, airplane mode off: the row leaves the outbox within a few seconds.
+        \item Restarting with a non-empty outbox drains it before the list refreshes.
+        \item pull() never re-downloads a row it already has.
+      \end{checklist}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=Task II]{The drain loop}
+\begin{dart}
+Future<void> drainOutbox() async {
+  final batch = await (select(outbox)
+        ..orderBy([(o) => OrderingTerm.asc(o.queuedAt)]))
+      .get();
+  for (final item in batch) {
+    final r = await http.post(Uri.parse('$base/notes'), body: item.payload);
+    if (r.statusCode != 200) break;   // stop, keep order
+    await db.transaction(() async {
+      await (delete(outbox)..where((o) => o.id.equals(item.id))).go();
+      await notesDao.clearDirty(item.entityId);
+    });
+  }
+}
+\end{dart}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=Task II]{Delta sync on start}
+\begin{dart}
+Future<void> pull() async {
+  final since = await meta.lastVersion();
+  final uri = Uri.parse('$base/notes?since=$since');
+  final rows = jsonDecode((await http.get(uri)).body) as List;
+  var newest = since;
+  await db.transaction(() async {
+    for (final row in rows) {
+      await notesDao.upsertFromServer(row);
+      newest = max(newest, row['version'] as int);
+    }
+  });
+  await meta.setLastVersion(newest);
+}
+\end{dart}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=Reference]{The whole sync server, part 1}
+\begin{golang}
+type Note struct{ ID, Title, Body, UpdatedAt, DeletedAt string; Version int }
+var mu sync.Mutex; var version int
+var notes = map[string]Note{}
+func upsert(w http.ResponseWriter, r *http.Request) {
+  var n Note
+  json.NewDecoder(r.Body).Decode(&n)
+  mu.Lock()
+  version++
+  n.Version = version
+  notes[n.ID] = n
+  mu.Unlock()
+  json.NewEncoder(w).Encode(n)
+}
+\end{golang}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=Reference]{The whole sync server, part 2}
+\begin{golang}
+func list(w http.ResponseWriter, r *http.Request) {
+  since, _ := strconv.Atoi(r.URL.Query().Get("since"))
+  mu.Lock()
+  defer mu.Unlock()
+  var out []Note
+  for _, n := range notes {
+    if n.Version > since {
+      out = append(out, n)
+    }
+  }
+  json.NewEncoder(w).Encode(out)
+}
+\end{golang}
+  \muted{main() wires POST and GET on /notes to these handlers, then listens on :8080.}
+\end{frame}
+
+\begin{frame}[eyebrow=Task III]{One conflict rule, and a visible marker}
+  \begin{columns}[T]
+    \begin{column}{0.55\textwidth}
+      \begin{steps}
+        \item On pull, if the local row is not dirty, upsert the server's row: no conflict.
+        \item If the local row is dirty and the incoming version is higher, the server wins: keep its value.
+        \item Mark the losing row \code{updatedElsewhere} instead of silently overwriting it.
+        \item Clear the marker once the user opens the note.
+      \end{steps}
+    \end{column}
+    \begin{column}{0.41\textwidth}
+      \kv{Done when}{}
+      \begin{checklist}
+        \item Two devices editing the same note end with one value on both.
+        \item The device that lost the race shows an "Updated elsewhere" badge.
+        \item The badge clears once the note is opened.
+      \end{checklist}
+    \end{column}
+  \end{columns}
+  \begin{takeaway}{The loser is not the older edit.}
+    It is the device that had not yet seen the version that won.
+  \end{takeaway}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=Task III]{The rule: server version wins}
+  \vskip 1mm
+\begin{dart}
+Future<void> onIncoming(Map row) => db.transaction(() async {
+  final local = await notesDao.find(row['id'] as String);
+  if (local == null || !local.isDirty) {
+    return notesDao.upsertFromServer(row);      // no conflict
+  }
+  if ((row['version'] as int) > local.version) {
+    await notesDao.markUpdatedElsewhere(local.id);
+    return notesDao.upsertFromServer(row);      // we lost
+  }
+  // local.version >= incoming: we are still ahead, keep ours
+});
+\end{dart}
+  \muted{Both devices run this same function, so both reach the same answer without talking to each other.}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=Task III]{The marker in the list}
+  \vskip 1mm
+\begin{dart}
+ListTile(
+  title: Text(note.title),
+  trailing: note.updatedElsewhere
+      ? const Chip(label: Text('Updated elsewhere'))
+      : null,
+  onTap: () => notesDao.clearFlag(note.id),
+)
+\end{dart}
+  \begin{takeaway}{The marker is the whole UI cost of this rule.}
+    No merge screen, no dialog: one boolean and one badge tell the user their edit did not survive.
+  \end{takeaway}
+\end{frame}
+
+\begin{frame}[eyebrow=Acceptance]{What the grader will do}
+  \vskip 1mm
+  \begin{columns}[T]
+    \begin{column}{0.48\textwidth}
+      \kv{The demo}{}
+      \begin{checklist}
+        \item Airplane mode on, edit a note, airplane mode off: the server has the edit within a few seconds.
+        \item Two devices, or two emulators, edit the same note. Both end up with the same value.
+        \item The device that lost the race shows the "Updated elsewhere" marker.
+      \end{checklist}
+    \end{column}
+    \begin{column}{0.48\textwidth}
+      \kv{In the repository}{}
+      \muted{The Drift schema, the sync engine, and \code{server/lab5/main.go}, with a README naming your conflict rule.\par\vskip 1.5mm
+      One commit per task. A screenshot of both devices showing the same value is the cheapest proof you can leave.}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}[eyebrow=Troubleshooting]{Four failures you will meet}
+  \vskip 1mm
+  \trouble{Target of URI hasn't been generated: app\_db.g.dart}{build\_runner has not run, or ran before the table file was saved. Re-run it, then restart analysis.}
+  \trouble{Connection refused, or the request hangs until it times out}{The emulator's \code{localhost} is itself. Point the client at \code{10.0.2.2}, not \code{localhost}.}
+  \trouble{The outbox row count never drops to zero}{An exception is swallowed silently, or the loop never runs because the connectivity check never fires. Log every iteration.}
+  \trouble{A device keeps re-downloading rows it already has}{The checkpoint was saved before the transaction committed, or the comparison used \code{>=} instead of \code{>}.}
+\end{frame}
+
+\closingframe{Push before you leave.}{Branch lab-5 · one commit per task · your conflict rule named in the README}
+
+\end{document}

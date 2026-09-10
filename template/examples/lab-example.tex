@@ -1,0 +1,102 @@
+% Example lab handout. Compile: latexmk -xelatex lab-example.tex
+\documentclass[10pt,aspectratio=169,t]{beamer}
+\usetheme[lab]{upbminimal}
+
+\course{Application Development for Mobile Devices}
+\decklabel{Lab 3}
+\title{Widgets \& UI}
+\subtitle{Composing layouts and handling gestures}
+\author{Dinu-Ștefan Rusu}
+\institute{FILS, Universitatea Politehnica București}
+\date{Week 6}
+
+\begin{document}
+
+\titleframe
+
+\begin{frame}[eyebrow=Today]{What this lab is for}
+  \vskip 2mm
+  \begin{grid}[2]
+    \cell[\faThLarge]{Compose a screen}{Build a todo list from Column, Row, ListView and Card, without a single hard-coded pixel offset.}
+    \cell[\faHandPointer]{Handle a gesture}{Swipe a row away with Dismissible and keep the list consistent.}
+  \end{grid}
+  \vskip 6mm
+  \taskmeta{Time}{2 hours}{Submit}{Push to your project repo, branch \code{lab-3}, before next lab}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=Setup]{Where your code goes}
+  \begin{steps}
+    \item Open the project from Lab 2 and create a branch:
+\begin{shell}
+git checkout -b lab-3
+\end{shell}
+    \item Create \code{lib/lab3/todo\_screen.dart}. Everything in this lab lives there.
+    \item Run the app once before changing anything. If it does not build, fix that first.
+  \end{steps}
+  \begin{hint}
+    Hot reload keeps your list contents between edits. Hot restart drops them: use it after changing \code{initState}.
+  \end{hint}
+\end{frame}
+
+\begin{frame}[eyebrow=Task I]{The screen, element by element}
+  \begin{columns}[T]
+    \begin{column}{0.55\textwidth}
+      \begin{steps}
+        \item An AppBar titled \emph{Todos}.
+        \item A ListView.builder with one Card per todo.
+        \item A Checkbox in each Card, bound to \code{done}.
+        \item A FloatingActionButton that appends a todo.
+        \item Extract the Card into \code{TodoTile}.
+      \end{steps}
+    \end{column}
+    \begin{column}{0.41\textwidth}
+      \kv{Done when}{}
+      \begin{checklist}
+        \item Adding a todo scrolls the list, and the list does not jump.
+        \item Toggling a checkbox rebuilds only that tile.
+        \item \code{TodoTile} takes its data through the constructor.
+      \end{checklist}
+    \end{column}
+  \end{columns}
+  \begin{takeaway}{Reusable component means constructor in, callbacks out.}
+    A tile that reaches into global state is not reusable.
+  \end{takeaway}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=Task II]{The anatomy of one swipeable row}
+  \begin{columns}[T]
+    \begin{column}{0.55\textwidth}
+\begin{dart}
+Dismissible(
+  key: ValueKey(todo.id),          // never the index
+  direction: DismissDirection.endToStart,
+  onDismissed: (_) => onDelete(todo.id),
+  background: Container(color: Colors.red),
+  child: TodoTile(todo: todo, onToggle: onToggle),
+)
+\end{dart}
+    \end{column}
+    \begin{column}{0.41\textwidth}
+      \begin{steps}
+        \item Wrap each tile in a Dismissible.
+        \item Remove the item from the list in \code{onDismissed}.
+        \item Show a SnackBar with an \emph{Undo} action.
+      \end{steps}
+      \begin{warning}
+        Using the list index as the key makes the wrong row disappear after a delete.
+      \end{warning}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}[eyebrow=Troubleshooting]{Layout errors and their fixes}
+  \vskip 2mm
+  \trouble{RenderFlex overflowed by 42 pixels}{A Row or Column has more content than space. Wrap the growing child in Expanded or Flexible.}
+  \trouble{Vertical viewport was given unbounded height}{A ListView inside a Column. Give it a fixed height, or wrap it in Expanded.}
+  \trouble{setState() called after dispose()}{An async callback finished after the screen was popped. Check \code{mounted} before calling setState.}
+  \trouble{A dismissed Dismissible widget is still part of the tree}{You did not remove the item from the list in onDismissed.}
+\end{frame}
+
+\closingframe{Push before you leave.}{Branch lab-3 · one commit per task · screenshots in the PR description}
+
+\end{document}

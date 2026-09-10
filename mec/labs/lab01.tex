@@ -1,0 +1,267 @@
+% MEC Lab 1. Compile: latexmk -xelatex lab01.tex
+\documentclass[10pt,aspectratio=169,t]{beamer}
+\usetheme[lab]{upbminimal}
+
+\course{Mobile and Embedded Computing}
+\decklabel{Lab 1}
+\title{Toolchain, board, broker, and project kickoff}
+\subtitle{TinyGo, a blinking board, a local broker, and your team}
+\author{Dinu-Ștefan Rusu}
+\institute{FILS, Universitatea Politehnica București}
+\date{Week 2}
+
+\begin{document}
+
+\titleframe
+
+\begin{frame}[eyebrow=Today]{What this lab is for}
+  \vskip 2mm
+  \begin{grid}[2]
+    \cell[\faMicrochip]{Put code on a device}{Install TinyGo, build the blink program for your board or for the simulator, flash it, and read what it prints on the serial console.}
+    \cell[\faServer]{Run your own broker}{Install Mosquitto, publish and subscribe from the command line, then agree on a project idea that meets all five requirements.}
+  \end{grid}
+  \vskip 8mm
+  \taskmeta{Time}{2 hours}{Submit}{Branch \code{lab-1} in your team repository, before next lab}
+  \vskip 3mm
+  \muted{Bring a board if you have one. If you do not, Task III replaces Task II and is worth the same.}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=Setup]{Where your work goes}
+  \begin{steps}
+    \item One repository per team. Use the Flutter app repository from ADMD: the project extends that app.
+    \item Create the branch and the folder this lab writes into:
+\begin{shell}
+git checkout -b lab-1
+mkdir -p device/blink
+\end{shell}
+    \item Open a pull request from \code{lab-1} on the first commit. Everything you are graded on goes in its description.
+  \end{steps}
+  \begin{hint}
+    Pull requests, not pushes to main. Your individual mark is read from your own commits.
+  \end{hint}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=Setup]{Install Go and TinyGo}
+  \vskip 1mm
+\begin{shell}
+# macOS
+brew install go
+brew tap tinygo-org/tools && brew install tinygo
+
+# Windows, with Scoop
+scoop install go tinygo
+
+# Debian and Ubuntu: Go from go.dev/dl, TinyGo from its releases page
+sudo dpkg -i tinygo_*.deb
+tinygo version
+\end{shell}
+  \muted{Install Go first: TinyGo reuses the Go standard library and the module cache. If \code{tinygo version} is not found, the TinyGo \code{bin} folder is not on your PATH.}
+\end{frame}
+
+\begin{frame}[fragile,embedded,eyebrow=Task I]{Pick a board and confirm its target}
+  \begin{columns}[T]
+    \begin{column}{0.55\textwidth}
+      \begin{steps}
+        \item Pick one: a Raspberry Pi Pico, an ESP32-C3 board, or an ESP32-S3 board. With no hardware, go to Task III.
+        \item List what your TinyGo can build for:
+\begin{shell}
+tinygo targets
+\end{shell}
+        \item Take the target name from your board's page on the TinyGo site. The Pico is \code{pico}, a plain ESP32-C3 board is \code{esp32c3}.
+      \end{steps}
+    \end{column}
+    \begin{column}{0.41\textwidth}
+      \kv{Done when}{}
+      \begin{checklist}
+        \item \code{tinygo version} prints a version.
+        \item Your target appears in the output of \code{tinygo targets}.
+        \item The target name is written in the pull request description.
+      \end{checklist}
+      \begin{warning}
+        Board variants have their own targets, such as \code{xiao-esp32c3}. Check the board page for the exact name.
+      \end{warning}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}[fragile,embedded,eyebrow=Reference]{The blink program, in full}
+\begin{golang}
+package main
+import "machine"
+import "time"
+func main() {
+    led := machine.LED
+    led.Configure(machine.PinConfig{Mode: machine.PinOutput})
+    for {
+        led.Set(!led.Get())
+        println("blink")
+        time.Sleep(500 * time.Millisecond)
+    }
+}
+\end{golang}
+  \muted{Save it as \code{device/blink/main.go}. Use the LED pin your board page names.}
+\end{frame}
+
+\begin{frame}[fragile,embedded,eyebrow=Task II]{Flash the board and read the console}
+  \begin{columns}[T]
+    \begin{column}{0.55\textwidth}
+      \begin{steps}
+        \item Plug the board in with a data cable, not a charge-only cable.
+        \item Build and flash in one command:
+\begin{shell}
+tinygo flash -target=pico ./device/blink
+\end{shell}
+        \item Watch the LED, then read what the program prints:
+\begin{shell}
+tinygo monitor
+\end{shell}
+        \item Stop the monitor with Ctrl-C.
+      \end{steps}
+    \end{column}
+    \begin{column}{0.41\textwidth}
+      \kv{Done when}{}
+      \begin{checklist}
+        \item The LED blinks about once a second.
+        \item \code{tinygo monitor} prints one line per blink.
+        \item A photo or a short video of the board is in the pull request.
+      \end{checklist}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}[fragile,embedded,eyebrow=Task III]{No board: the same program in Wokwi}
+  \begin{columns}[T]
+    \begin{column}{0.55\textwidth}
+      \begin{steps}
+        \item Open wokwi.com and start a new project on the ESP32-C3 DevKitM-1 board.
+        \item Add an LED and a 220 ohm resistor from the parts menu, wired to a free GPIO pin. Use that pin in the code.
+        \item Build the firmware on your laptop:
+\begin{shell}
+tinygo build -o blink.elf \
+  -target=esp32c3 ./device/blink
+\end{shell}
+        \item Press F1, choose \emph{Upload Firmware and Start Simulation}, and pick \code{blink.elf}.
+      \end{steps}
+    \end{column}
+    \begin{column}{0.41\textwidth}
+      \kv{Done when}{}
+      \begin{checklist}
+        \item The simulated LED blinks.
+        \item The Wokwi serial monitor prints one line per blink.
+        \item One screenshot shows the board and the serial output.
+      \end{checklist}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=Setup]{Install the Mosquitto broker}
+\begin{shell}
+# macOS
+brew install mosquitto
+
+# Debian and Ubuntu
+sudo apt install mosquitto mosquitto-clients
+
+# Windows: the installer from mosquitto.org/download
+mosquitto -v         # foreground, port 1883, one line per event
+\end{shell}
+  \begin{hint}
+    Mosquitto 2 and later accept local connections only until you configure a listener. In this lab that default is what you want.
+  \end{hint}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=Task IV]{Publish and subscribe from two terminals}
+  \begin{columns}[T]
+    \begin{column}{0.55\textwidth}
+      \begin{steps}
+        \item Leave the broker running. In a second terminal, subscribe to a wildcard topic:
+\begin{shell}
+mosquitto_sub -h localhost -t mec/lab1/#
+\end{shell}
+        \item In a third terminal, publish to a subtopic:
+\begin{shell}
+mosquitto_pub -h localhost \
+  -t mec/lab1/hello -m "1"
+\end{shell}
+        \item Publish three more messages, changing the subtopic each time.
+      \end{steps}
+    \end{column}
+    \begin{column}{0.41\textwidth}
+      \kv{Done when}{}
+      \begin{checklist}
+        \item The subscriber prints every message the publisher sends.
+        \item Messages from different subtopics all reach the wildcard subscription.
+        \item The broker log lists both clients connecting.
+      \end{checklist}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}[eyebrow=Task V]{Your team and your project idea}
+  \begin{columns}[T]
+    \begin{column}{0.55\textwidth}
+      \begin{steps}
+        \item Form a team of at most three. Fill one row in the team sheet in the Teams channel: names, GitHub handles, repository URL.
+        \item Write the idea in the repository README: one paragraph, then one line for each of the five requirements on the next slide.
+        \item Show it to me during this lab. Milestone 1 is the team and the idea approved.
+      \end{steps}
+    \end{column}
+    \begin{column}{0.41\textwidth}
+      \kv{Done when}{}
+      \begin{checklist}
+        \item The sheet row is filled and the repository URL opens.
+        \item The README names the sensor, the transport, and the conflict rule.
+        \item The idea is approved.
+      \end{checklist}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}[eyebrow=Reference]{The five requirements your idea must meet}
+  {\usebeamerfont{small}
+  \begin{tabular}{@{}p{0.30\textwidth}p{0.62\textwidth}@{}}
+    \toprule
+    \thead{Requirement} & \thead{True at the defense} \\
+    \midrule
+    Device component & A TinyGo program on a board or in Wokwi, reading a sensor. \\
+    Device to phone & The reading arrives over MQTT or BLE and the app shows it live. \\
+    Offline-first & The app works with no network, syncs later, states its conflict rule. \\
+    One boundary & Either gRPC with a Go server, or FFI, or a platform channel. \\
+    A measured claim & One number your team measured, with the method. \\
+    \bottomrule
+  \end{tabular}}
+  \begin{takeaway}{All five, or the project is not approved.}
+    Pick an idea where each requirement has an obvious home.
+  \end{takeaway}
+\end{frame}
+
+\begin{frame}[embedded,eyebrow=Troubleshooting]{What goes wrong, and what to do}
+  \vskip 2mm
+  \trouble{permission denied: /dev/ttyUSB0}{Your user is not in the serial port group. Add yourself to \code{dialout} on Debian and Ubuntu, or \code{uucp} on Arch, then log out and back in. Do not flash with sudo.}
+  \trouble{no serial ports found}{The cable carries power only, or the board is not in its bootloader. Swap the cable, then hold the BOOT button while plugging the board in and release it.}
+  \trouble{unknown target or board name}{The string after \code{-target=} is not one TinyGo knows. Copy it from \code{tinygo targets} or from the board's page.}
+\end{frame}
+
+\begin{frame}[eyebrow=Troubleshooting]{When the broker refuses you}
+  \vskip 2mm
+  \trouble{Error: Connection refused}{Nothing is listening on port 1883. Start the broker in a terminal with \code{mosquitto -v} and leave it running while you test.}
+  \trouble{Connection refused from another machine}{The default configuration binds to localhost. Add \code{listener 1883} and \code{allow\_anonymous true} to \code{mosquitto.conf}, and open the port in the local firewall. Lab network only.}
+  \trouble{Address already in use}{A broker is already running, often as a system service. Use that one, or stop the service before starting your own.}
+\end{frame}
+
+\begin{frame}[eyebrow=Submission]{What the pull request has to contain}
+  \vskip 2mm
+  \begin{grid}[2]
+    \cell[\faMicrochip]{Proof it ran}{A photo of the blinking board, or a screenshot of the Wokwi simulation, plus the serial output copied as text.}
+    \cell[\faServer]{Proof it talks}{The two terminals from Task IV, subscriber and publisher, with the messages visible.}
+  \end{grid}
+  \vskip 4mm
+  \kv{Also in the description}{The board and the target name you used, and a link to the team sheet row.}
+  \begin{takeaway}{Open the pull request now, not at the deadline.}
+    A branch with no pull request is not a submission, and an empty description is not evidence.
+  \end{takeaway}
+\end{frame}
+
+\closingframe{Push before you leave.}{Branch lab-1 · blink and serial output in the PR · idea approved}
+
+\end{document}

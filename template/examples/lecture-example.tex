@@ -1,0 +1,130 @@
+% Example lecture deck. Compile: latexmk -xelatex lecture-example.tex
+\documentclass[10pt,aspectratio=169,t]{beamer}
+\usetheme{upbminimal}
+
+\course{Application Development for Mobile Devices}
+\decklabel{Lecture 5}
+\title{State Management, Part 1}
+\subtitle{Debugging, Stateless vs Stateful, and where state should live}
+\author{Dinu-Ștefan Rusu}
+\institute{FILS, Universitatea Politehnica București}
+\date{Autumn 2026}
+
+\begin{document}
+
+\titleframe
+
+\objectivesframe{
+  \cell[\faBug]{Debug on purpose}{Launch and attach DevTools, read the inspector, set breakpoints and step through Dart.}
+  \cell[\faLayerGroup]{The three trees}{Widget, Element and RenderObject, and what setState actually triggers.}
+  \cell[\faToggleOn]{Stateless vs Stateful}{When a widget really needs a State object, and when it genuinely does not.}
+  \cell[\faIcon{share-alt}]{Sharing state}{Lifting state up, InheritedWidget, and why value equality decides rebuilds.}
+}
+
+\divider{Part 1 · Debugging}{Seeing what your app is actually doing}[DevTools, breakpoints, and useful logging]
+
+\begin{frame}[eyebrow=Debugging]{The debugging toolbox}
+  \vskip 2mm
+  \begin{grid}[3]
+    \cell[\faIcon{sync-alt}]{Hot reload}{Injects changed source into the running VM and rebuilds. State objects survive.}
+    \cell[\faPowerOff]{Hot restart}{Rebuilds from scratch and drops all state. Use it whenever initState or a global changed.}
+    \cell[\faTerminal]{debugPrint \& assert}{Cheap, always available, and compiled out of release builds entirely.}
+    \cell[\faPause]{Breakpoints}{Stop on a line, inspect every variable in scope, step through the frame.}
+    \cell[\faIcon{tachometer-alt}]{DevTools}{Inspector, performance, CPU, memory, network: a browser tab attached to your app.}
+    \cell[\faExclamationCircle]{Read the error}{Flutter's exception boxes name the widget and the constraint that failed.}
+  \end{grid}
+  \note{Ask the room how many have ever opened DevTools. Usually very few; that is the gap this section closes.}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=Debugging]{print, debugPrint, and assert}
+  \begin{columns}[T]
+    \begin{column}{0.56\textwidth}
+\begin{dart}
+print('value: $x');       // logcat truncates
+debugPrint('value: $x');  // throttled, lossless
+assert(count >= 0, 'count negative');
+
+// Three switches worth memorizing:
+debugDumpApp();            // widget tree
+debugDumpRenderTree();     // sizes + constraints
+(*@\hl{debugPrintRebuildDirtyWidgets = true;}@*)
+\end{dart}
+    \end{column}
+    \begin{column}{0.40\textwidth}
+      \lead{Why not just print?}{Android's logcat silently drops lines beyond a length limit. \code{debugPrint} throttles output so nothing disappears.}
+      \muted{\code{assert} takes a message. Use it for invariants you want to hear about in the lab and never in production.}
+    \end{column}
+  \end{columns}
+  \begin{takeaway}{Logging is a primary debugging tool.}
+    It is the only tool that works identically on a simulator, a real phone and a colleague's machine.
+  \end{takeaway}
+\end{frame}
+
+\begin{frame}[eyebrow=State]{Pick the smallest tool that works}
+  \vskip 1mm
+  {\usebeamerfont{small}\begin{tabular}{@{}lllp{14mm}p{44mm}@{}}
+    \toprule
+    \thead{Tool} & \thead{Scope} & \thead{Boilerplate} & \thead{Testable} & \thead{Use when} \\
+    \midrule
+    setState        & one widget       & none   & partly    & the state never leaves the screen \\
+    Lifting up      & a subtree        & low    & yes       & two siblings share one value \\
+    InheritedWidget & any descendant   & medium & yes       & a value is read far below its owner \\
+    Provider        & any descendant   & low    & yes       & the same, with less ceremony \\
+    BLoC / Cubit    & whole feature    & high   & excellent & events and side effects \\
+    \bottomrule
+  \end{tabular}}
+  \vskip 3mm
+  \muted{Provider wraps InheritedWidget. Riverpod is its successor, without the BuildContext.}
+  \begin{takeaway}{This is Part 1.}
+    setState, lifting up and InheritedWidget carry most screens. The last column is Lecture 6.
+  \end{takeaway}
+\end{frame}
+
+\begin{frame}[eyebrow=Numbers]{Why the frame budget matters}
+  \vskip 4mm
+  \begin{grid}[3]
+    \bignum{16.7 ms}{per frame at 60 Hz}
+    \bignum{8.3 ms}{per frame at 120 Hz, most 2026 phones}
+    \bignum{1}{missed frame is visible jank}
+  \end{grid}
+\end{frame}
+
+\begin{frame}[embedded,eyebrow=Embedded,fragile]{Publishing a reading over MQTT}
+  \begin{columns}[T]
+    \begin{column}{0.58\textwidth}
+\begin{golang}
+func main() {
+    led := machine.LED
+    led.Configure(machine.PinConfig{Mode: machine.PinOutput})
+    for {
+        led.High()
+        time.Sleep(200 * time.Millisecond)
+        led.Low()
+        time.Sleep(800 * time.Millisecond)
+    }
+}
+\end{golang}
+    \end{column}
+    \begin{column}{0.38\textwidth}
+      \lead{Orange marks embedded topics.}{The \code{[embedded]} frame option switches the accent for that slide only.}
+      \begin{hint}[Board]
+        ESP32-C3, flashed with \code{tinygo flash}.
+      \end{hint}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}[eyebrow=Recap]{Three things to remember}
+  \vskip 2mm
+  \begin{enumerate}
+    \item Widgets are immutable blueprints. \muted{The State object is what persists across builds.}
+    \item setState marks one Element dirty. \muted{Only that subtree rebuilds on the next frame.}
+    \item Value equality decides rebuilds. \muted{That is the whole reason Equatable exists.}
+  \end{enumerate}
+  \vskip 5mm
+  \kv{Further reading}{\link{https://docs.flutter.dev/ui/interactivity}{docs.flutter.dev/ui/interactivity} · \link{https://docs.flutter.dev/tools/devtools}{DevTools guide}}
+\end{frame}
+
+\closingframe{Questions?}{dinu\_stefan.rusu@upb.ro · Microsoft Teams: course channel}
+
+\end{document}

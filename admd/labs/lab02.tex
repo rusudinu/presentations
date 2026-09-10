@@ -1,0 +1,214 @@
+% Lab 2: Dart and null safety
+\documentclass[10pt,aspectratio=169,t]{beamer}
+\usetheme[lab]{upbminimal}
+
+\course{Application Development for Mobile Devices}
+\decklabel{Lab 2}
+\title{Dart and null safety}
+\subtitle{Classes, null-safe types and collections}
+\author{Dinu-Ștefan Rusu}
+\institute{FILS, Universitatea Politehnica București}
+\date{Week 4}
+
+\begin{document}
+
+\titleframe
+
+\begin{frame}[eyebrow=Today]{What this lab is for}
+  \vskip 2mm
+  \begin{grid}[2]
+    \cell[\faLock]{Null safety in code}{Reach for \code{?}, \code{?.}, \code{??} and \code{late} deliberately instead of by trial and error}
+    \cell[\faLayerGroup]{Classes and inheritance}{Model a small domain with an abstract base class and two subclasses}
+  \end{grid}
+  \vskip 6mm
+  \taskmeta{Time}{2 hours}{Submit}{Push to \code{admd-labs}, branch \code{lab-2}, before Lab 3}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=Setup]{Where your code goes}
+  \begin{steps}
+    \item Open the project from Lab 1 and create a branch:
+\begin{shell}
+git checkout -b lab-2
+\end{shell}
+    \item Create \code{lib/models/} directory. All classes live there.
+    \item One class per file with \code{lower\_snake\_case} filenames: \code{user.dart}, \code{bank\_account.dart}, etc.
+    \item Only \code{main.dart} holds widget code: just enough to display what your classes produce.
+  \end{steps}
+  \begin{hint}
+    Dart convention: lowercase filename for lowercase class. The graders read your repository by these rules.
+  \end{hint}
+\end{frame}
+
+\begin{frame}[eyebrow=Reference]{The null-safety toolkit}
+  {\small
+  \begin{columns}[T]
+    \begin{column}{0.50\textwidth}
+      \textbf{Types and operators}
+      \begin{itemize}
+        \item \code{String?}: may be null; plain \code{String} never can
+        \item \code{?.}: read a member only if non-null
+        \item \code{??}: use right-hand value if left is null
+        \item \code{??=}: assign only if currently null
+        \item \code{!}: assert non-null; throws if wrong
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.46\textwidth}
+      \textbf{Declarations and promotion}
+      \begin{itemize}
+        \item \code{late}: assigned after construction
+        \item \code{required}: caller must pass it
+        \item \code{= 0.0}: default for optional parameter
+        \item \code{is Book}: type test that promotes variable
+        \item \code{x != null}: flow analysis promotes to non-null
+      \end{itemize}
+    \end{column}
+  \end{columns}
+  }
+  \vskip 2mm
+  \begin{takeaway}{Use \code{!} last, not first.}
+    Every \code{!} you write is a promise the compiler can no longer check for you.
+  \end{takeaway}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=Reference]{Null safety in one file}
+\begin{dart}
+class Room {
+  final String code;            // always present
+  final int? seats;             // may be unknown
+  String? projector;            // may be absent
+  late final DateTime opened;   // set later, read after
+
+  Room({required this.code, this.seats, this.projector});
+
+  String describeSeats() =>
+      seats == null ? 'Unknown' : '$seats seats';
+}
+\end{dart}
+  {\small
+  \code{code} never null. \code{seats}, \code{projector} may be null, so compiler forces handling. \code{opened} has no value yet; reading it throws \code{LateInitializationError}.
+  }
+\end{frame}
+
+\begin{frame}[eyebrow=Task I]{Users}
+  {\small
+  \begin{columns}[T]
+    \begin{column}{0.55\textwidth}
+      \begin{steps}
+        \item Create \code{User} with \code{String name}, \code{int? age}, \code{String? email}.
+        \item Make \code{name} required; leave \code{age}, \code{email} optional.
+        \item Create three \code{User} instances with different null combinations.
+        \item Display safely; show ``Not provided'' where value is null.
+        \item Implement \code{getDisplayAge()}: return ``Age not specified'' or age as string.
+      \end{steps}
+    \end{column}
+    \begin{column}{0.41\textwidth}
+      \kv{Done when}{}
+      \begin{checklist}
+        \item Three users render, one with all optionals null
+        \item Both branches of \code{getDisplayAge()} work
+      \end{checklist}
+    \end{column}
+  \end{columns}
+  }
+\end{frame}
+
+\begin{frame}[eyebrow=Task II]{Bank accounts}
+  {\small
+  \begin{columns}[T]
+    \begin{column}{0.55\textwidth}
+      \begin{steps}
+        \item Create \code{BankAccount}: \code{late accountNumber}, required \code{holderName}, \code{balance = 0.0}.
+        \item Add optional \code{bankBranch}.
+        \item Implement \code{initializeAccount(String number)}.
+        \item Add method to check if account number is set.
+        \item Display accounts safely in ListView.
+      \end{steps}
+    \end{column}
+    \begin{column}{0.41\textwidth}
+      \kv{Done when}{}
+      \begin{checklist}
+        \item All accounts render with branch or ``N/A''
+        \item Uninitialized account shows message
+      \end{checklist}
+    \end{column}
+  \end{columns}
+  }
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=Scaffolding]{Just enough UI to see your objects}
+\begin{dart}
+ListView.builder(
+  itemCount: accounts.length,
+  itemBuilder: (context, i) {
+    final a = accounts[i];
+    return ListTile(
+      title: Text(a.holderName),
+      subtitle: Text(a.bankBranch ?? 'Not provided'),
+    );
+  },
+)
+\end{dart}
+  \begin{takeaway}{Widgets are Lecture 3 and Lab 3.}
+    Build visible rows only. \code{??} handles ``Not provided'' in widgets.
+  \end{takeaway}
+\end{frame}
+
+\begin{frame}[eyebrow=Task III]{Library: model classes}
+  {\small
+  \begin{columns}[T]
+    \begin{column}{0.55\textwidth}
+      \begin{steps}
+        \item Abstract \code{LibraryItem}: \code{title}, \code{author?}, \code{publishDate?}.
+        \item \code{Book extends LibraryItem}: add \code{pageCount?}, \code{isbn?}.
+        \item \code{Magazine extends LibraryItem}: add \code{issueNumber?}, \code{publisher?}.
+        \item Pass shared fields via super constructor.
+        \item Add \code{borrower?} (reuse Task I \code{User}) and \code{dueDate?} to \code{LibraryItem}.
+      \end{steps}
+    \end{column}
+    \begin{column}{0.41\textwidth}
+      \kv{Done when}{}
+      \begin{checklist}
+        \item Both subclasses compile without unset fields
+        \item All optional fields use \code{?}
+      \end{checklist}
+    \end{column}
+  \end{columns}
+  }
+\end{frame}
+
+\begin{frame}[eyebrow=Task III]{Library: API and borrowing}
+  {\small
+  \begin{columns}[T]
+    \begin{column}{0.55\textwidth}
+      \begin{steps}
+        \item \code{Library} holds \code{List<LibraryItem>}; add \code{addItem()} with validation.
+        \item Implement \code{searchByTitle()}, \code{getItemsByAuthor()}, \code{getRecentItems()} with null handling.
+        \item Add \code{borrowItem()} that checks if already borrowed.
+        \item Add \code{returnItem()} that clears borrower and dueDate.
+      \end{steps}
+    \end{column}
+    \begin{column}{0.41\textwidth}
+      \kv{Done when}{}
+      \begin{checklist}
+        \item All methods handle null safely
+        \item Borrowed items are protected
+        \item Null queries return empty list
+      \end{checklist}
+    \end{column}
+  \end{columns}
+  }
+\end{frame}
+
+\begin{frame}[eyebrow=Troubleshooting]{Errors you will hit today}
+  {\small
+  \trouble{Non-nullable 'x' not assigned before use}{Give a value, use \code{?}, or mark \code{late}}
+  \trouble{LateInitializationError on 'x'}{A \code{late} field read before it was set}
+  \trouble{Can't access property on nullable receiver}{Use \code{?.}, \code{??}, or null check first}
+  \trouble{Null check \code{!} used on null value}{Replace with \code{??} or real null check}
+  \trouble{Type 'String?' can't assign to 'String'}{Promote with \code{if (x != null)} or \code{??}}
+  }
+\end{frame}
+
+\closingframe{Push before you leave}{Branch lab-2 · one commit per task · running app is your evidence}
+
+\end{document}

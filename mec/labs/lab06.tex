@@ -1,0 +1,308 @@
+% Mobile and Embedded Computing, Lab 6. Compile: latexmk -xelatex lab06.tex
+\documentclass[10pt,aspectratio=169,t]{beamer}
+\usetheme[lab]{upbminimal}
+
+\course{Mobile and Embedded Computing}
+\decklabel{Lab 6}
+\title{gRPC: a Go server and a Dart client}
+\subtitle{One unary call, one stream, a deadline, and a cancel}
+\author{Dinu-Ștefan Rusu}
+\institute{FILS, Universitatea Politehnica București}
+\date{Week 12}
+
+\begin{document}
+
+\titleframe
+
+\begin{frame}[eyebrow=Today]{What this lab is for}
+  \vskip 2mm
+  \begin{grid}[2]
+    \cell[\faServer]{Call a Go server once}{Generate a Dart client from a .proto file, call a unary RPC with a deadline, and read back a DeadlineExceeded status when the server is slow.}
+    \cell[\faSatelliteDish]{Watch a stream live}{Subscribe to a server-streaming RPC, show one reading a second on screen, and cancel it cleanly with a button.}
+  \end{grid}
+  \vskip 6mm
+  \taskmeta{Time}{2 hours}{Submit}{Push to your team repo, branch \code{lab-6}, before next lab}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=Setup]{Install the toolchain}
+  \vskip 1mm
+  Install these once per machine, then branch the team repository for this lab.
+\begin{shell}
+brew install protobuf   # or: apt install protobuf-compiler
+
+go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
+go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest
+
+dart pub global activate protoc_plugin
+\end{shell}
+  \begin{hint}[Add them to PATH]
+    The Go plugins land in \code{GOPATH/bin}, the Dart one in your pub-cache \code{bin} folder. Neither is on PATH by default.
+  \end{hint}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=Setup]{Where your code goes}
+  \begin{steps}
+    \item Branch the team repository:
+\begin{shell}
+git checkout -b lab-6
+\end{shell}
+    \item Put the contract in \code{proto/readings/v1/}.
+    \item Server code in \code{server/lab6/main.go}. App code in \code{lib/lab6/}.
+    \item Run the server once before writing any Dart code.
+  \end{steps}
+  \begin{hint}[Order of work]
+    Contract, then server, then client. Do not write a widget before \code{go run} prints a listening line in your terminal.
+  \end{hint}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=Setup]{The contract: readings.proto}
+\begin{codeblock}
+syntax = "proto3";
+package readings.v1;
+message Reading {
+  string device_id    = 1;
+  double value         = 2;
+  int64  taken_at_unix = 3;
+}
+message DeviceRequest { string device_id = 1; }
+service Readings {
+  rpc GetLatest(DeviceRequest) returns (Reading);
+  rpc StreamReadings(DeviceRequest) returns (stream Reading);
+}
+\end{codeblock}
+  \vskip 1mm
+  \muted{GetLatest returns one Reading. StreamReadings returns a stream of them.}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=Task I]{Generate the stubs, run the server}
+  \begin{columns}[T]
+    \begin{column}{0.55\textwidth}
+      \begin{steps}
+        \item Run protoc for Go, then for Dart (the exact commands are next).
+        \item Add the packages: \code{flutter pub add grpc protobuf}.
+        \item Start the server: \code{go run ./server/lab6}.
+        \item Confirm it prints the port it is listening on.
+      \end{steps}
+    \end{column}
+    \begin{column}{0.41\textwidth}
+      \kv{Done when}{}
+      \begin{checklist}
+        \item \code{server/lab6/gen/} holds two generated Go files.
+        \item \code{lib/gen/} holds two generated Dart files.
+        \item The server keeps running with no error printed.
+        \item \code{flutter pub get} resolves cleanly.
+      \end{checklist}
+    \end{column}
+  \end{columns}
+  \begin{takeaway}{Generated code is build output.}
+    Never hand-edit it. Change the .proto file and regenerate instead.
+  \end{takeaway}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=Task I]{Generating stubs for Go and Dart}
+  \vskip 1mm
+  Run protoc once per language, against the same .proto file.
+\begin{shell}
+protoc -Iproto \
+  --go_out=gen      --go_opt=paths=source_relative \
+  --go-grpc_out=gen --go-grpc_opt=paths=source_relative \
+  proto/readings/v1/readings.proto
+
+protoc -Iproto --dart_out=grpc:lib/gen \
+  proto/readings/v1/readings.proto
+\end{shell}
+  \muted{Commit the generated files, or run protoc in CI. Either way, pick one and write it down.}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=Task I]{A Go server: struct and GetLatest}
+  \begin{columns}[T]
+    \begin{column}{0.6\textwidth}
+\begin{golang}
+type server struct {
+    pb.UnimplementedReadingsServer
+    latest *pb.Reading
+}
+
+func (s *server) GetLatest(
+    ctx context.Context, req *pb.DeviceRequest,
+) (*pb.Reading, error) {
+    if s.latest == nil {
+        return nil, status.Error(codes.NotFound, "empty")
+    }
+    return s.latest, nil
+}
+\end{golang}
+    \end{column}
+    \begin{column}{0.37\textwidth}
+      \begin{itemize}
+        \item \textbf{Embed the Unimplemented type.} \muted{It gives every method a stub, so the server compiles before GetLatest exists.}
+        \item \textbf{No reading yet is an error,} \muted{not a zero value: NotFound tells the client empty and absent apart.}
+      \end{itemize}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=Task I]{A Go server: the stream and main}
+  \begin{columns}[T]
+    \begin{column}{0.58\textwidth}
+\begin{golang}
+func (s *server) StreamReadings(
+    req *pb.DeviceRequest,
+    stream pb.Readings_StreamReadingsServer,
+) error {
+    ctx := stream.Context()
+    for ctx.Err() == nil {
+        time.Sleep(time.Second)
+        stream.Send(s.latest)
+    }
+    return nil
+}
+\end{golang}
+    \end{column}
+    \begin{column}{0.39\textwidth}
+\begin{golang}
+func main() {
+    lis, _ := net.Listen(
+        "tcp", ":50051")
+    gs := grpc.NewServer()
+    pb.RegisterReadingsServer(
+        gs, &server{})
+    gs.Serve(lis)
+}
+\end{golang}
+    \end{column}
+  \end{columns}
+  \muted{StreamReadings loops until the client's context is done. main wires the implementation to a TCP listener.}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=Task II]{A unary call with a deadline}
+  \begin{columns}[T]
+    \begin{column}{0.55\textwidth}
+      \begin{steps}
+        \item Add a debug flag that sleeps 3 seconds before \code{GetLatest} returns.
+        \item Call \code{getLatest} from Flutter with a 2-second \code{CallOptions} timeout.
+        \item Catch \code{GrpcError} and show its status code on screen.
+        \item Confirm the call fails while the server is still asleep.
+      \end{steps}
+    \end{column}
+    \begin{column}{0.41\textwidth}
+      \kv{Done when}{}
+      \begin{checklist}
+        \item The screen shows an error, not a stuck spinner.
+        \item The error code is \code{deadlineExceeded}.
+        \item Turning off the sleep makes the same call succeed.
+      \end{checklist}
+    \end{column}
+  \end{columns}
+  \begin{takeaway}{A deadline is not optional.}
+    Without one, a slow server holds your UI state forever.
+  \end{takeaway}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=Task II]{A Dart client: the unary call}
+  \begin{columns}[T]
+    \begin{column}{0.6\textwidth}
+\begin{dart}
+final channel = ClientChannel(
+    '10.0.2.2', port: 50051,
+    options: const ChannelOptions(
+        credentials: ChannelCredentials.insecure()));
+final client = ReadingsClient(channel); try {
+  final r = await client.getLatest(
+    DeviceRequest()..deviceId = id,
+    options: CallOptions(
+        timeout: const Duration(seconds: 2)));
+  setState(() => _value = r.value);
+} on GrpcError catch (e) {
+  setState(() => _error = e.code);
+}
+\end{dart}
+    \end{column}
+    \begin{column}{0.37\textwidth}
+      \begin{itemize}
+        \item \textbf{Insecure means plaintext,} \muted{fine for a lab server on your own machine, never for a real deployment.}
+        \item \textbf{10.0.2.2} \muted{is the Android emulator's address for your host machine, not \code{localhost}.}
+      \end{itemize}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=Task III]{The streaming screen, with a cancel}
+  \begin{columns}[T]
+    \begin{column}{0.55\textwidth}
+      \begin{steps}
+        \item Call \code{streamReadings} with the device id.
+        \item Listen on the stream and update the screen on each \code{Reading}.
+        \item Add a Cancel button that stops the subscription.
+        \item Show a stopped label once canceled.
+      \end{steps}
+    \end{column}
+    \begin{column}{0.41\textwidth}
+      \kv{Done when}{}
+      \begin{checklist}
+        \item The value on screen changes about once a second.
+        \item Cancel stops the updates immediately.
+        \item Nothing is logged as an error after a clean cancel.
+      \end{checklist}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=Task III]{A Dart client: the stream and cancel}
+  \begin{columns}[T]
+    \begin{column}{0.55\textwidth}
+\begin{dart}
+final call = client.streamReadings(
+  DeviceRequest()..deviceId = id,
+);
+final sub = call.listen(
+  (r) => setState(() => _value = r.value),
+  onError: (_) => setState(() => _live = false),
+);
+
+void _cancel() {
+  call.cancel();   // stop the stream
+  sub.cancel();
+  setState(() => _live = false);
+}
+\end{dart}
+    \end{column}
+    \begin{column}{0.42\textwidth}
+      \begin{itemize}
+        \item \textbf{call is a ResponseStream.} \muted{Canceling it tells the server to stop sending, not only to stop listening locally.}
+        \item \textbf{The timeout still applies.} \muted{Pick a generous one for a stream you plan to keep open for a while.}
+      \end{itemize}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}[eyebrow=Acceptance]{What the grader will do}
+  \vskip 1mm
+  \begin{columns}[T]
+    \begin{column}{0.48\textwidth}
+      \kv{The demo}{}
+      \begin{checklist}
+        \item The stream updates live, about once a second.
+        \item Pressing Cancel stops it immediately.
+        \item A 2-second deadline fails \code{getLatest} against a server sleeping 3 seconds, with \code{deadlineExceeded}.
+      \end{checklist}
+    \end{column}
+    \begin{column}{0.48\textwidth}
+      \kv{In the repository}{}
+      \muted{The .proto file, the server, the app code, and a README naming your device id scheme and the port you used.\par\vskip 1.5mm
+      One commit per task, on branch \code{lab-6}.}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}[eyebrow=Troubleshooting]{Errors you will meet, and their fixes}
+  \trouble{protoc-gen-go: program not found}{Not on PATH. Add both plugin bin folders to PATH.}
+  \trouble{Target of URI doesn't exist: readings.pb.dart}{Match \code{--dart\_out} to where the app imports it.}
+  \trouble{Connection refused to localhost:50051}{Emulator localhost is itself. Use \code{10.0.2.2}.}
+  \trouble{UNAVAILABLE: failed to connect}{The server isn't running, or the port is wrong.}
+  \trouble{CLEARTEXT communication not permitted}{Android blocks it. Set \code{usesCleartextTraffic}.}
+\end{frame}
+
+\closingframe{Push before you leave.}{Branch lab-6 · one commit per task · README with device id scheme and port}
+
+\end{document}
