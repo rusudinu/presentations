@@ -4,8 +4,8 @@ Slides, demos and code from my courses, conference talks and trainings.
 
 ## Students
 
-- [Application Development for Mobile Devices (ADMD)](admd/), year III, semester I
-- [Mobile and Embedded Computing (MEC)](mec/), year III, semester II
+- [Application Development for Mobile Devices (ADMD)](admd/)
+- [Mobile and Embedded Computing (MEC)](mec/)
 
 Each folder has an index of every lecture and lab, the PDFs, and the code examples.
 
