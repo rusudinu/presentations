@@ -40,13 +40,12 @@
   \begin{columns}[T]
     \begin{column}{0.56\textwidth}
 \begin{dart}
-print('value: $x');       // logcat truncates
-debugPrint('value: $x');  // throttled, lossless
+print('value: $x');  // logcat truncates
+debugPrint('value: $x'); // throttled
 assert(count >= 0, 'count negative');
-
 // Three switches worth memorizing:
-debugDumpApp();            // widget tree
-debugDumpRenderTree();     // sizes + constraints
+debugDumpApp();         // widget tree
+debugDumpRenderTree(); // sizes, constraints
 (*@\hl{debugPrintRebuildDirtyWidgets = true;}@*)
 \end{dart}
     \end{column}

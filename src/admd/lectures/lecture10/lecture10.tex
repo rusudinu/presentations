@@ -112,22 +112,25 @@
     \begin{column}{0.56\textwidth}
 \begin{dart}
 final auth = FirebaseAuth.instance;
-Future<void> signUp(String email, String pass) async {
+Future<void> signUp(
+    String email, String pass) async {
   try {
-    final cred = await auth.createUserWithEmailAndPassword(
-        email: email.trim(), password: pass);
-    await cred.user!.sendEmailVerification();
+    final cred = await auth
+        .createUserWithEmailAndPassword(
+    email: email.trim(), password: pass);
+    await cred.user!
+        .sendEmailVerification();
   } on FirebaseAuthException catch (e) {
-    throw AuthFailure(mapSignUpError(e.code));
-  }
-}
+    throw AuthFailure(
+        mapSignUpError(e.code));
+  }}
 \end{dart}
     \end{column}
     \begin{column}{0.40\textwidth}
-      \lead{Three things to notice}{The sign-up call also signs the user in immediately. The password never reaches your code again after it returns.}
-      \muted{Send the verification mail here, not later. An unverified account should not reach your data.}
-      \vskip 2mm
-      \muted{Sign-up is the one endpoint that still reveals existence: email-already-in-use is unavoidable on a usable form. Rate limiting and App Check are the mitigation.}
+      \lead{Three things to notice}{The call also signs the user in immediately. The password never reaches your code again.}
+      \muted{Send the verification mail here, not later. Keep unverified accounts out of your data.}
+      \vskip 1mm
+      \muted{Sign-up still reveals existence: email-already-in-use is unavoidable. Rate limiting and App Check help.}
     \end{column}
   \end{columns}
   \note{mapSignUpError is a Dart 3 switch expression that turns Firebase's error code into a message you control. Point out that the failure type thrown here is your own: never let a raw FirebaseAuthException reach the widget layer, because its message field is written for developers, not users.}

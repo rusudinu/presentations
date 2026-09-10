@@ -144,13 +144,14 @@
 final _reader = TextRecognizer(
     script: TextRecognitionScript.latin);
 
-Future<String> readText(String path) async {
-  final input = InputImage.fromFilePath(path);
+Future<String> readText(
+    String path) async {
+  final input =
+      InputImage.fromFilePath(path);
   final result =
       await _reader.processImage(input);
   return result.text;
 }
-
 void dispose() => _reader.close();
 \end{dart}
     \end{column}
@@ -245,14 +246,13 @@ Future<void> load() async {
   _interp = await Interpreter.fromAsset(
       'assets/leaf_int8.tflite');
   _iso = await IsolateInterpreter.create(
-      address: _interp.address);
-}
-Future<List<double>> classify(List x) async {
+      address: _interp.address);}
+Future<List<double>> classify(
+    List x) async {
   final out =
       List.filled(5, 0.0).reshape([1, 5]);
   await _iso.run([x], out);
-  return out[0].cast<double>();
-}
+  return out[0].cast<double>();}
 \end{dart}
     \end{column}
     \begin{column}{0.40\textwidth}
@@ -378,16 +378,18 @@ AIzaSyD-EXAMPLE_KEY_xxxxxxxxxx
   \begin{columns}[T]
     \begin{column}{0.56\textwidth}
 \begin{dart}
-// Firebase.initializeApp already ran (Lecture 8)
+// initializeApp already ran (Lecture 8)
 await FirebaseAppCheck.instance.activate(
-  androidProvider: AndroidProvider.playIntegrity,
+  androidProvider:
+      AndroidProvider.playIntegrity,
   appleProvider: AppleProvider.appAttest,
 );
 final model = FirebaseAI.googleAI()
     .generativeModel(
   model: 'gemini-2.5-flash',
   generationConfig: GenerationConfig(
-      temperature: 0.2, maxOutputTokens: 512),
+      temperature: 0.2,
+      maxOutputTokens: 512),
 );
 \end{dart}
     \end{column}
@@ -436,7 +438,7 @@ Stream<String> ask(String prompt) async* {
     \bignum{$n^2$}{cost of a naive chat: n turns cost roughly n squared}
   \end{grid}
   \vskip 2mm
-  \muted{Cap the output with maxOutputTokens, and cap the input by summarizing history instead of resending all of it. Route by difficulty: a small model answers most questions, only its failures reach the expensive one.}
+  \muted{Cap the output with maxOutputTokens, and cap the input by summarizing history. Route by difficulty: a small model answers most questions, only its failures reach the expensive one.}
   \begin{takeaway}{Per-user quotas live on your backend.}
     An app cannot enforce a quota against a user who controls the app: the same rule as the authentication lecture.
   \end{takeaway}

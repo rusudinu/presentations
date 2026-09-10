@@ -1,0 +1,101 @@
+name: Build slides
+
+# Rebuilds the LaTeX decks whose sources changed (all of them when the template changes or when
+# run by hand), publishes the PDFs into admd/ and mec/, and commits them only when the bytes differ.
+# Builds are reproducible (TeX Live fonts, SOURCE_DATE_EPOCH pinned to the deck's commit time), so
+# an unchanged deck produces an identical file and nothing is committed.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'src/**'
+      - 'template/**'
+      - '.github/workflows/build-slides.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: build-slides
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    container: texlive/texlive:latest
+    timeout-minutes: 60
+
+    steps:
+      - name: Install git and python
+        run: |
+          apt-get update -qq
+          apt-get install -y -qq git python3 > /dev/null
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+
+      - name: Checkout
+        uses: actions/checkout@v7.0.1
+        with:
+          fetch-depth: 0   # full history: the build pins each PDF's date to the deck's last commit
+
+      - name: Decide what to build
+        id: plan
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] || [ -z "${{ github.event.before }}" ] \
+             || ! git cat-file -e "${{ github.event.before }}" 2>/dev/null; then
+            echo "all=true" >> "$GITHUB_OUTPUT"; exit 0
+          fi
+          changed=$(git diff --name-only "${{ github.event.before }}" "${{ github.sha }}" -- src template .github/workflows/build-slides.yml)
+          echo "$changed"
+          if echo "$changed" | grep -qE '^(template/|\.github/)'; then
+            echo "all=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "all=false" >> "$GITHUB_OUTPUT"
+            # one target per changed deck folder: src/<course>/<kind>/<deck>/<deck>.pdf
+            echo "$changed" | grep -E '^src/(admd|mec)/(lectures|labs)/[^/]+/' \
+              | sed -E 's#^(src/[^/]+/[^/]+/([^/]+))/.*#\1/\2.pdf#' | sort -u > targets.txt
+            cat targets.txt
+          fi
+
+      - name: Build every deck
+        if: steps.plan.outputs.all == 'true'
+        run: |
+          make -C src/admd all
+          make -C src/mec all
+
+      - name: Build the changed decks
+        if: steps.plan.outputs.all == 'false'
+        shell: bash
+        run: |
+          while read -r t; do
+            [ -n "$t" ] || continue
+            course=$(echo "$t" | cut -d/ -f2)
+            make -C "src/$course" "${t#src/$course/}"
+          done < targets.txt
+          make -C src/admd publish
+          make -C src/mec publish
+
+      - name: Fail on slides that run into the footer
+        shell: bash
+        run: |
+          bad=$(grep -l 'Overfull \\vbox' src/*/lectures/*/*.log src/*/labs/*/*.log 2>/dev/null || true)
+          if [ -n "$bad" ]; then
+            echo "These decks have overfull slides:"; echo "$bad"
+            grep -H 'Overfull \\vbox' $bad
+            exit 1
+          fi
+
+      - name: Commit the published PDFs when they changed
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add admd/*.pdf mec/*.pdf admd/README.md mec/README.md
+          if git diff --cached --quiet; then
+            echo "No PDF changed; nothing to commit."
+          else
+            git commit -m "Rebuild slides"
+            git push
+          fi

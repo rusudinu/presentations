@@ -138,13 +138,12 @@ Future<void> refresh(String id) async {
     if (mounted) {
       setState(() => _loading = false);
     }
-  }
-}
+  }}
 \end{dart}
     \end{column}
     \begin{column}{0.40\textwidth}
       \lead{One specific catch, one general catch.}{Handle the failure you expect by type, then anything else.}
-      \muted{Always check \code{mounted} before calling setState after an await. The widget may already have left the tree.}
+      \muted{Check \code{mounted} before calling setState after an await. The widget may already be gone.}
     \end{column}
   \end{columns}
   \note{Demo turning off Wi-Fi mid-request and show the DioException path firing. Then remove the mounted check, pop the screen mid-request, and show the setState-after-dispose error it produces.}

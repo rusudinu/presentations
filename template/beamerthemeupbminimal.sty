@@ -6,7 +6,7 @@
 % Design system (mirrors slides/assets/template.js in the course repo):
 %   ink 1D1D1F · gray 86868B · hairline D2D2D7 · panel F5F5F7
 %   blue 0071E3 = the one accent · orange F56300 = embedded topics only
-%   Helvetica Neue for text, Menlo for code. Black title, divider, closing.
+%   TeX Gyre Heros for text, DejaVu Sans Mono for code. Black title, divider, closing.
 %   Whitespace and hairlines separate; no cards, stripes, gradients, shadows.
 %
 % Usage:  \usetheme{upbminimal}            lectures
@@ -58,13 +58,12 @@
   \newcommand\upb@spaced[1]{\textls{#1}}
 \else
   \RequirePackage{fontspec}
-  \IfFontExistsTF{Helvetica Neue}
-    {\setsansfont{Helvetica Neue}}
-    {\IfFontExistsTF{Arial}{\setsansfont{Arial}}{\setsansfont{Liberation Sans}}}
-  \IfFontExistsTF{Menlo}
-    {\setmonofont{Menlo}[Scale=MatchLowercase]}
-    {\IfFontExistsTF{Courier New}{\setmonofont{Courier New}[Scale=MatchLowercase]}
-                                 {\setmonofont{Liberation Mono}[Scale=MatchLowercase]}}
+  % Fonts shipped with TeX Live (Helvetica and Menlo look-alikes), so every machine and the CI
+  % render byte-identical PDFs. Do not switch to system fonts: the build would stop being reproducible.
+  \setsansfont{texgyreheros}[Extension=.otf,UprightFont=*-regular,BoldFont=*-bold,
+    ItalicFont=*-italic,BoldItalicFont=*-bolditalic]
+  \setmonofont{DejaVuSansMono}[Extension=.ttf,BoldFont=*-Bold,ItalicFont=*-Oblique,
+    BoldItalicFont=*-BoldOblique,Scale=MatchLowercase]
   \newcommand\upb@spaced[1]{{\addfontfeature{LetterSpace=16}#1}}
 \fi
 \renewcommand\familydefault{\sfdefault}

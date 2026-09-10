@@ -44,15 +44,14 @@ print('value: $x');       // logcat truncates
 debugPrint('value: $x');  // throttled, lossless
 assert(count >= 0, 'count negative');
 
-// Three switches worth memorizing:
 debugDumpApp();            // widget tree
 debugDumpRenderTree();     // sizes + constraints
 (*@\hl{debugPrintRebuildDirtyWidgets = true;}@*)
 \end{dart}
     \end{column}
     \begin{column}{0.40\textwidth}
-      \lead{Why not just print?}{Android's logcat silently drops lines beyond a length limit. \code{debugPrint} throttles output so nothing disappears.}
-      \muted{\code{assert} takes a message. Use it for invariants you want to hear about in the lab and never in production.}
+      \lead{Why not just print?}{Android's logcat drops long lines. \code{debugPrint} throttles output so nothing disappears.}
+      \muted{\code{assert} takes a message. Use it for invariants you want to hear about in the lab.}
     \end{column}
   \end{columns}
   \begin{takeaway}{Logging is a primary debugging tool.}

@@ -284,7 +284,6 @@ ListTile(
 \end{frame}
 
 \begin{frame}[eyebrow=Troubleshooting]{Four failures you will meet}
-  \vskip 1mm
   \trouble{Target of URI hasn't been generated: app\_db.g.dart}{build\_runner has not run, or ran before the table file was saved. Re-run it, then restart analysis.}
   \trouble{Connection refused, or the request hangs until it times out}{The emulator's \code{localhost} is itself. Point the client at \code{10.0.2.2}, not \code{localhost}.}
   \trouble{The outbox row count never drops to zero}{An exception is swallowed silently, or the loop never runs because the connectivity check never fires. Log every iteration.}
