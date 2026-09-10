@@ -110,6 +110,7 @@ python3 /Users/dinu/dev/upb/presentations/template/qa.py src/<course>/lectures/l
 ```
 
 It compiles the deck, reports every problem, and writes `preview/<deck>-sheetN.png` next to the
-deck. A deck is done only when qa.py prints `RESULT CLEAN` **and** every contact sheet has been
+deck. Commit only the `.tex`; the PDF under `admd/` or `mec/` is rebuilt and committed by the GitHub
+workflow after the push. A deck is done only when qa.py prints `RESULT CLEAN` **and** every contact sheet has been
 looked at and shows no title wrapped to two lines, no text touching the footer, no code wrapping
 mid-statement, and no slide with an empty half. Fix, re-run, look again.

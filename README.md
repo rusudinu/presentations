@@ -13,4 +13,4 @@ Each folder has an index of every lecture and lab, the PDFs, and the code exampl
 
 Talks and demos live in their own folders (for example `demos/` for the RAG and MCP material).
 The LaTeX sources of the course decks are under `src/`, and the Beamer theme they use is in
-`template/`, free to reuse.
+`template/`, free to reuse. A GitHub workflow rebuilds the PDFs on every push.

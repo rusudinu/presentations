@@ -8,7 +8,9 @@ LATEXMK  = latexmk -cd -xelatex -interaction=nonstopmode -halt-on-error
 SRC     := $(wildcard lectures/*/*.tex labs/*/*.tex)
 PDF     := $(SRC:.tex=.pdf)
 
-all: $(PDF) publish
+# `make` only builds. Publishing into ../../admd is done by the GitHub workflow, so that the
+# committed PDFs always come from one reproducible environment. `make publish` still works locally.
+all: $(PDF)
 
 # SOURCE_DATE_EPOCH = the commit time of the deck folder, so an unchanged deck rebuilds to identical bytes.
 %.pdf: %.tex $(TEMPLATE)/beamerthemeupbminimal.sty

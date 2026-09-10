@@ -27,6 +27,12 @@ make preview         # plus one PNG per page in preview/ for a visual QA pass
 latexmk -xelatex my-lecture.tex
 ```
 
+**Who publishes the PDFs.** `make` in `src/<course>/` only builds the decks next to their sources
+(ignored by git). The GitHub workflow builds the changed decks in a fixed TeX Live container and
+commits the results into `admd/` and `mec/` when the bytes differ, so the committed PDFs always come
+from one environment. Do not commit locally built PDFs: two TeX Live snapshots round glyph positions
+slightly differently, and the CI would rewrite them anyway.
+
 Fonts come from TeX Live itself: TeX Gyre Heros (a Helvetica clone) for text and DejaVu Sans Mono
 (what Menlo is based on) for code. Nothing depends on the operating system, so a deck builds to the
 same bytes on a Mac and on the GitHub runner. The Makefiles also pin the PDF timestamp to the commit
