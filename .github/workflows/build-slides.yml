@@ -95,7 +95,17 @@ jobs:
           git add admd/*.pdf mec/*.pdf admd/README.md mec/README.md
           if git diff --cached --quiet; then
             echo "No PDF changed; nothing to commit."
-          else
-            git commit -m "Rebuild slides"
-            git push
+            exit 0
           fi
+          git commit -m "Rebuild slides"
+          # main may have moved while we were building. Replay our commit on top of it, keeping
+          # the CI-built PDFs on conflict (they are the reproducible ones), and retry the push.
+          for attempt in 1 2 3; do
+            git pull --rebase -X theirs origin main || { git rebase --abort; exit 1; }
+            if [ "$(git rev-parse HEAD)" = "$(git rev-parse origin/main)" ]; then
+              echo "Upstream already has identical PDFs; nothing to push."; exit 0
+            fi
+            git push && exit 0
+            sleep 10
+          done
+          exit 1
