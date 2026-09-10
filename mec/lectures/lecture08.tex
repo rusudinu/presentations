@@ -1,0 +1,458 @@
+% MEC Lecture 8. Compile: latexmk -xelatex lecture08.tex
+\documentclass[10pt,aspectratio=169,t]{beamer}
+\usetheme{upbminimal}
+
+\course{Mobile and Embedded Computing}
+\decklabel{Lecture 8}
+\title{Offline-first, part 1}
+\subtitle{Local data and the sync engine}
+\author{Dinu-Ștefan Rusu}
+\institute{FILS, Universitatea Politehnica București}
+\date{Spring 2027}
+
+\begin{document}
+
+\titleframe
+
+\objectivesframe{
+  \cell[\faCloud]{Design for offline}{Why offline is a normal state, and why the UI reads local data, never a server response.}
+  \cell[\faDatabase]{Model the local layer}{A Drift table with sync metadata, and a live query the UI watches with watch().}
+  \cell[\faIcon{exchange-alt}]{Write the sync engine}{An outbox, a drain loop, and a delta pull driven by a checkpoint.}
+  \cell[\faSatelliteDish]{Trigger sync sensibly}{When to wake the radio, and what background sync can and cannot promise.}
+}
+
+\divider{Part 1 · Offline-first}{The network is not a dependency}[It is a background utility that is often, briefly, absent]
+
+\begin{frame}[eyebrow=Offline-first]{Offline is a state, not an error}
+  \vskip 2mm
+  \begin{grid}[3]
+    \bignum{< 1 ms}{a local read: no radio, no server, no failure mode}
+    \bignum{40–200 ms}{a good round trip on a warm 4G or 5G link}
+    \bignum{30 s}{the timeout your user waits out before giving up}
+  \end{grid}
+  \vskip 3mm
+  \muted{Worse than no signal is lie-fi: the interface reports a connection, and the request simply hangs until the timeout fires.}
+  \begin{takeaway}{An offline-first app has no offline error path.}
+    Being offline is not a failure to handle. It is the resting state the UI is built for from the start.
+  \end{takeaway}
+  \note{This is the lecture the semester project needs: requirement 3 asks for offline-first with a stated conflict rule, and no lab before Lab 5 covers it. Ask the room what their app currently does when a request hangs instead of failing outright.}
+\end{frame}
+
+\begin{frame}[eyebrow=Offline-first]{This is not an edge case}
+  \vskip 2mm
+  \begin{grid}[3]
+    \cell[\faIcon{building}]{Lifts and basements}{Concrete and steel block a radio signal completely, for the whole ride.}
+    \cell[\faIcon{plane}]{Planes and trains}{Airplane mode is not a bug report, and a tunnel repeats the same loss every few minutes.}
+    \cell[\faWifi]{Hotel Wi-Fi}{DNS resolves, the interface reports a connection, and nothing routes past it.}
+  \end{grid}
+  \vskip 4mm
+  \muted{Hospital wards, rural roads, and festival crowds add the same failure by radio congestion, not by radio absence. All of these are ordinary conditions for real users, not corner cases to special-case away.}
+  \note{Ask who in the room has been on a train that loses signal in the same tunnel every day. That is the exact condition an offline-first app is built to shrug off without a special code path.}
+\end{frame}
+
+\begin{frame}[eyebrow=Offline-first]{The inversion of truth}
+  \muted{The same user action, tap Save, under the two architectures.}
+  \vskip 2mm
+  \begin{columns}[T]
+    \begin{column}{0.48\textwidth}
+      \lead{Online-first: UI = f(server)}{}
+      \begin{enumerate}
+        \item Tap Save, a spinner appears.
+        \item The request goes out: latency, retries.
+        \item The server answers, or it does not.
+        \item The UI updates, or shows an error.
+      \end{enumerate}
+    \end{column}
+    \begin{column}{0.48\textwidth}
+      \lead{Offline-first: UI = f(local database)}{}
+      \begin{enumerate}
+        \item Tap Save, no spinner at all.
+        \item The write commits locally, in one transaction.
+        \item watch() re-emits, the UI rebuilds instantly.
+        \item Sync happens later, in the background.
+      \end{enumerate}
+    \end{column}
+  \end{columns}
+  \begin{takeaway}{The network leaves the critical path.}
+    It becomes a background job that reconciles two copies of the truth.
+  \end{takeaway}
+  \note{Walk both columns side by side. The point to land: the offline-first UI never has a loading state for the network, only the first-launch case where the local database is genuinely empty.}
+\end{frame}
+
+\begin{frame}[eyebrow=Offline-first]{CAP, on a device in your pocket}
+  \vskip 1mm
+  CAP describes what happens during a partition: when the two sides cannot talk, you either refuse to answer, or you answer with data that may be stale. You cannot do both.
+  \vskip 3mm
+  \begin{grid}[3]
+    \cell[\faWifi]{Partition tolerance}{Not a choice on mobile. A phone in a lift is the resting state, not a rare fault to engineer around.}
+    \cell[\faIcon{check-circle}]{Availability}{You keep it. Every read comes from the local database, and every write is accepted, signal or no signal.}
+    \cell[\faIcon{balance-scale}]{Consistency}{You give it up. What you get instead is eventual consistency, and the cost of it is the rest of this lecture and the next one.}
+  \end{grid}
+  \begin{takeaway}{The network picks P for you.}
+    The only real choice left is whether the app stays useful while partitioned, or freezes waiting for data it cannot reach.
+  \end{takeaway}
+  \note{Correct the common misreading out loud: CAP does not say pick two of three. It says during a partition, pick one of two. On a phone the partition is not rare, so the choice is effectively made before the app ships.}
+\end{frame}
+
+\begin{frame}[eyebrow=Offline-first]{Why the project grades this directly}
+  \vskip 2mm
+  \begin{grid}[2]
+    \cell[\faIcon{list-ol}]{Requirement 3 of 5}{The app must work with no network and sync later, with a stated conflict rule.}
+    \cell[\faClock]{Milestone 7}{By the seventh project session the app runs offline and syncs. Lab 5 builds exactly this.}
+  \end{grid}
+  \begin{takeaway}{Everything from here builds toward Lab 5.}
+    ADMD Lecture 9 covered local storage. This lecture adds the sync metadata, the outbox, and the drain loop on top of it.
+  \end{takeaway}
+  \note{Make the stakes explicit: this is not background theory, it is the exact shape of Lab 5 and half of the project's graded requirements. Point at the milestone table so the room sees the deadline.}
+\end{frame}
+
+\divider{Part 2 · Local database}{One source of truth, on the device}[Schema, reactive reads, and an outbox for every write]
+
+\begin{frame}[eyebrow=Local database]{Firestore's cache, or your own SQLite}
+  {\usebeamerfont{small}\begin{tabular}{@{}lp{42mm}p{42mm}@{}}
+    \toprule
+    & \thead{Firestore offline cache} & \thead{Drift (SQLite)} \\
+    \midrule
+    Types           & dynamic maps, checked at run time & compile-time checked SQL and rows \\
+    Reactive UI     & snapshots() streams               & watch() streams, on any query \\
+    Offline queries & full scans, no local indexes      & your indexes work offline too \\
+    Transactions    & online only                       & full local ACID transactions \\
+    Cost            & billed per document read          & flat: whatever your backend costs \\
+    \bottomrule
+  \end{tabular}}
+  \begin{takeaway}{Firestore is a managed sync engine you cannot open.}
+    ADMD Lecture 9 introduced sqflite. Drift sits on the same SQLite engine, with generated queries.
+  \end{takeaway}
+  \note{PowerSync is a middle path worth naming if it comes up, but do not spend time on it: the project needs students to own the database directly. Lecture 10 covers the backend that Drift eventually syncs with.}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=Local database]{A Drift table with sync metadata}
+  \vskip 1mm
+\begin{dart}
+class Notes extends Table {
+  TextColumn get id => text()();       // client-made UUID
+  TextColumn get title => text()();
+  DateTimeColumn get updatedAt => dateTime()();
+  DateTimeColumn get deletedAt => dateTime().nullable()();
+  BoolColumn get isDirty =>
+      boolean().withDefault(const Constant(true))();
+  IntColumn get version =>
+      integer().withDefault(const Constant(0))();
+  @override
+  Set<Column> get primaryKey => {id};
+}
+\end{dart}
+  \muted{Four columns make a table syncable: updatedAt, deletedAt, isDirty, version.}
+  \note{Point out the id column first: a client-made UUID, never an auto-increment integer, because two offline devices must never invent the same primary key for two different rows.}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=Local database]{Generating the boilerplate}
+  \vskip 1mm
+\begin{shell}
+dart run build_runner build \
+    --delete-conflicting-outputs
+\end{shell}
+  \vskip 2mm
+  \muted{Drift reads the Notes table and writes the DAO mixin, the generated Note row class, and the companion classes the rest of this lecture uses. Run it again after every schema change.}
+  \begin{warning}[Schema versions]
+    Adding a column bumps the schema version. Write a migration step for it, or existing installs crash on the first launch after an update.
+  \end{warning}
+  \note{This is the step students forget until the app crashes on a real device with old data on disk. Show the generated file once in the lab so it stops looking like magic.}
+\end{frame}
+
+\begin{frame}[eyebrow=Local database]{What each sync column means}
+  \vskip 2mm
+  \begin{grid}[2]
+    \cell[\faClock]{updatedAt}{When this device last touched the row. It is the input to any timestamp-based resolution, and its weakness is the subject of Lecture 9.}
+    \cell[\faTrash]{deletedAt}{The tombstone. A delete is a write, never a local DELETE statement, or the server never learns the row is gone.}
+    \cell[\faBolt]{isDirty}{True from the moment the row is touched until the server has acknowledged it. The drain loop clears it.}
+    \cell[\faIcon{list-ol}]{version}{What this device last saw from the server, so the resolver can tell ``we are ahead'' from ``both sides moved''.}
+  \end{grid}
+  \note{Ask what happens if deletedAt is missing and a plain DELETE is issued instead: the row simply vanishes locally, the server never hears about it, and the next pull silently resurrects it.}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=Local database]{The UI reads local data}
+  \vskip 1mm
+\begin{dart}
+class NotesDao extends DatabaseAccessor<AppDb>
+    with _$NotesDaoMixin {
+  NotesDao(super.db);
+
+  // Drift re-runs this and re-emits whenever the
+  // table changes: from the user, or from sync.
+  Stream<List<Note>> watchActive() => (select(notes)
+        ..where((n) => n.deletedAt.isNull())
+        ..orderBy([(n) => OrderingTerm.desc(n.updatedAt)]))
+      .watch();
+}
+\end{dart}
+  \muted{One stream, two writers. A user edit and a sync update both flow through this same watch() call.}
+  \note{Stress that there is no network loading state here, only the first-launch case where the database is genuinely empty. watch() is a Stream, so everything about StreamBuilder and Riverpod from Lecture 4 still applies.}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=Local database]{The outbox table}
+  \vskip 1mm
+\begin{dart}
+class Outbox extends Table {
+  TextColumn get id => text()();
+  TextColumn get entity => text()();
+  TextColumn get entityId => text()();
+  TextColumn get op => text()();        // upsert or delete
+  TextColumn get payload => text()();   // JSON, ready to POST
+  DateTimeColumn get queuedAt => dateTime()();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+\end{dart}
+  \muted{A durable, ordered list of intents. It survives the process being killed mid-request, which a variable holding a pending request in memory never would.}
+  \note{Point out that payload is already serialized JSON, not a reference back to the row: the outbox must still describe the original intent correctly even if the row changes again before the drain loop runs.}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=Local database]{Writes go to the table and an outbox}
+  \vskip 1mm
+\begin{dart}
+Future<void> saveNote(Note n) => db.transaction(() async {
+  final row = n.copyWith(
+      updatedAt: DateTime.now(), isDirty: true);
+  await into(notes).insertOnConflictUpdate(row);
+  await into(outbox).insert(OutboxCompanion.insert(
+    id: uuid.v4(), entity: 'note', entityId: n.id,
+    op: 'upsert', payload: jsonEncode(row.toJson()),
+  ));
+});
+\end{dart}
+  \muted{One transaction, two effects. The row and the intent to sync it commit together, so the outbox can never drift out of step with the data. watch() fires the moment this commits, long before any packet leaves the device.}
+  \note{Say why not to just call the API directly: the call can fail, and then the local row and the server disagree with nothing recording that fact. The outbox is that record, and the transaction is what makes it safe.}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=Local database]{A delete is a write, not a DELETE}
+  \vskip 1mm
+\begin{dart}
+Future<void> deleteNote(String id) => db.transaction(() async {
+  await (update(notes)..where((n) => n.id.equals(id)))
+      .write(NotesCompanion(
+          deletedAt: Value(DateTime.now()),
+          isDirty: const Value(true)));
+  await into(outbox).insert(OutboxCompanion.insert(
+    id: uuid.v4(), entity: 'note', entityId: id,
+    op: 'delete', payload: '',
+  ));
+});
+\end{dart}
+  \muted{The row stays in the table with deletedAt set. The watch() query from two slides ago filters it out, so the UI never sees it, but the sync engine still has a row to push.}
+  \note{Ask what a real SQL DELETE would do instead of a tombstone: the row is simply absent from the next delta, and an absent row means not changed, never gone, so the deletion never reaches other devices.}
+\end{frame}
+
+\begin{frame}[eyebrow=Local database]{Why not just call the API directly}
+  \vskip 2mm
+  \begin{grid}[3]
+    \cell[\faIcon{times-circle}]{The call can fail}{A dropped connection loses the write, and nothing records that the local row and the server now disagree.}
+    \cell[\faPowerOff]{The app can be killed}{Mid-request, the process dies. An in-memory retry queue dies with it; a table on disk does not.}
+    \cell[\faIcon{sort-numeric-down}]{Order matters}{Two edits to the same row must reach the server in the order the user made them, not in request-completion order.}
+  \end{grid}
+  \begin{takeaway}{The outbox is the durable record of intent.}
+    Everything the drain loop does in the next section exists to empty this table, one row at a time, in order.
+  \end{takeaway}
+  \note{This is the bridge into the sync engine section: everything from here on is about what reads the outbox table and how. Ask what a naive fire-and-forget API call would do differently for each of the three cells.}
+\end{frame}
+
+\divider{Part 3 · Sync engine}{Two loops and a checkpoint}[Push what this device changed, pull what everyone else changed, remember where you got to]
+
+\begin{frame}[eyebrow=Sync engine]{The two loops}
+  \muted{Neither loop runs while the user is waiting. Both are triggered by events.}
+  \vskip 2mm
+  \begin{columns}[T]
+    \begin{column}{0.48\textwidth}
+      \lead{Push: what this device changed}{}
+      \begin{enumerate}
+        \item Read the outbox, oldest first.
+        \item POST it, with an idempotency key.
+        \item The server accepts, assigns a version.
+        \item Drop the row, clear isDirty.
+      \end{enumerate}
+    \end{column}
+    \begin{column}{0.48\textwidth}
+      \lead{Pull: what everyone else changed}{}
+      \begin{enumerate}
+        \item GET /sync since the last checkpoint.
+        \item The server returns a delta.
+        \item Upsert, or resolve if isDirty is set.
+        \item Save the new checkpoint: the server's clock.
+      \end{enumerate}
+    \end{column}
+  \end{columns}
+  \begin{takeaway}{The checkpoint is the whole protocol.}
+    Store the timestamp the server reported, never the one your device read, or clock skew makes you skip rows.
+  \end{takeaway}
+  \note{Draw the two loops as parallel timelines if a whiteboard is at hand. The room should leave with the checkpoint rule as a fixed habit: always the server's clock, never the device's.}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=Sync engine]{Draining the outbox}
+  \vskip 1mm
+\begin{dart}
+Future<void> drainOutbox() async {
+  final batch = await (select(outbox)
+        ..orderBy([(o) => OrderingTerm.asc(o.queuedAt)])
+        ..limit(50)).get();
+  for (final item in batch) {
+    await api.push(item, idempotencyKey: item.id);
+    await db.transaction(() async {
+      await (delete(outbox)
+          ..where((o) => o.id.equals(item.id))).go();
+      await notesDao.clearDirty(item.entityId);
+    });
+  }
+}
+\end{dart}
+  \note{Point out that api.push carries the outbox row's own id as the idempotency key, so a reply lost on the way back means the same intent is pushed twice, and the server must recognize it and do nothing new.}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=Sync engine]{FIFO, and stop on the first failure}
+  \vskip 1mm
+\begin{dart}
+try {
+  await api.push(item, idempotencyKey: item.id);
+} on ApiFailure catch (e) {
+  if (e.permanent) { await parkItem(item); continue; }
+  break;   // transient: keep order, retry later
+}
+\end{dart}
+  \begin{grid}[2]
+    \cell[\faIcon{sort-numeric-down}]{Never skip ahead}{Reordering the queue reorders the user's own edits.}
+    \cell[\faIcon{ban}]{Park poison messages}{A permanent 4xx fails forever. Move it aside and let the rest through.}
+  \end{grid}
+  \note{This is the outbox pattern exactly as used in backend message queues. Ask what happens if the loop keeps retrying a permanent failure forever: the whole queue behind it starves.}
+\end{frame}
+
+\begin{frame}[eyebrow=Sync engine]{Idempotency: safe to push twice}
+  \vskip 2mm
+  \muted{A reply lost on the way back looks identical to a request the server never received. The client cannot tell the difference, so sending the same intent again must be safe.}
+  \vskip 3mm
+  \begin{grid}[2]
+    \cell[\faIcon{key}]{The key is the outbox row id}{Generated once, on the device, when the write happened. It travels unchanged with every retry of that same intent.}
+    \cell[\faServer]{The server deduplicates}{It remembers keys it has already applied, and returns the same result again instead of applying the write twice.}
+  \end{grid}
+  \begin{takeaway}{This is not optional once retries exist.}
+    Any network call an app retries needs an idempotency key, on a phone as much as between two backend services.
+  \end{takeaway}
+  \note{Connect this to gRPC retries in Lecture 11 if it comes up, but do not go deep here: the point for this lecture is that drainOutbox already retries, so the key already has to exist.}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=Sync engine]{Delta sync: only what changed}
+\begin{dart}[aboveskip=1mm,belowskip=1mm]
+Future<void> pull() async {
+  var cursor = await meta.checkpoint();  // the server's clock
+  while (true) {
+    final page = await api.get('/sync', {'since': cursor});
+    await db.transaction(() async {
+      for (final r in page.rows) {
+        await notesDao.upsertFromServer(r);
+      }
+      await meta.setCheckpoint(page.serverCursor);
+    });
+    if (!page.hasMore) break;
+    cursor = page.serverCursor;
+  }
+}
+\end{dart}
+  \note{Say plainly why the whole loop is one transaction per page: an interrupted sync must leave a consistent database and a checkpoint that matches what was actually written, never a checkpoint that has moved past unwritten rows.}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=Sync engine]{What one page of the response holds}
+\begin{codeblock}
+GET /sync?since=2026-08-01T09:14:22Z
+{ "serverCursor": "2026-08-01T09:31:05Z",
+  "hasMore": false,
+  "rows": [
+    {"id": "a1", "title": "Milk", "deletedAt": null},
+    {"id": "b2", "deletedAt": "2026-08-01T09:20:00Z"}
+  ]}
+\end{codeblock}
+  \begin{grid}[3]
+    \cell[\faTrash]{Deletes are rows}{Absent means not changed, never gone.}
+    \cell[\faIcon{list-ol}]{Paged}{Two weeks offline is not one whole backlog.}
+    \cell[\faClock]{One cursor}{Moves forward only once its page commits.}
+  \end{grid}
+  \note{Point at the JSON: b2 carries no title field at all, only the tombstone marker. That is the shape a client must handle for every deleted row, even one it never saw while it existed.}
+\end{frame}
+
+\begin{frame}[eyebrow=Sync engine]{Sync, in three numbers}
+  \vskip 4mm
+  \begin{grid}[3]
+    \bignum{50}{rows per outbox batch: enough to drain fast, small enough to retry cheaply}
+    \bignum{1}{transaction per pulled page, so a crash mid-sync leaves a consistent database}
+    \bignum{15 min}{the usual floor for a periodic background task on Android}
+  \end{grid}
+  \vskip 6mm
+  \muted{None of these numbers matters as much as the event that starts the loop. The next two slides are about that trigger.}
+  \note{These are the numbers worth remembering if the lab test asks about the sync engine's shape. The 15-minute figure ties directly to the WorkManager slide from Lecture 7.}
+\end{frame}
+
+\begin{frame}[eyebrow=Sync engine]{When to wake the radio}
+  {\renewcommand{\arraystretch}{1.05}\usebeamerfont{small}\begin{tabular}{@{}lp{26mm}p{16mm}p{22mm}p{26mm}@{}}
+    \toprule
+    & \thead{How} & \thead{Latency} & \thead{Radio cost} & \thead{Use it for} \\
+    \midrule
+    Push             & server holds a socket open  & real time     & high: always on       & chat, live tracking \\
+    Poll             & a timer fires either way    & half interval & high, mostly wasted   & legacy backends \\
+    Delta on trigger & sync on resume or reconnect & seconds       & low: one per event    & almost every app \\
+    Nudge and delta  & silent push, then a pull    & near real time & low: existing channel & feeds, inboxes \\
+    \bottomrule
+  \end{tabular}}
+  \begin{takeaway}{Sync on events, not on a timer.}
+    App resumed, connectivity returned, or the user asked. A fixed interval wastes battery.
+  \end{takeaway}
+  \note{Land on the delta-on-trigger row: it is the default for the project unless the team specifically needs live push, which is more infrastructure than the offline-first requirement asks for.}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=Sync engine]{Background sync, and what it gives you}
+  \begin{columns}[T]
+    \begin{column}{0.55\textwidth}
+\begin{dart}
+void didChangeAppLifecycleState(s) {
+  if (s == AppLifecycleState.resumed) sync.now();
+}
+
+connectivity.onChanged.listen((r) {
+  if (r != ConnectivityResult.none) sync.now();
+});
+\end{dart}
+    \end{column}
+    \begin{column}{0.41\textwidth}
+      \lead{Android: WorkManager.}{Roughly a 15-minute floor.}
+      \lead{iOS: BGTaskScheduler.}{Never guaranteed to run.}
+    \end{column}
+  \end{columns}
+  \begin{takeaway}{Foreground triggers are the contract; background work is a bonus.}
+    The syncs you can rely on are the ones you trigger yourself, not the ones the OS schedules.
+  \end{takeaway}
+  \note{Be blunt that background execution is not dependable on either platform. Lab 5's acceptance test, airplane mode on, edit, airplane mode off, only works because sync is triggered on the connectivity event, not on a background timer.}
+\end{frame}
+
+\begin{frame}[eyebrow=Sync engine]{What Lab 5 asks you to build}
+  \vskip 2mm
+  \begin{grid}[2]
+    \cell[\faDatabase]{A Drift table, with the outbox}{Your main entity, with the four sync columns from this lecture, and writes that go to both tables in one transaction.}
+    \cell[\faIcon{exchange-alt}]{A drain loop against a tiny server}{An in-memory Go server that keeps a version per row. Full source is on a reference slide in the lab.}
+    \cell[\faIcon{route}]{Delta sync on start}{Pull since the last checkpoint, upsert what came back, save the new checkpoint.}
+    \cell[\faIcon{check-circle}]{Acceptance}{Airplane mode on, edit, airplane mode off: the server has the edit. Lecture 9 adds the conflict rule this lab needs next.}
+  \end{grid}
+  \note{Preview, do not solve: the lab handout carries the exact server source and the acceptance script. The point today is that every piece named here was just built, in this same order, on this slide deck.}
+\end{frame}
+
+\begin{frame}[eyebrow=Recap]{Three things to remember}
+  \vskip 2mm
+  \begin{enumerate}
+    \item The UI reads the local database, never the network. \muted{Sync is a background job that reconciles two copies of the truth after the fact.}
+    \item Every write is two writes in one transaction. \muted{The row, and an outbox entry recording the intent to sync it.}
+    \item Sync on events, not on a timer. \muted{App resumed, connectivity returned, or the user asked. Background execution is a bonus, never the contract.}
+  \end{enumerate}
+  \vskip 5mm
+  \kv{Further reading}{\link{https://drift.simonbinder.eu}{drift.simonbinder.eu} · \link{https://drift.simonbinder.eu/docs/transactions/}{Drift: transactions and DAOs} · \link{https://docs.flutter.dev/cookbook/persistence}{docs.flutter.dev/cookbook/persistence} · \link{https://developer.android.com/topic/libraries/architecture/workmanager}{WorkManager docs}}
+  \note{Close by naming what is still missing: two devices can edit the same row while both are offline, and last writer wins is not always the right answer. That gap is exactly Lecture 9.}
+\end{frame}
+
+\closingframe{Questions?}{dinu\_stefan.rusu@upb.ro · Microsoft Teams: course channel}
+
+\end{document}

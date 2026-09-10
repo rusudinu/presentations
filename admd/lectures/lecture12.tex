@@ -1,0 +1,514 @@
+% Lecture 12: AI in the app. Compile: latexmk -xelatex lecture12.tex
+\documentclass[10pt,aspectratio=169,t]{beamer}
+\usetheme{upbminimal}
+
+\course{Application Development for Mobile Devices}
+\decklabel{Lecture 12}
+\title{AI in the App}
+\subtitle{On-device ML, custom models, and safe cloud LLM calls}
+\author{Dinu-Ștefan Rusu}
+\institute{FILS, Universitatea Politehnica București}
+\date{Autumn 2026}
+
+\begin{document}
+
+\titleframe
+
+\objectivesframe{
+  \cell[\faBalanceScale]{On-device or cloud}{The variables that decide it: latency, privacy, offline behavior, cost per call, capability ceiling.}
+  \cell[\faMicrochip]{ML Kit and LiteRT}{Real Dart for text and barcodes, plus your own quantized model through tflite\_flutter.}
+  \cell[\faKey]{Where the key lives}{Why a key inside an app binary is public, and the two architectures that fix it.}
+  \cell[\faIcon{wave-square}]{LLMs in a real UI}{Streaming answers from a large language model, timeouts, token cost, and validating output you cannot trust.}
+}
+
+\divider{Part 1 · The decision}{On the device, or on someone else's GPU}[Five variables: latency, privacy, offline, cost, capability ceiling]
+
+\begin{frame}[eyebrow=Decision]{Three different things called AI in the app}
+  \vskip 2mm
+  \begin{grid}[3]
+    \cell[\faCamera]{Classic on-device ML}{A fixed-purpose machine learning (ML) model runs locally: read text, find a barcode, locate a face. Milliseconds, offline, nothing leaves the phone.}
+    \cell[\faMagic]{On-device generative}{A small language model on the phone's own accelerator: summarize, proofread, rewrite. Gated on hardware, never guaranteed.}
+    \cell[\faCloud]{A cloud large language model}{A large model on someone else's machines. Highest capability, network-bound, billed per token.}
+  \end{grid}
+  \vskip 2mm
+  \muted{Artificial intelligence (AI) in an app is not one thing. The three shapes differ in where the compute happens, what happens with no network, and what an attacker can reach.}
+  \begin{takeaway}{Most shipping apps use two of the three.}
+    Picking one is an architecture decision, not a library choice, and it is expensive to reverse late.
+  \end{takeaway}
+  \note{Ask the room to name an app that already does one of these three. The boundary between them, not the labels, is where most of the design work sits.}
+\end{frame}
+
+\begin{frame}[eyebrow=Decision]{On-device vs cloud, variable by variable}
+  \vskip 1mm
+  {\usebeamerfont{small}\renewcommand{\arraystretch}{1.05}\begin{tabular}{@{}lp{4.6cm}p{4.6cm}@{}}
+    \toprule
+    & \thead{On-device} & \thead{Cloud} \\
+    \midrule
+    Latency & a few milliseconds & hundreds of ms to seconds, plus the round trip \\
+    No connection & works, offline is normal & the feature does not exist \\
+    Where data goes & stays on the device & to a third party \\
+    Cost per call & zero, forever & billed per token, forever \\
+    Capability ceiling & limited by memory & the largest model in production \\
+    Updating the model & ships with an app update & instant, server-side \\
+    \bottomrule
+  \end{tabular}}
+  \vskip 1mm
+  \begin{takeaway}{On-device first, cloud when it cannot cope.}
+    Privacy, offline behavior and cost all point one way. Only capability points the other.
+  \end{takeaway}
+  \note{Walk the room through one row at a time and ask which column they would pick for a banking app versus a game. The capability row is the only one that ever argues for cloud.}
+\end{frame}
+
+\begin{frame}[eyebrow=Decision]{Will the model even fit on the phone}
+  \vskip 2mm
+  \begin{grid}[3]
+    \bignum{28 GB}{7 billion parameters at float32, 4 bytes each}
+    \bignum{14 GB}{the same model at float16}
+    \bignum{About 1 GB}{a 2 billion parameter model at int4, phone-class}
+  \end{grid}
+  \vskip 1mm
+  \muted{Parameter count times bytes per parameter is memory you must find before a single token appears. A 2026 flagship phone has roughly 8 to 16 GB of random-access memory (RAM), shared with the system and every other app.}
+  \begin{takeaway}{On-device generative AI is a resource-allocation problem.}
+    Mobile and Embedded Computing covers the full memory arithmetic.
+  \end{takeaway}
+  \note{Do the arithmetic out loud: seven billion parameters times four bytes is 28 gigabytes. Then ask what a flagship phone actually has. The size class that fits is small and quantized, not a shrunken laptop model.}
+\end{frame}
+
+\begin{frame}[eyebrow=Decision]{The pattern that ships: hybrid}
+  \vskip 2mm
+  \begin{columns}[T]
+    \begin{column}{0.46\textwidth}
+      \begin{enumerate}
+        \item Input arrives. \muted{A camera frame, a document, a question.}
+        \item The on-device model runs first. \muted{Free, offline, private, milliseconds.}
+        \item Is it good enough? \muted{Measured against a threshold you set.}
+        \item Escalate to the cloud. \muted{Only for what the small model cannot do.}
+      \end{enumerate}
+    \end{column}
+    \begin{column}{0.50\textwidth}
+      \lead{Scan locally, look up remotely.}{ML Kit reads the barcode on the device; only the resulting digits go to your own application programming interface (API).}
+      \vskip 3mm
+      \lead{Draft locally, refine remotely.}{The on-device model writes a first version instantly; the cloud model runs only when the user asks for better.}
+    \end{column}
+  \end{columns}
+  \note{Ask for an example from an app the room uses daily. This is the same escalation shape as retry with backoff from the networking lecture: try the cheap path first, pay for the expensive one only on failure.}
+\end{frame}
+
+\begin{frame}[eyebrow=Decision]{Know your escalation rate}
+  \vskip 2mm
+  \begin{grid}[2]
+    \cell[\faIcon{search}]{Detect locally, understand remotely}{A face or object detector finds the region; you upload a small crop instead of a full-resolution frame.}
+    \cell[\faIcon{sync}]{Cache, then do not call at all}{The same barcode, photo or question asked twice becomes zero latency and zero cost the second time.}
+  \end{grid}
+  \vskip 4mm
+  \lead{The share of requests that reach the cloud is one number.}{It is your bill, your slowest response time, and your privacy exposure, all at once.}
+  \begin{takeaway}{A hybrid architecture is a promise you can break silently.}
+    A system whose escalation rate nobody can quote is a cloud system with a cache in front of it.
+  \end{takeaway}
+  \note{Ask what happens to the privacy story if most requests silently escalate to the cloud. The escalation rate is the one number worth remembering here, not the diagram.}
+\end{frame}
+
+\divider{Part 2 · On the device}{ML Kit, LiteRT, and making a model fit}[The problems already solved, and then your own]
+
+\begin{frame}[eyebrow=On-device ML]{Google ML Kit: the everyday building blocks}
+  \vskip 2mm
+  \begin{grid}[3]
+    \cell[\faIcon{font}]{Text recognition}{google\_mlkit\_text\_recognition reads Latin, Chinese, Japanese, Korean and Devanagari script, as blocks of lines of elements.}
+    \cell[\faIcon{qrcode}]{Barcode scanning}{google\_mlkit\_barcode\_scanning reads every common 1D and 2D symbology, plus the parsed payload for a URL or a Wi-Fi network.}
+    \cell[\faUser]{Face detection}{google\_mlkit\_face\_detection returns bounding boxes, landmarks and a smile probability. Detection, never recognition.}
+  \end{grid}
+  \vskip 4mm
+  \muted{Machine learning (ML) here means a model Google already trained and shipped for you. Nothing on this slide trains on your data or learns from your users.}
+  \note{Ask which of these three the room has already used in a personal project. The detection-versus-recognition line on face detection matters legally, not only technically.}
+\end{frame}
+
+\begin{frame}[eyebrow=On-device ML]{More ML Kit, and how you add it}
+  \vskip 2mm
+  \begin{grid}[3]
+    \cell[\faIcon{language}]{Language ID and translation}{google\_mlkit\_language\_id and google\_mlkit\_translation ship per-language-pair models the device downloads once and keeps.}
+    \cell[\faIcon{image}]{Labeling and object detection}{google\_mlkit\_image\_labeling gives coarse categories; google\_mlkit\_object\_detection tracks a region across frames.}
+    \cell[\faIcon{box-open}]{How you add it}{One plugin per feature, Android and iOS only. The google\_ml\_kit umbrella pulls every model into your binary at once.}
+  \end{grid}
+  \vskip 4mm
+  \begin{takeaway}{These are community-maintained Dart wrappers.}
+    Each call crosses a platform channel into the native ML Kit SDK. Fine for a photo; it is why the next slide is about back-pressure, not raw speed.
+  \end{takeaway}
+  \note{The umbrella package trades convenience for binary size. A common mistake is importing google\_ml\_kit for one feature and shipping every model with it.}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=On-device ML]{Reading text from an image, end to end}
+  \begin{columns}[T]
+    \begin{column}{0.53\textwidth}
+\begin{dart}
+// pubspec: google_mlkit_text_recognition
+final _reader = TextRecognizer(
+    script: TextRecognitionScript.latin);
+
+Future<String> readText(String path) async {
+  final input = InputImage.fromFilePath(path);
+  final result =
+      await _reader.processImage(input);
+  return result.text;
+}
+
+void dispose() => _reader.close();
+\end{dart}
+    \end{column}
+    \begin{column}{0.44\textwidth}
+      \lead{Runs off the Dart thread.}{The UI keeps rendering while a frame is read.}
+      \vskip 2mm
+      \lead{The result is a tree.}{Blocks of lines of elements, each with a bounding box.}
+      \vskip 2mm
+      \muted{close() is not optional. The detector owns a native model; skipping it is a leak the Dart garbage collector cannot see.}
+    \end{column}
+  \end{columns}
+  \note{The first call is the slow one, since the model loads or downloads on first use. Ask what happens if a screen that opens a camera never calls close.}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=On-device ML]{Barcodes from a live camera stream}
+  \begin{columns}[T]
+    \begin{column}{0.52\textwidth}
+\begin{dart}
+bool _busy = false;
+Future<void> onFrame(CameraImage f) async {
+  if (_busy) return; else _busy = true;
+  final codes = await _scanner.processImage(_toInput(f));
+  if (codes.isNotEmpty) onCode(codes.first);
+  _busy = false;
+}
+\end{dart}
+    \end{column}
+    \begin{column}{0.45\textwidth}
+      \lead{A camera delivers about 30 frames a second.}{Inference will not always finish inside 33 ms.}
+      \muted{Dropping frames is correct: the next arrives in a moment.}
+    \end{column}
+  \end{columns}
+  \begin{takeaway}{Real-time on-device ML is a back-pressure problem.}
+    The model is fast enough. The frame pipeline breaks first.
+  \end{takeaway}
+  \note{Get the sensor rotation wrong and detection silently returns nothing, with no error at all. Stop the stream and close the scanner in dispose, and again when the app backgrounds: continuous inference drains the battery.}
+\end{frame}
+
+\begin{frame}[eyebrow=On-device ML]{On-device generative AI is a capability}
+  \begin{columns}[T]
+    \begin{column}{0.56\textwidth}
+      \muted{The step past classification: a small language model on the phone's own neural processing unit (NPU) can summarize a thread, proofread a message, or rewrite a paragraph.}
+      \vskip 2mm
+      \muted{Google exposes this through the ML Kit generative AI APIs, backed by Gemini Nano; Apple exposes an equivalent on supported hardware. Both are the same shape from your side.}
+    \end{column}
+    \begin{column}{0.40\textwidth}
+      \lead{Ask the SDK. Three answers.}{}
+      \begin{enumerate}
+        \item Available. \muted{Run it locally.}
+        \item Downloadable. \muted{Ask, show progress, or defer.}
+        \item Unsupported. \muted{Fall back to the cloud.}
+      \end{enumerate}
+    \end{column}
+  \end{columns}
+  \begin{takeaway}{Feature-detect, never device-detect.}
+    A hard-coded list of phone models goes stale fast. Availability is a runtime question, and the fallback is part of the feature.
+  \end{takeaway}
+  \note{This is gated on the hardware and operating system, not on your app: the platform downloads and shares the model between every app instead of you shipping it. Naming specific phone models in a lecture is a bug, because the list is out of date within a year.}
+\end{frame}
+
+\begin{frame}[eyebrow=Custom models]{Your own model: LiteRT, formerly TensorFlow Lite}
+  \begin{columns}[T]
+    \begin{column}{0.55\textwidth}
+      \muted{ML Kit covers the problems Google already solved. When the task is yours, such as grading a weld, you bring your own model.}
+      \vskip 0mm
+      \muted{LiteRT executes a .tflite file on the device: the graph plus the weights, with fixed input and output shapes.}
+      \vskip 0mm
+      \muted{tflite\_flutter binds the LiteRT C API through dart:ffi: a direct native call, not a platform-channel message.}
+    \end{column}
+    \begin{column}{0.41\textwidth}
+      \begin{enumerate}
+        \item Train. \muted{TensorFlow or PyTorch, on a real GPU.}
+        \item Convert. \muted{To a .tflite file.}
+        \item Quantize. \muted{float32 to int8, about four times smaller.}
+        \item Ship and run. \muted{As an asset or a download, then Interpreter.}
+      \end{enumerate}
+    \end{column}
+  \end{columns}
+  \begin{takeaway}{None of the first three steps happen in Dart.}
+    A delegate hands layers to an accelerator; every delegate may refuse, so the CPU is always the fallback.
+  \end{takeaway}
+  \note{Mobile and Embedded Computing revisits the cost side of this in depth. The point here is only the shape: a fixed graph, a runtime, and a hardware-dependent fallback.}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=Custom models]{tflite\_flutter: load, run, get off the UI isolate}
+  \begin{columns}[T]
+    \begin{column}{0.56\textwidth}
+\begin{dart}
+late final Interpreter _interp;
+late final IsolateInterpreter _iso;
+Future<void> load() async {
+  _interp = await Interpreter.fromAsset(
+      'assets/leaf_int8.tflite');
+  _iso = await IsolateInterpreter.create(
+      address: _interp.address);
+}
+Future<List<double>> classify(List x) async {
+  final out =
+      List.filled(5, 0.0).reshape([1, 5]);
+  await _iso.run([x], out);
+  return out[0].cast<double>();
+}
+\end{dart}
+    \end{column}
+    \begin{column}{0.40\textwidth}
+      \lead{run is synchronous and CPU-bound.}{On the UI isolate it drops frames, so hand the native address to an isolate.}
+      \vskip 2mm
+      \muted{Shapes are fixed at conversion time; guessing them produces a crash or silent nonsense.}
+      \vskip 2mm
+      \muted{close() both. Native memory again, invisible to the Dart garbage collector.}
+    \end{column}
+  \end{columns}
+  \note{An int8 model expects int8 input, with a scale and a zero point traveling alongside the tensor. getInputTensors tells you the shape; guessing does not.}
+\end{frame}
+
+\begin{frame}[eyebrow=Custom models]{Quantization: shrinking the model to fit}
+  \vskip 3mm
+  {\usebeamerfont{small}\begin{tabular}{@{}lccc@{}}
+    \toprule
+    & \thead{float32} & \thead{float16} & \thead{int8} \\
+    \midrule
+    Size & baseline & half & a quarter \\
+    Accuracy loss & none & usually negligible & small, so measure it \\
+    CPU speed & baseline & about baseline & 2 to 4 times faster \\
+    \bottomrule
+  \end{tabular}}
+  \vskip 3mm
+  \muted{Bundled as an asset, the model works on first launch. Downloaded on first run, the install is smaller but you now own a cache, a version check and a retry.}
+  \begin{takeaway}{Accelerator paths are int8-first.}
+    Quantization is often the difference between running on the NPU and falling back to the CPU.
+  \end{takeaway}
+  \note{Firebase machine learning custom model hosting can own the download-and-version problem for you, with rollout and rollback, if the class asks about it.}
+\end{frame}
+
+\divider{Part 3 · Cloud LLMs}{Calling a model you do not host}[Where the key lives decides the architecture]
+
+\begin{frame}[fragile,eyebrow=Cloud LLMs]{The prototyping trap: a key inside the app}
+  \begin{columns}[T]
+    \begin{column}{0.54\textwidth}
+\begin{dart}
+// google_generative_ai is deprecated.
+const apiKey =
+    'AIzaSyD-EXAMPLE_KEY_xxxxxxxxxx';
+
+final model = GenerativeModel(
+  model: 'gemini-2.5-flash',
+  apiKey: apiKey,  // compiled into the app
+);
+
+final res = await model.generateContent(
+    [Content.text(prompt)]);
+\end{dart}
+    \end{column}
+    \begin{column}{0.43\textwidth}
+      \lead{The package.}{google\_generative\_ai is deprecated; firebase\_ai replaces it, and fixes the other two problems too.}
+      \vskip 2mm
+      \lead{The key.}{Anything compiled into your app ships to every person who installs it. A .env file or base64 changes nothing.}
+      \vskip 2mm
+      \lead{The architecture.}{The client talks straight to a metered API, so nothing but the client limits who spends against your account.}
+    \end{column}
+  \end{columns}
+  \note{This is fine for one afternoon on an emulator. It stops being fine the moment the build leaves your machine, which for a student project is the moment it reaches a pull request.}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=Cloud LLMs]{A key in a binary is a published key}
+  \begin{columns}[T]
+    \begin{column}{0.54\textwidth}
+\begin{shell}
+# Anyone can run this, on their own phone.
+$ adb pull /data/app/~~a1b2/base.apk .
+$ unzip -o base.apk -d out/
+$ strings out/lib/arm64-v8a/libapp.so \
+    | grep -E 'AIza[0-9A-Za-z_-]{35}'
+AIzaSyD-EXAMPLE_KEY_xxxxxxxxxx
+
+# Elapsed: about a minute.
+# iOS: the same exercise on the .ipa file.
+\end{shell}
+    \end{column}
+    \begin{column}{0.43\textwidth}
+      \muted{Release Dart is compiled ahead of time into native code, but string constants survive: the program has to read them at runtime.}
+      \vskip 1mm
+      \muted{Obfuscation renames symbols. It does not remove the bytes your HTTP client puts on the wire.}
+      \vskip 1mm
+      \muted{The bill is yours. A leaked key is billed to the account that issued it until you notice.}
+    \end{column}
+  \end{columns}
+  \begin{takeaway}{There is no secret you can ship inside a client.}
+    The same rule as the authentication lecture, this time with a billing consequence.
+  \end{takeaway}
+  \note{If you have a spare device, run this live on your own release build once. It takes about a minute and convinces a room far better than the sentence does.}
+\end{frame}
+
+\begin{frame}[eyebrow=Cloud LLMs]{Shape A: your backend proxies the call}
+  \vskip 3mm
+  \begin{enumerate}
+    \item Flutter app. \muted{Sends the user's ID token, never a key.}
+    \item Your backend. \muted{Verifies the token, holds the provider key.}
+    \item Model provider. \muted{Billed to you, called only by you.}
+  \end{enumerate}
+  \vskip 5mm
+  \muted{Works with any provider, with your own rate limits, your own logging and your own prompt control, at the cost of a service you now have to operate and keep online.}
+  \begin{takeaway}{The credential lives somewhere the user cannot reach.}
+    That single property is what separates this from the key-in-the-app version.
+  \end{takeaway}
+  \note{This is the same backend shape as the authentication lecture: the app never holds a long-lived secret, only a short-lived token proving it belongs to a signed-in user.}
+\end{frame}
+
+\begin{frame}[eyebrow=Cloud LLMs]{Shape B: Firebase AI Logic and App Check}
+  \vskip 3mm
+  \begin{enumerate}
+    \item Flutter app. \muted{Uses firebase\_ai, with no key to pass.}
+    \item Firebase AI Logic. \muted{App Check attests the caller is a genuine build.}
+    \item Gemini. \muted{Billed to your own Firebase project.}
+  \end{enumerate}
+  \vskip 5mm
+  \muted{Working the same afternoon, with attestation built in, but Google models only, and only once you press Enforce in the App Check console.}
+  \begin{takeaway}{Both shapes hide the credential from the user.}
+    Pick A for provider freedom, B for the fastest path to something that cannot be extracted from the app.
+  \end{takeaway}
+  \note{Ask why Enforce is a separate switch from Activate. Activation only measures traffic; enforcement is the step that turns away requests without a valid App Check token.}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=Cloud LLMs]{firebase\_ai: the call with no key in it}
+  \begin{columns}[T]
+    \begin{column}{0.56\textwidth}
+\begin{dart}
+// Firebase.initializeApp already ran (Lecture 8)
+await FirebaseAppCheck.instance.activate(
+  androidProvider: AndroidProvider.playIntegrity,
+  appleProvider: AppleProvider.appAttest,
+);
+final model = FirebaseAI.googleAI()
+    .generativeModel(
+  model: 'gemini-2.5-flash',
+  generationConfig: GenerationConfig(
+      temperature: 0.2, maxOutputTokens: 512),
+);
+\end{dart}
+    \end{column}
+    \begin{column}{0.38\textwidth}
+      \lead{No apiKey parameter exists.}{The credential is the project configuration; App Check gates the request.}
+      \vskip 2mm
+      \lead{activate() only measures.}{Enforcement is a separate switch you flip in the console, per product.}
+    \end{column}
+  \end{columns}
+  \note{maxOutputTokens is a cost control, not a style preference. temperature low and a narrow systemInstruction are the cheapest steering available, and both run before any validation code of yours does.}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=Cloud LLMs]{Stream the answer, do not freeze the screen}
+  \begin{columns}[T]
+    \begin{column}{0.52\textwidth}
+\begin{dart}
+Stream<String> ask(String prompt) async* {
+  final buf = StringBuffer();
+  final s = _model.generateContentStream(
+      [Content.text(prompt)]);
+  await for (final chunk in s) {
+    buf.write(chunk.text ?? '');
+    yield buf.toString();   // UI rebuilds per chunk
+  }
+}
+\end{dart}
+    \end{column}
+    \begin{column}{0.45\textwidth}
+      \lead{Time to first token is what users feel.}{Streaming turns a six-second wait into a 600 ms one.}
+      \vskip 1mm
+      \muted{Feed this into a StreamBuilder. Show three states: sent, thinking, writing, since a spinner that never changes looks like a hang.}
+      \vskip 1mm
+      \lead{A frozen screen is a bug, not a wait.}{Cancel the stream on dispose or when a new question starts.}
+    \end{column}
+  \end{columns}
+  \note{A canceled request has still paid for the radio wake-up. Nothing here causes jank unless work happens inside the builder itself.}
+\end{frame}
+
+\divider{Part 4 · Engineering reality}{Cost, failure, and answers that are wrong}[Three areas to get right before you ship]
+
+\begin{frame}[eyebrow=Engineering reality]{Tokens: the unit you are billed in}
+  \vskip 3mm
+  \begin{grid}[3]
+    \bignum{About 4}{characters per token, for English prose}
+    \bignum{In and out}{both directions are billed, every turn}
+    \bignum{$n^2$}{cost of a naive chat: n turns cost roughly n squared}
+  \end{grid}
+  \vskip 2mm
+  \muted{Cap the output with maxOutputTokens, and cap the input by summarizing history instead of resending all of it. Route by difficulty: a small model answers most questions, only its failures reach the expensive one.}
+  \begin{takeaway}{Per-user quotas live on your backend.}
+    An app cannot enforce a quota against a user who controls the app: the same rule as the authentication lecture.
+  \end{takeaway}
+  \note{Do the arithmetic: resending full chat history every turn means turn n pays for all n previous turns again, so n turns cost on the order of n squared messages.}
+\end{frame}
+
+\begin{frame}[eyebrow=Engineering reality]{The failures you will actually see}
+  \vskip 1mm
+  {\usebeamerfont{small}\renewcommand{\arraystretch}{1.05}\begin{tabular}{@{}lp{4.0cm}p{4.6cm}@{}}
+    \toprule
+    \thead{Code} & \thead{What it means} & \thead{What to do} \\
+    \midrule
+    429 & Rate limited, or over quota & Back off with jitter, capped \\
+    503 / 500 & The provider is failing & Retry, but the retry is billed too \\
+    400 & Your request is wrong & Never retry; fix the request \\
+    Timeout & No answer in budget & Cancel, say so, offer a retry \\
+    Safety block & The model declined & A normal state, not an exception \\
+    \bottomrule
+  \end{tabular}}
+  \vskip 1mm
+  \muted{Set a budget for the whole feature, not one attempt: three tries of ten seconds each is a spinner no user waits out.}
+  \begin{takeaway}{Retries multiply load and cost, so cap them.}
+    Reuse the same backoff-with-jitter machinery from the networking lecture.
+  \end{takeaway}
+  \note{Ask which of these five the room has already seen from an ordinary REST API. Only the safety-block row is new; the rest is the same failure taxonomy as any HTTP client.}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=Engineering reality]{Models produce plausible wrong answers}
+  \begin{columns}[T]
+    \begin{column}{0.52\textwidth}
+      \lead{Not a bug you can prompt away.}{A model returns a likely continuation, not a true one.}
+      \lead{Constrain the output space.}{A fixed set of values cannot be hallucinated into something new.}
+      \muted{Validate anyway: parse it, range-check it, look every id up in your own data.}
+    \end{column}
+    \begin{column}{0.44\textwidth}
+\begin{dart}
+responseMimeType: 'application/json',
+responseSchema: Schema.object(properties: {
+  'category': Schema.enumString(
+      enumValues: ['food', 'travel']),
+}),
+\end{dart}
+    \end{column}
+  \end{columns}
+  \begin{warning}[Never wire model output straight to consequence]
+    Money, a database write, a message to another person: a rule or a human belongs in between.
+  \end{warning}
+  \note{A schema is a constraint, not a guarantee: the model can still return a value inside the schema that is wrong. Validation still has to happen after parsing.}
+\end{frame}
+
+\begin{frame}[eyebrow=Recap]{Three things to remember}
+  \vskip 2mm
+  \begin{enumerate}
+    \item On-device or cloud is an architecture decision. \muted{Latency, privacy, offline behavior, cost and capability ceiling, not a library choice.}
+    \item No app ever holds a provider key. \muted{Your backend holds it, or Firebase AI Logic with App Check does.}
+    \item Stream the answer, cap the tokens, and validate everything the model says. \muted{Treat model output like input from the internet.}
+  \end{enumerate}
+  \note{Ask each student which of the three they are most likely to forget in the lab. The key-in-the-app mistake is the one that shows up most often in real pull requests.}
+\end{frame}
+
+\begin{frame}[eyebrow=Recap]{Further reading}
+  \vskip 3mm
+  \kv{Firebase AI Logic}{\link{https://firebase.google.com/docs/ai-logic}{firebase.google.com/docs/ai-logic}}
+  \vskip 3mm
+  \kv{Google ML Kit}{\link{https://developers.google.com/ml-kit}{developers.google.com/ml-kit}}
+  \vskip 3mm
+  \kv{LiteRT}{\link{https://ai.google.dev/edge/litert}{ai.google.dev/edge/litert}}
+  \vskip 3mm
+  \kv{tflite\_flutter on pub.dev}{\link{https://pub.dev/packages/tflite_flutter}{pub.dev/packages/tflite\_flutter}}
+  \note{Point at the OWASP Mobile Application Security Verification Standard too, for the fuller checklist behind the key-extraction demo. It is not required reading for the lab.}
+\end{frame}
+
+\closingframe{Questions?}{dinu\_stefan.rusu@upb.ro · Microsoft Teams: course channel}
+
+\end{document}

@@ -1,0 +1,310 @@
+% Mobile and Embedded Computing, Lab 2. Compile: latexmk -xelatex lab02.tex
+\documentclass[10pt,aspectratio=169,t]{beamer}
+\usetheme[lab]{upbminimal}
+
+\course{Mobile and Embedded Computing}
+\decklabel{Lab 2}
+\title{A sensor reading over MQTT}
+\subtitle{I2C in TinyGo, MQTT in the middle, a live value in Flutter}
+\author{Dinu-Ștefan Rusu}
+\institute{FILS, Universitatea Politehnica București}
+\date{Week 4}
+
+\begin{document}
+
+\titleframe
+
+\begin{frame}[eyebrow=Today]{What this lab is for}
+  \vskip 2mm
+  \begin{grid}[2]
+    \cell[\faMicrochip]{Read a sensor and publish it}{Drive an I2C sensor from TinyGo with a driver from the TinyGo drivers repository, then publish the reading as JSON to your Mosquitto broker every two seconds.}
+    \cell[\faMobile]{Show it live in the app}{Subscribe with mqtt\_client, push every message into a BLoC, render it in a BlocBuilder, and survive the broker or the board going away.}
+  \end{grid}
+  \vskip 6mm
+  \taskmeta{Time}{2 hours}{Submit}{Push to your team repo, branch \code{lab-2}, before next lab}
+\end{frame}
+
+\begin{frame}[embedded,eyebrow=Setup]{Three set-ups, one contract}
+  \vskip 1mm
+  \begin{grid}[2]
+    \cell[\faWifi]{ESP32-C3 or ESP32-S3}{Wi-Fi comes from the espradio package. The board publishes to the broker itself.}
+    \cell[\faIcon{plug}]{Raspberry Pi Pico}{No Wi-Fi on the plain Pico. It prints the reading, and a laptop bridge forwards it.}
+    \cell[\faIcon{desktop}]{Wokwi simulator}{No physical sensor, no route to your laptop. Use a simulated part or a counter, and a public test broker.}
+    \cell[\faIcon{file-signature}]{The contract}{All three paths give the broker the same topic, the same JSON, one message every two seconds.}
+  \end{grid}
+  \vskip 2mm
+  \muted{The broker is the Mosquitto you installed in Lab 1. Start it before anything else.}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=Setup]{Where your code goes}
+  \begin{steps}
+    \item Branch the team repository and add the two dependencies:
+\begin{shell}
+git checkout -b lab-2
+cd firmware && go get tinygo.org/x/drivers
+cd ../app   && flutter pub add mqtt_client
+\end{shell}
+    \item Firmware in \code{firmware/lab2/main.go}. App code in \code{lib/lab2/}.
+    \item Leave a subscriber running in a terminal for the whole lab. It is your ground truth.
+  \end{steps}
+  \begin{hint}[Order of work]
+    Sensor first, then the broker, then the app. Do not write Flutter code before a reading appears in \code{mosquitto\_sub}.
+  \end{hint}
+\end{frame}
+
+\begin{frame}[embedded,eyebrow=Task I]{Read one sensor over I2C}
+  \begin{columns}[T]
+    \begin{column}{0.55\textwidth}
+      \begin{steps}
+        \item Pick a sensor with a driver in \code{tinygo.org/x/drivers}. The BME280 is cheap, common, and reads temperature.
+        \item Wire it to the two I2C pins of your board, supply and ground.
+        \item Configure the bus at 400 kHz, then the driver.
+        \item Print one reading every two seconds, and read it back with \code{tinygo monitor}.
+      \end{steps}
+    \end{column}
+    \begin{column}{0.41\textwidth}
+      \kv{Done when}{}
+      \begin{checklist}
+        \item The serial line shows a new value every two seconds.
+        \item The value changes when you breathe on the sensor.
+        \item A read error prints a message instead of stopping the loop.
+      \end{checklist}
+    \end{column}
+  \end{columns}
+  \begin{takeaway}{A driver is the datasheet, already read.}
+    Writing register numbers by hand is how a two-hour lab becomes a four-hour lab.
+  \end{takeaway}
+\end{frame}
+
+\begin{frame}[embedded,fragile,eyebrow=Task I]{The shape of the sensor loop}
+  \begin{columns}[T]
+    \begin{column}{0.55\textwidth}
+\begin{golang}
+// tinygo.org/x/drivers/bme280
+i2c := machine.I2C0
+i2c.Configure(machine.I2CConfig{
+    Frequency: 400 * machine.KHz})
+s := bme280.New(i2c)  // 0x76 or 0x77
+s.Configure()
+
+for {
+    mC, err := s.ReadTemperature()
+    if err != nil { println(err.Error()) }
+    println("c:", float32(mC)/1000)
+    time.Sleep(2 * time.Second)
+}
+\end{golang}
+    \end{column}
+    \begin{column}{0.41\textwidth}
+      \lead{Milli-degrees, not degrees.}{The drivers return thousandths of a degree Celsius. Divide once and keep one unit in your code.}
+      \begin{warning}
+        \code{Connected()} answers before the first read. Call it and print the answer: a sensor that never acknowledges is a wiring fault.
+      \end{warning}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}[embedded,fragile,eyebrow=Task I]{No board, or no sensor}
+  \vskip 1mm
+\begin{golang}
+// Same program, one line swapped. Everything downstream stays identical.
+celsius := 20 + float32(seq%100)/10   // a ramp, not a constant
+seq++
+\end{golang}
+  \vskip 2mm
+  \begin{columns}[T]
+    \begin{column}{0.48\textwidth}
+      \kv{On Wokwi}{}
+      \muted{Use the board Lab 1 named for you. If the part library carries an I2C sensor with a TinyGo driver, wire it in the diagram. If not, feed the loop the counter above and say so in your README.}
+    \end{column}
+    \begin{column}{0.48\textwidth}
+      \kv{The broker, from Wokwi}{}
+      \muted{The simulator runs in the browser, so a broker on your own machine is out of reach. Publish to a public test broker, on a topic prefix nobody else will use.}
+    \end{column}
+  \end{columns}
+  \vskip 3mm
+  \muted{A constant proves nothing. Publish a value that moves, so the number on the phone shows the chain is alive.}
+\end{frame}
+
+\begin{frame}[embedded,eyebrow=Task II]{Publish the reading over MQTT}
+  \begin{columns}[T]
+    \begin{column}{0.55\textwidth}
+      \begin{steps}
+        \item Join the network. On the ESP32-C3 and ESP32-S3 the radio comes from the espradio package, not from the standard library.
+        \item Connect to the broker with a client id that carries your team name.
+        \item Publish one JSON document on \code{course/<team>/reading} every two seconds, with QoS 1 and the retain flag off.
+        \item Print the result of every step. A silent board tells you nothing.
+      \end{steps}
+    \end{column}
+    \begin{column}{0.41\textwidth}
+      \kv{Done when}{}
+      \begin{checklist}
+        \item \code{mosquitto\_sub} prints one line every two seconds.
+        \item The payload parses as JSON and carries a sequence number.
+        \item Killing the broker and starting it again brings the board back without a reflash.
+      \end{checklist}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}[embedded,fragile,eyebrow=Task II]{Joining the network and the broker}
+  \begin{columns}[T]
+    \begin{column}{0.55\textwidth}
+\begin{golang}
+// drivers/netlink, drivers/net/mqtt
+link, _ := netlink.New()
+err := link.NetConnect(
+    &netlink.ConnectParams{
+        Ssid: ssid, Passphrase: pass,
+    })
+if err != nil {
+    println("wifi:", err.Error())
+}
+opts := mqtt.NewClientOptions().
+    AddBroker(broker).
+    SetClientID("mec-" + team + "-board")
+c := mqtt.NewClient(opts)
+c.Connect().Wait()
+\end{golang}
+    \end{column}
+    \begin{column}{0.41\textwidth}
+      \lead{Treat this as a shape.}{The package paths for the radio move faster than the protocol does. Keep the sequence: join, connect, publish, check the error each time.}
+      \begin{hint}[The address]
+        \code{broker} is your laptop's address on the lab network, port 1883. Not \code{localhost}: that is the board.
+      \end{hint}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}[embedded,fragile,eyebrow=Task II]{The topic and the payload}
+  \vskip 1mm
+\begin{golang}
+topic := "course/" + team + "/reading"          // one team, one topic
+p := fmt.Sprintf(`{"team":%q,"c":%.2f,"seq":%d}`, team, celsius, seq)
+c.Publish(topic, 1, false, p)                   // QoS 1, retain off
+time.Sleep(2 * time.Second)
+\end{golang}
+  \vskip 3mm
+  \begin{columns}[T]
+    \begin{column}{0.48\textwidth}
+      \kv{Rules}{}
+      \muted{Identity in the topic, data in the payload. Never publish the value as a topic level.\par\vskip 1.5mm
+      The sequence number is yours, not the protocol's: it is the only way to see a gap.}
+    \end{column}
+    \begin{column}{0.48\textwidth}
+      \kv{Why QoS 1}{}
+      \muted{At QoS 1 the broker acknowledges each message, so a lost packet is resent. A duplicate is harmless here because every document carries its own sequence number.}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}[embedded,fragile,eyebrow=Task II]{A Pico without Wi-Fi: the laptop bridge}
+  \vskip 1mm
+\begin{shell}
+# macOS: stty -f <port> 115200      Linux: stty -F <port> 115200
+cat /dev/tty.usbmodem1101 | while IFS= read -r line; do
+  mosquitto_pub -h localhost -q 1 -t course/t07/reading -m "$line"
+done
+\end{shell}
+  \vskip 3mm
+  \muted{The board prints the JSON document, one per line, exactly as a networked board would publish it. The laptop only forwards. Nothing else in the lab changes, which is the point: the phone cannot tell the two set-ups apart.}
+  \vskip 2mm
+  \begin{warning}
+    \code{tinygo monitor} holds the serial port open. Stop it before you start the bridge.
+  \end{warning}
+\end{frame}
+
+\begin{frame}[eyebrow=Task III]{Show the value live in the app}
+  \begin{columns}[T]
+    \begin{column}{0.55\textwidth}
+      \begin{steps}
+        \item Add a \code{ReadingBloc} with one event for an incoming document and a state holding the last value and its sequence number.
+        \item Connect an \code{MqttServerClient} and subscribe to your team topic at QoS 1.
+        \item Decode each message on the updates stream and add an event to the BLoC.
+        \item Render the value in a \code{BlocBuilder}, with a visible waiting state before the first message.
+        \item Reconnect with a growing delay when the connection drops.
+      \end{steps}
+    \end{column}
+    \begin{column}{0.41\textwidth}
+      \kv{Done when}{}
+      \begin{checklist}
+        \item The number on screen changes every two seconds.
+        \item Unplugging the board stops the updates and the screen says so.
+        \item Plugging it back in resumes updates with no restart of the app.
+        \item The client is closed when the screen is disposed.
+      \end{checklist}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=Task III]{Connect, subscribe, decode}
+\begin{dart}
+final c = MqttServerClient('10.0.2.2', 'phone-$team')  // mqtt_client
+  ..port = 1883
+  ..keepAlivePeriod = 30
+  ..onDisconnected = _scheduleReconnect;
+await c.connect();
+c.subscribe('course/$team/reading', MqttQos.atLeastOnce);
+c.updates!.listen((events) {
+  final m = events.first.payload as MqttPublishMessage;
+  final text = MqttPublishPayload.bytesToStringAsString(m.payload.message);
+  _bloc.add(ReadingReceived(jsonDecode(text)));
+});
+\end{dart}
+  \vskip 2mm
+  \muted{\code{10.0.2.2} is your machine from the Android emulator. A real phone uses the laptop's address.}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=Task III]{Render it, and come back after a drop}
+\begin{dart}
+BlocBuilder<ReadingBloc, ReadingState>(
+  builder: (ctx, s) => Text(s.label),   // 'waiting' or '21.4 C'
+)
+void _scheduleReconnect() async {
+  var delay = const Duration(seconds: 1);
+  while (!_closed && !_connected) {
+    await Future.delayed(delay);
+    try { await c.connect(); } catch (_) {}
+    delay *= 2;              // stop growing at a minute
+  }
+}
+\end{dart}
+  \vskip 1mm
+  \muted{Two clients with the same id disconnect each other, which looks exactly like a broken network.}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=Acceptance]{What the grader will do}
+  \vskip 1mm
+\begin{shell}
+mosquitto_sub -h localhost -q 1 -t 'course/+/reading' -v
+\end{shell}
+  \vskip 3mm
+  \begin{columns}[T]
+    \begin{column}{0.48\textwidth}
+      \kv{The demo}{}
+      \begin{checklist}
+        \item The topic prints one document every two seconds.
+        \item The app shows the same value, live.
+        \item Pulling the board's cable stops the updates.
+        \item Plugging it back in resumes them, with no app restart.
+      \end{checklist}
+    \end{column}
+    \begin{column}{0.48\textwidth}
+      \kv{In the repository}{}
+      \muted{The firmware, the app code, and a README naming your team topic, your board or simulator, and the broker address you used.\par\vskip 1.5mm
+      One commit per task. A screenshot of the app next to the subscriber terminal is the cheapest proof you can leave.}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}[eyebrow=Troubleshooting]{Five failures you will meet}
+  \trouble{Connected() is false}{Wrong I2C address: scan the bus, 0x76 or 0x77.}
+  \trouble{The bus scan prints nothing}{Nothing acknowledged. Check supply, ground, and the two I2C pins.}
+  \trouble{Error: Connection refused}{Nothing listens on 1883. Start Mosquitto, bind the network address.}
+  \trouble{Both clients reconnect in a loop}{One client id, two clients. Give each of them its own id.}
+  \trouble{CLEARTEXT not permitted}{Android blocks a plain broker. Set usesCleartextTraffic true in the manifest.}
+\end{frame}
+
+\closingframe{Push before you leave.}{Branch lab-2 · one commit per task · your topic in the README}
+
+\end{document}

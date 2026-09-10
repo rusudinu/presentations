@@ -1,0 +1,641 @@
+% ADMD Lecture 2. Compile: latexmk -xelatex lecture02.tex
+\documentclass[10pt,aspectratio=169,t]{beamer}
+\usetheme{upbminimal}
+
+\course{Application Development for Mobile Devices}
+\decklabel{Lecture 2}
+\title{Dart and null safety}
+\subtitle{The language you will write, and the Flutter toolchain that runs it}
+\author{Dinu-Ștefan Rusu}
+\institute{FILS, Universitatea Politehnica București}
+\date{Autumn 2026}
+
+\begin{document}
+
+\titleframe
+
+\objectivesframe{
+  \cell[\faLock]{Null safety, understood}{Read \code{?}, \code{??}, \code{?.}, \code{!} and \code{late}, and know why the compiler can trust them.}
+  \cell[\faCode]{Dart you can write today}{Variables, functions, classes, collections, records and pattern matching.}
+  \cell[\faIcon{mobile-alt}]{What Flutter draws}{One Dart codebase, one renderer, and the widget catalog at a glance.}
+  \cell[\faBolt]{Run the toolchain}{Install, \code{flutter doctor}, hot reload versus hot restart, and a new project's layout.}
+}
+
+\divider{Part 1 · Null safety}{The billion-dollar mistake, and its fix}[Why Dart and Kotlin make null part of the type]
+
+\begin{frame}[fragile,eyebrow=Null safety]{The billion-dollar mistake}
+  \begin{columns}[T]
+    \begin{column}{0.56\textwidth}
+\begin{dart}
+// Java. Compiles cleanly, no warning.
+String name = findUser(42);
+System.out.println(name.length());
+
+// findUser is allowed to return null.
+// NullPointerException at run time,
+// on a user's device, in production.
+\end{dart}
+    \end{column}
+    \begin{column}{0.40\textwidth}
+      \lead{Where null came from}{Tony Hoare added the null reference to ALGOL W in 1965 because it was easy to implement. He later called it his "billion-dollar mistake".}
+      \muted{Non-nullable by default arrived later, and separately, in Swift, Kotlin, Dart, and TypeScript's strict mode.}
+    \end{column}
+  \end{columns}
+  \begin{takeaway}{Null is not a value problem, it is a type problem.}
+    If the type cannot say "maybe absent", the compiler cannot help you.
+  \end{takeaway}
+  \note{Ask the room what a null pointer exception actually is, in their own words. Most have hit one. Point out this bug is old, well understood, and largely a solved problem in the languages this course uses.}
+\end{frame}
+
+\begin{frame}[eyebrow=Null safety]{Type errors are not security bugs}
+  \vskip 2mm
+  \begin{grid}[3]
+    \cell[\faCheckCircle]{Compile-time type errors}{The compiler rejects \code{int x = 'hi'} before it ever ships. Refactoring gets safer, at no runtime cost.}
+    \cell[\faExclamationCircle]{Runtime failures}{Null, an out-of-range index, a request that fails. Null safety removes one whole family of these, not all of them.}
+    \cell[\faLock]{Security vulnerabilities}{A hard-coded key, a missing check, insecure storage. A fully type-checked app can still be completely insecure.}
+  \end{grid}
+  \vskip 4mm
+  \begin{takeaway}{The one real overlap is memory safety.}
+    Dart, Kotlin and Swift have no manual pointer arithmetic, so the classic exploitable bugs of C and C++, buffer overflows and use-after-free, cannot happen there. Security itself stays a design and review discipline; Lecture 10 comes back to it.
+  \end{takeaway}
+  \note{This slide exists because students conflate a type-safe language with a secure app. Give one concrete example of each column if the room looks unconvinced: a typo caught at compile time, a null from a flaky API, and a hard-coded API key in a public repository.}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=Null safety]{Dart null safety: the operators}
+  \begin{columns}[T]
+    \begin{column}{0.56\textwidth}
+\begin{dart}
+// Non-nullable by default:
+// String name = null; is an error.
+String name = 'Ada';
+
+// Add ? and null becomes allowed.
+String? nickname;
+
+// ?. calls only if non-null.
+// ?? supplies a fallback.
+final shown = nickname?.trim() ?? name;
+
+// ??= assigns only when null.
+nickname ??= 'anon';
+\end{dart}
+    \end{column}
+    \begin{column}{0.40\textwidth}
+      \lead{Five symbols, and that is most of it}{}
+      \begin{itemize}
+        \item \code{?} the type may hold null
+        \item \code{?.} reads or calls only if not null
+        \item \code{??} supplies a fallback value
+        \item \code{??=} assigns only when still null
+        \item \code{!} asserts non-null, and throws if wrong
+      \end{itemize}
+    \end{column}
+  \end{columns}
+  \note{Walk through the code line by line and ask what happens if nickname is null at each point. Emphasize that every one of these operators is a decision the type system forces you to make explicit.}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=Null safety]{What sound null safety means}
+  \begin{columns}[T]
+    \begin{column}{0.56\textwidth}
+\begin{dart}
+// Flow analysis promotes a nullable
+// to non-nullable within the branch.
+String greet(String? name) {
+  if (name == null) {
+    return 'Hello, stranger';
+  }
+  return 'Hello, ${name.toUpperCase()}';
+  // promoted: no ! needed here
+}
+\end{dart}
+    \end{column}
+    \begin{column}{0.40\textwidth}
+      \lead{Sound means the guarantee holds}{A non-nullable Dart variable can never hold null at run time. That is a guarantee, not a strong tendency.}
+      \vskip 2mm
+      \muted{So the compiler stops emitting null checks for it. Sound null safety makes release builds smaller and faster, not only safer.}
+    \end{column}
+  \end{columns}
+  \note{Demo opportunity: delete the null check inside greet and show the analyzer error in the editor, then add ! to make it compile anyway. The lesson is that ! moves the failure from build time to a user's phone.}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=Null safety]{The escape hatches: late and required}
+  \begin{columns}[T]
+    \begin{column}{0.56\textwidth}
+\begin{dart}
+// late: promise to assign before use.
+class Repo {
+  late final Database db;
+  Repo() { db = openDatabase(); }
+}
+// A broken promise throws
+// LateInitializationError.
+
+// required: a compile-time obligation.
+String card({required String title}) {
+  return title;
+}
+\end{dart}
+    \end{column}
+    \begin{column}{0.40\textwidth}
+      \lead{Two different promises}{\code{late} defers assignment of a non-nullable field. Use it for dependency injection and expensive lazy fields, not to silence the analyzer.}
+      \vskip 2mm
+      \muted{\code{required} makes a named parameter mandatory. The caller cannot omit it, and the compiler checks that at every call site.}
+    \end{column}
+  \end{columns}
+  \note{Point out that both keywords let you write a non-nullable type where the value is not available yet, one for a field, one for a parameter. Both trade a small promise for a much cleaner type.}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=Null safety]{Null safety: Dart and Kotlin, side by side}
+  \begin{columns}[T]
+    \begin{column}{0.48\textwidth}
+      {\bfseries Dart}
+\begin{dart}
+String? findEmail(int id) {...}
+
+void notify(int id) {
+  final email = findEmail(id);
+  if (email == null) return;
+  send(email);
+  // promoted to String
+}
+\end{dart}
+    \end{column}
+    \begin{column}{0.48\textwidth}
+      {\bfseries Kotlin}
+\begin{kotlin}
+fun findEmail(id: Int): String? {}
+
+fun notify(id: Int) {
+  val email = findEmail(id)
+  if (email == null) return
+  send(email)
+  // smart cast to String
+}
+\end{kotlin}
+    \end{column}
+  \end{columns}
+  \vskip 3mm
+  \muted{Operators map almost one to one: \code{?.}, \code{??} (Kotlin: \code{?:}), \code{!} (Kotlin: \code{!!}), \code{late final} (Kotlin: \code{lateinit var}, \code{var} only). Learn it once: it transfers straight to Kotlin, and to Swift and Rust after that.}
+  \note{This is the slide that pays off for the IoT track students who also write Kotlin. Ask if anyone has hit a NullPointerException in Kotlin interop code; the answer is usually from unannotated Java.}
+\end{frame}
+
+\divider{Part 2 · Dart}{The language you will write this semester}[Kotlin alongside it, wherever the comparison helps]
+
+\begin{frame}[fragile,eyebrow=Dart]{Variables: var, final, and const}
+  \begin{columns}[T]
+    \begin{column}{0.56\textwidth}
+\begin{dart}
+// var infers its type from the value.
+var count = 0;
+String title = 'Lecture 2';
+
+// final: assigned once, at run time.
+final now = DateTime.now();
+
+// const: computed by the compiler,
+// baked into the binary.
+const frameBudgetMs = 1000 / 120;
+
+print('$title: $frameBudgetMs ms/frame');
+\end{dart}
+    \end{column}
+    \begin{column}{0.40\textwidth}
+      \lead{Read it this way}{}
+      \begin{itemize}
+        \item \code{var}: still statically typed, only inferred
+        \item \code{final}: the binding cannot be reassigned
+        \item \code{const}: a compile-time constant
+        \item \code{dynamic}: opts out of checking, avoid it
+      \end{itemize}
+    \end{column}
+  \end{columns}
+  \note{In Flutter, const widgets are built once and reused across rebuilds, which is a real performance lever, not just a style preference. Save that connection for Lecture 3.}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=Dart]{Functions and named parameters}
+  \begin{columns}[T]
+    \begin{column}{0.56\textwidth}
+\begin{dart}
+// Positional; => is a one-expr body.
+int add(int a, int b) => a + b;
+
+// Optional positional, with a default.
+String tag(String n, [String s = '']) {
+  return '$n$s';
+}
+
+// Named parameters: the Flutter style.
+String card({
+  required String title,
+  String? subtitle,
+}) => title;
+\end{dart}
+    \end{column}
+    \begin{column}{0.40\textwidth}
+      \lead{Why named parameters matter}{Every Flutter widget constructor uses them. A call site reads as prose, not as a row of anonymous arguments.}
+      \vskip 2mm
+      \muted{Functions are first-class values: pass them, store them, return them. That is what a callback like \code{onPressed} really is.}
+    \end{column}
+  \end{columns}
+  \note{Have students read card's call site out loud before showing the definition. Named parameters are the single biggest readability win Flutter borrows from Dart.}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=Dart]{Classes and constructors}
+  \begin{columns}[T]
+    \begin{column}{0.56\textwidth}
+\begin{dart}
+class Lecture {
+  final int number;
+  final String title;
+  final String? room;
+
+  // this.x assigns the field directly.
+  Lecture(this.number, this.title,
+      [this.room]);
+}
+
+final l = Lecture(2, 'Languages');
+\end{dart}
+    \end{column}
+    \begin{column}{0.40\textwidth}
+      \lead{The constructor is the field list}{\code{this.x} in the parameter list assigns the field with no body needed.}
+      \vskip 2mm
+      \muted{Mark a field \code{final} and it must be set once, either at declaration or in the constructor, never after.}
+    \end{column}
+  \end{columns}
+  \note{This is the shape every model class in the labs will follow: a handful of final fields, one constructor. Point out room's ? makes it genuinely optional to omit.}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=Dart]{Getters, equality, and named constructors}
+  \begin{columns}[T]
+    \begin{column}{0.56\textwidth}
+\begin{dart}
+class Lecture {
+  final int number;
+  final String title;
+
+  Lecture(this.number, this.title);
+
+  // Named constructor: another way
+  // to build the same type.
+  Lecture.lab(this.number)
+      : title = 'Lab';
+
+  // A getter: computed, no parens.
+  String get label => 'L$number';
+}
+\end{dart}
+    \end{column}
+    \begin{column}{0.40\textwidth}
+      \lead{Equality is identity by default}{Every class gets a default \code{toString}, \code{==}, and \code{hashCode}.}
+      \vskip 2mm
+      \muted{Two \code{Lecture} objects with the same fields are still not equal. Lecture 5 fixes that with Equatable.}
+    \end{column}
+  \end{columns}
+  \note{Try l1 == l2 on two objects built with the same arguments and watch the room be surprised it prints false. That surprise is exactly the motivation for Equatable later.}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=Dart]{Collections: List, Set, and Map}
+  \begin{columns}[T]
+    \begin{column}{0.56\textwidth}
+\begin{dart}
+final topics = ['Dart', 'Kotlin'];
+final seen = <String>{};
+final points = {'exam': 3, 'lab': 3};
+
+for (final t in topics) {
+  seen.add(t);
+}
+\end{dart}
+    \end{column}
+    \begin{column}{0.40\textwidth}
+      \lead{Three built-ins}{\code{List}, \code{Set} and \code{Map}. The angle brackets, where they appear, name the element types.}
+      \vskip 2mm
+      \muted{\code{where}, \code{map} and \code{forEach} are lazy \code{Iterable} operations; call \code{.toList()} when you need a \code{List} back.}
+    \end{column}
+  \end{columns}
+  \note{Ask why seen needs the explicit <String>{} while topics does not: type inference reads the list literal's contents, but an empty set literal has nothing to infer from.}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=Dart]{Control flow and collection operators}
+  \begin{columns}[T]
+    \begin{column}{0.56\textwidth}
+\begin{dart}
+// Collection-if / collection-for build
+// a list inline, with no helper method.
+final menu = [
+  'Home',
+  if (isAdmin) 'Admin',
+  for (final t in topics) 'Lab: $t',
+];
+
+topics.where((t) => t.length > 4)
+    .forEach(print);
+\end{dart}
+    \end{column}
+    \begin{column}{0.40\textwidth}
+      \lead{Where you will see this}{Flutter builds a list of children conditionally this way, without a helper function and without a temporary list.}
+      \vskip 2mm
+      \muted{\code{for}, \code{if} and \code{while} read exactly like Kotlin and Java. Nothing new to learn there.}
+    \end{column}
+  \end{columns}
+  \note{Collection-if and collection-for feel like a small trick the first time you see them, then turn up in nearly every widget build method. Worth a second example if the room looks unsure.}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=Dart]{Records: typed, immutable tuples}
+  \begin{columns}[T]
+    \begin{column}{0.56\textwidth}
+\begin{dart}
+// A record: an anonymous tuple type.
+(String, int) parseLine(String line) {
+  final parts = line.split(',');
+  return (parts[0], int.parse(parts[1]));
+}
+
+final (name, score) =
+    parseLine('Ada,97');
+print('$name scored $score');
+\end{dart}
+    \end{column}
+    \begin{column}{0.40\textwidth}
+      \lead{One type, many values}{A record bundles values without declaring a class. Two records are equal if their fields are equal.}
+      \vskip 2mm
+      \muted{Named fields read like a tiny class: \code{(title: String, week: int)}.}
+    \end{column}
+  \end{columns}
+  \note{Records replace the old pattern of returning a small custom class, or worse, a List<Object>, just to hand back two values. The destructuring assignment on the left is new syntax; the next slide names it.}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=Dart]{Pattern matching: switch expressions}
+  \begin{columns}[T]
+    \begin{column}{0.56\textwidth}
+\begin{dart}
+String describe(Object v) {
+  return switch (v) {
+    int n when n < 0 => 'negative',
+    int() => 'a whole number',
+    String s => 'text: $s',
+    _ => 'something else',
+  };
+}
+\end{dart}
+    \end{column}
+    \begin{column}{0.40\textwidth}
+      \lead{A switch that returns a value}{Each arm is a pattern, an optional \code{when} guard, and an expression. \code{\_} is the required wildcard.}
+      \vskip 2mm
+      \muted{The record from the previous slide can be destructured directly in a \code{case}, matching its shape and binding its fields at once.}
+    \end{column}
+  \end{columns}
+  \note{Compare this to a chain of if-else on runtimeType, which is what students would otherwise reach for. The compiler also warns when a switch expression is not exhaustive.}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=Dart]{Async waits until Lecture 4}
+  \lead{One line for now}{Dart handles a value that arrives later, with \code{Future}, \code{async} and \code{await}.}
+\begin{dart}
+Future<String> fetchName(); // arrives later
+\end{dart}
+  \begin{takeaway}{Every example in this lecture is synchronous on purpose.}
+    The full model, the event loop, error handling and streams, is Lecture 4.
+  \end{takeaway}
+  \note{Reassure the room that async is coming, not skipped. A Future is just a box that will hold a value later; unpacking it safely is next lecture's entire topic.}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=Dart]{Dart syntax, a quick reference}
+  \vskip 2mm
+  \begin{tabular}{@{}p{48mm}p{72mm}@{}}
+    \toprule
+    \thead{Concept} & \thead{Dart} \\
+    \midrule
+    Variable & \code{var count = 0;} \\
+    Immutable binding & \code{final now = DateTime.now();} \\
+    Compile-time constant & \code{const budget = 1000 / 120;} \\
+    Nullable type & \code{String? name;} \\
+    Required named parameter & \code{required this.title} \\
+    Typed list literal & \code{<String>['a', 'b']} \\
+    \bottomrule
+  \end{tabular}
+  \vskip 3mm
+  \muted{Six lines, and most of the Dart you will read this semester is already here.}
+  \note{Use this as a one-slide anchor before moving to Kotlin. Point at each row and ask a student to say out loud what it does, without looking at the previous slides.}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=Dart]{Kotlin and Dart: the same shapes}
+  \begin{columns}[T]
+    \begin{column}{0.48\textwidth}
+      {\bfseries Dart}
+\begin{dart}
+class User {
+  final String name;
+  final int age;
+  const User(this.name, this.age);
+}
+
+final u = User('Ada', 36);
+\end{dart}
+    \end{column}
+    \begin{column}{0.48\textwidth}
+      {\bfseries Kotlin}
+\begin{kotlin}
+data class User(
+  val name: String,
+  val age: Int,
+)
+
+val u = User("Ada", 36)
+\end{kotlin}
+    \end{column}
+  \end{columns}
+  \vskip 3mm
+  \muted{Kotlin's \code{data class} gives you \code{==}, \code{hashCode}, \code{copy} and \code{toString} for free. In Dart you write them by hand, or generate them: Equatable in Lecture 5, freezed in Lecture 7.}
+  \note{The same spectrum from Lecture 1 shows up again here: Kotlin/JVM ships bytecode Android's runtime compiles, Kotlin/Native compiles ahead of time for iOS, the Kotlin Multiplatform path from Lecture 1.}
+\end{frame}
+
+\divider{Part 3 · Flutter}{What Flutter actually is}[One Dart codebase, one renderer, and a build mode that changes how the code runs]
+
+\begin{frame}[eyebrow=Flutter]{What Flutter is, and what it draws}
+  \begin{columns}[T]
+    \begin{column}{0.56\textwidth}
+      \begin{itemize}
+        \item Google's open-source UI toolkit: one Dart codebase for Android, iOS, web, and desktop.
+        \item Flutter does not reuse the platform's own widgets. It ships its own widget library and draws every pixel itself, through the Impeller renderer.
+        \item That is why a Flutter app looks identical on both platforms, and why native platform controls are not automatically available.
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.40\textwidth}
+      \kv{Your Dart code}{widgets, state, logic}
+      \kv{Flutter framework}{layout, animation, gestures}
+      \kv{Impeller}{the renderer}
+      \kv{GPU}{Metal on iOS, Vulkan on Android}
+    \end{column}
+  \end{columns}
+  \begin{takeaway}{A release build is Dart, compiled ahead of time to native code.}
+    There is no interpreter and no JavaScript inside your app.
+  \end{takeaway}
+  \note{Students who compared Flutter to React Native in Lecture 1 already know the trade-off: Flutter draws its own pixels instead of driving native widgets. This slide is where that fact gets its mechanism.}
+\end{frame}
+
+\begin{frame}[eyebrow=Flutter]{The widget catalog, at a glance}
+  \vskip 2mm
+  \begin{grid}[3]
+    \cell[\faLayerGroup]{Layout}{Container, Padding, Row, Column, Stack: how you arrange pixels.}
+    \cell[\faKeyboard]{Input}{TextField, Checkbox, ElevatedButton: what the user touches.}
+    \cell[\faListUl]{Scrolling}{ListView, GridView: how a long list stays lazy.}
+    \cell[\faWindowRestore]{Structure}{Scaffold, AppBar, Drawer: the shell every screen sits in.}
+    \cell[\faBell]{Feedback}{SnackBar, AlertDialog, Tooltip: telling the user something happened.}
+    \cell[\faToggleOn]{Cupertino}{An iOS-styled set of the same ideas. Lecture 3 goes deeper on all of this.}
+  \end{grid}
+  \note{This is a map, not a tutorial: point at each cell and name one widget from it that students will meet again in Lecture 3, where layout and composition get a full treatment.}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=Flutter]{Dart compiles two ways: JIT and AOT}
+  \begin{columns}[T]
+    \begin{column}{0.48\textwidth}
+\begin{panel}
+{\bfseries Debug: JIT}\par
+\code{flutter run}
+\vskip 1mm
+\begin{itemize}
+  \item The Dart VM compiles as it runs
+  \item Hot reload swaps in new code in under a second
+  \item Assertions on, DevTools attached
+\end{itemize}
+\end{panel}
+    \end{column}
+    \begin{column}{0.48\textwidth}
+\begin{panel}
+{\bfseries Release: AOT}\par
+\code{flutter build apk}
+\vskip 1mm
+\begin{itemize}
+  \item Compiled ahead of time to native machine code
+  \item No VM ships inside the app
+  \item Fast cold start, tree-shaken, no hot reload
+\end{itemize}
+\end{panel}
+    \end{column}
+  \end{columns}
+  \begin{takeaway}{Never judge performance from a debug build.}
+    Measure in profile or release mode: \code{flutter run --profile}.
+  \end{takeaway}
+  \note{This is the slide that replaces compiled versus interpreted as a language property: same language, two compilers, chosen by build mode. A debug build can be several times slower than release, by design.}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=Flutter]{Hot reload versus hot restart}
+  \begin{columns}[T]
+    \begin{column}{0.52\textwidth}
+      \lead{Hot reload}{\code{r} in the terminal.}
+      \begin{enumerate}
+        \item You save a \code{.dart} file
+        \item Changed source goes to the running VM
+        \item The VM re-JITs it in place
+        \item Flutter rebuilds the tree; state survives
+      \end{enumerate}
+    \end{column}
+    \begin{column}{0.44\textwidth}
+\begin{panel}
+{\bfseries What reload cannot do}
+\vskip 1mm
+\begin{itemize}
+  \item Change \code{main()} or start-up code
+  \item Change an enum into a class
+  \item Fix a compile error first
+  \item Run inside a release build at all
+\end{itemize}
+\end{panel}
+    \end{column}
+  \end{columns}
+  \begin{takeaway}{Hot restart (\code{R}) rebuilds from scratch.}
+    All state is lost. Use it whenever \code{initState} or a global variable changed.
+  \end{takeaway}
+  \note{Ask the room to guess which of the four "cannot do" items is most common in practice. It is usually the compile error one: reload silently does nothing useful until the build succeeds again.}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=Flutter]{Installing the toolchain}
+  \begin{columns}[T]
+    \begin{column}{0.56\textwidth}
+\begin{shell}
+# docs.flutter.dev/install
+
+# Android Studio: SDK + emulator
+# Xcode (macOS only): iOS builds
+# VS Code or IntelliJ, with the
+#   Dart and Flutter plugins
+
+flutter doctor
+# reports what is missing, per line
+\end{shell}
+    \end{column}
+    \begin{column}{0.40\textwidth}
+      \lead{Run it first, always}{\code{flutter doctor} names the exact missing piece. Read that line before asking for help.}
+      \vskip 2mm
+      \muted{An Android emulator is enough for every lab. A real device is faster, and the only way to test sensors.}
+      \vskip 2mm
+      \muted{iOS builds need macOS and Xcode; the labs never require them.}
+    \end{column}
+  \end{columns}
+  \note{Lab 2 walks this whole install end to end. Tell students to run flutter doctor before the lab starts, so setup problems surface with time to fix them, not during the two-hour window.}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=Flutter]{Creating and running your first app}
+  \begin{columns}[T]
+    \begin{column}{0.56\textwidth}
+\begin{shell}
+flutter create my_app
+cd my_app
+flutter run
+# debug: hot reload r, restart R
+flutter run --release
+# AOT machine code: what users get
+\end{shell}
+    \end{column}
+    \begin{column}{0.40\textwidth}
+      \lead{This week's lab}{Lab 2 walks the install end to end, on Windows, macOS, and Linux.}
+      \muted{\code{flutter create} scaffolds a runnable counter app. Read it before you change it.}
+    \end{column}
+  \end{columns}
+  \note{Run flutter create live if time allows. The generated counter app is small enough to read in full, and every student will edit exactly this file in Lab 2.}
+\end{frame}
+
+\begin{frame}[eyebrow=Flutter]{The project structure of a new app}
+  \begin{tabular}{@{}p{36mm}p{84mm}@{}}
+    \toprule
+    \thead{Path} & \thead{What it holds} \\
+    \midrule
+    \code{lib/main.dart} & Entry point: \code{runApp()} and the root widget \\
+    \code{pubspec.yaml} & Dependencies, assets, and the SDK constraint \\
+    \code{android/} & The native Android project Gradle builds \\
+    \code{ios/} & The native Xcode project for iOS builds \\
+    \code{test/} & Unit and widget tests, run with \code{flutter test} \\
+    \code{build/} & Generated output, never committed to git \\
+    \bottomrule
+  \end{tabular}
+  \vskip 2mm
+  \muted{Everything you write lives under \code{lib/}. The rest is generated or native scaffolding you rarely touch.}
+  \note{Open a freshly created project side by side with this table. Students consistently ask whether they should edit android/ or ios/ directly; the honest answer for this course is almost never.}
+\end{frame}
+
+\begin{frame}[eyebrow=Flutter]{Numbers worth knowing}
+  \vskip 4mm
+  \begin{grid}[3]
+    \bignum{1}{Dart codebase, every platform}
+    \bignum{<1 s}{typical hot reload turnaround}
+    \bignum{2}{compilers: JIT for debug, AOT for release}
+  \end{grid}
+  \note{These three numbers are the whole lecture compressed: one codebase, a fast development loop, and a build mode switch that changes how the same source actually runs.}
+\end{frame}
+
+\begin{frame}[eyebrow=Recap]{Three things to remember}
+  \vskip 2mm
+  \begin{enumerate}
+    \item Null is part of the type. \muted{\code{?}, \code{??}, \code{?.}, \code{!}, \code{late} and \code{required} remove a whole family of crashes.}
+    \item Dart's shapes map onto Kotlin. \muted{Variables, functions, classes, collections, records and patterns: learn the concept once.}
+    \item Flutter draws every pixel itself. \muted{JIT while you build for hot reload, AOT for what actually ships.}
+  \end{enumerate}
+  \vskip 5mm
+  \kv{Further reading}{\link{https://dart.dev/language}{dart.dev/language} · \link{https://dart.dev/null-safety}{dart.dev/null-safety} · \link{https://docs.flutter.dev/get-started}{docs.flutter.dev/get-started} · \link{https://kotlinlang.org/docs/null-safety.html}{kotlinlang.org null safety}}
+  \note{Close by asking one student to state, in one sentence each, what null safety, records, and Impeller are. If all three land, the lecture did its job.}
+\end{frame}
+
+\closingframe{Questions?}{dinu\_stefan.rusu@upb.ro · Microsoft Teams: course channel}
+
+\end{document}

@@ -1,0 +1,507 @@
+% Mobile and Embedded Computing, Lecture 1. Compile: latexmk -xelatex lecture01.tex
+\documentclass[10pt,aspectratio=169,t]{beamer}
+\usetheme{upbminimal}
+
+\course{Mobile and Embedded Computing}
+\decklabel{Lecture 1}
+\title{Orientation, the device spectrum, and how code runs}
+\subtitle{How the course works, and what runs under your app}
+\author{Dinu-Ștefan Rusu}
+\institute{FILS, Universitatea Politehnica București}
+\date{Spring 2027}
+
+\begin{document}
+
+\titleframe
+
+\objectivesframe{
+  \cell[\faGraduationCap]{Know the plan}{The 14 lectures, the 7 labs, the 7 project sessions, and how the 10 points are earned.}
+  \cell[\faIcon{mobile-alt}]{Read the spectrum}{Where a phone, a single-board computer and a microcontroller sit, and how their budgets differ.}
+  \cell[\faCode]{Source to instructions}{Compilers, interpreters, JIT and AOT, and why Dart is built both ways.}
+  \cell[\faRecycle]{Memory on a phone}{What a garbage collector does for you, and what it costs inside a frame.}
+}
+
+% =====================================================================
+\divider{Part 1 · Orientation}{How this course works}[Lectures, labs, the project, and how you are graded]
+
+\begin{frame}[eyebrow=Orientation]{Who is teaching this course}
+  \vskip 3mm
+  \begin{columns}[T]
+    \begin{column}{0.52\textwidth}
+      \lead{Dinu-Ștefan Rusu}{dinu\_stefan.rusu@upb.ro}
+      \vskip 2mm
+      \muted{Microsoft Teams: the course channel. Everything else: rusudinu.com}
+      \vskip 4mm
+      \kv{Course repository}{\link{https://github.com/rusudinu/mobile-and-embedded-computing}{github.com/rusudinu/mobile-and-embedded-computing}}
+    \end{column}
+    \begin{column}{0.44\textwidth}
+      \begin{grid}[2]
+        \bignum{45+}{Flutter apps shipped}
+        \bignum{400k}{installs across them}
+      \end{grid}
+    \end{column}
+  \end{columns}
+  \begin{takeaway}{Ask questions during the lecture, not after it.}
+    Every slide here comes from work that shipped, so there is usually a war story behind it.
+  \end{takeaway}
+  \note{Introduce yourself in under two minutes. Say plainly that the material is chosen from production experience, not from a textbook. Point at the Teams channel as the fastest way to reach you between sessions.}
+\end{frame}
+
+\begin{frame}[eyebrow=Orientation]{What this course is about}
+  \vskip 2mm
+  \begin{grid}[3]
+    \cell[\faMicrochip]{Under the app}{How code executes, how the phone spends energy, how a microcontroller is programmed.}
+    \cell[\faWifi]{Around the app}{Data that survives without a network, servers over RPC, devices over MQTT and BLE.}
+    \cell[\faLayerGroup]{Not the app itself}{Widgets, layout and screens belong to the sibling course, ADMD, in semester I.}
+  \end{grid}
+  \vskip 3mm
+  \kv{The stack for the whole semester}{Flutter and Dart on the phone. Go on the server. TinyGo on the microcontroller. MQTT between them.}
+  \begin{takeaway}{Internet of Things Engineering, year III, semester II.}
+    Mandatory, 3 ECTS, 14 weeks, exam in the session.
+  \end{takeaway}
+  \note{Draw the line between this course and ADMD explicitly: ADMD taught how to build the app, this course teaches what runs under and around it. Computer Networks and Computer Architecture already own the general stack, so we stay device-specific.}
+\end{frame}
+
+\begin{frame}[eyebrow=Orientation]{The 14 lectures}
+  \vskip 2mm
+  {\usebeamerfont{small}
+  \begin{columns}[T]
+    \begin{column}{0.47\textwidth}
+      \begin{tabular}{@{}r@{\hspace{2.5mm}}l@{}}
+        \toprule
+        \thead{Wk} & \thead{Topic} \\
+        \midrule
+        1 & Orientation, devices, how code runs \\
+        2 & Concurrency: event loop and isolates \\
+        3 & Embedded fundamentals and TinyGo \\
+        4 & Device networking: MQTT, CoAP, TLS \\
+        5 & Bluetooth Low Energy \\
+        6 & Phone sensors and hardware APIs \\
+        7 & Background execution and power \\
+        \bottomrule
+      \end{tabular}
+    \end{column}
+    \begin{column}{0.47\textwidth}
+      \begin{tabular}{@{}r@{\hspace{2.5mm}}l@{}}
+        \toprule
+        \thead{Wk} & \thead{Topic} \\
+        \midrule
+        8 & Offline-first: local data and sync \\
+        9 & Offline-first: conflicts and CRDTs \\
+        10 & Backends: serverless, VPS, and Go \\
+        11 & gRPC, protocol buffers, HTTP/2 and 3 \\
+        12 & Platform channels, FFI, and Kotlin MP \\
+        13 & Rendering and optimization \\
+        14 & Compilation, energy, revision \\
+        \bottomrule
+      \end{tabular}
+    \end{column}
+  \end{columns}}
+  \vskip 3mm
+  \muted{Every deck goes to Moodle on the day it is presented, and the whole set stays in the course repository.}
+  \note{Point out the arc: the device side first, then the phone side, then the server side, then measurement. Tell students that every lecture deck goes on Moodle the same day it is presented.}
+\end{frame}
+
+\begin{frame}[eyebrow=Orientation]{Labs, project sessions, and the rhythm}
+  \vskip 1mm
+  {\usebeamerfont{small}
+  \begin{tabular}{@{}rll@{}}
+    \toprule
+    \thead{Week} & \thead{Deck} & \thead{Lab} \\
+    \midrule
+    2 & lab01 & Toolchain, board, broker, project kickoff \\
+    4 & lab02 & A sensor reading to the phone over MQTT \\
+    6 & lab03 & BLE: a peripheral and a Flutter central \\
+    8 & lab04 & Phone sensors and a background task \\
+    10 & lab05 & Offline-first: outbox, sync, one conflict rule \\
+    12 & lab06 & gRPC: a Go server and a Dart client \\
+    14 & lab07 & Lab test \\
+    \bottomrule
+  \end{tabular}}
+  \vskip 1mm
+  \muted{Lecture weekly, lab in even weeks, project in odd weeks. Every session is 2 hours.}
+  \note{Make the branch rule concrete now: one branch per lab, pushed before the next lab starts. Say that a lab pushed late is still graded, but a lab never pushed is worth nothing.}
+\end{frame}
+
+\begin{frame}[eyebrow=Orientation]{Grading: ten points, five sources}
+  \vskip 4mm
+  \begin{grid}[3]
+    \bignum{3 p}{final exam, in the exam session}
+    \bignum{3 p}{laboratory and assignments}
+    \bignum{1.5 p}{lab test, in week 14}
+    \bignum{1.5 p}{team project, teams of at most 3}
+    \bignum{1 p}{concept presentation}
+    \bignum{5}{points needed to pass}
+  \end{grid}
+  \begin{takeaway}{Seven of the ten points come from work done during the semester.}
+    The exam alone cannot carry you, and it cannot sink you either.
+  \end{takeaway}
+  \note{Read the split out loud once and then move on. The message students need is that continuous work dominates, so falling behind in the labs is the usual way to fail this course.}
+\end{frame}
+
+\begin{frame}[eyebrow=Orientation]{Concept presentations}
+  \vskip 2mm
+  \begin{columns}[T]
+    \begin{column}{0.56\textwidth}
+      \begin{itemize}
+        \item Teams of at most 3 pick a topic from the shared sheet. Topics are taken in the order they are claimed.
+        \item Prepare about 20 minutes of slides, with a demo if the topic supports one, inside the same 20 minutes.
+        \item Every member presents a part, from your own laptop. Materials go to Moodle.
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.40\textwidth}
+      \begin{hint}[Speaking time]
+        20 minutes divided by team size. A team of 2 speaks about 10 minutes each, a team of 3 about 7 minutes each.
+      \end{hint}
+    \end{column}
+  \end{columns}
+  \begin{takeaway}{Claim a topic in the first three weeks.}
+    The interesting topics go first, and a topic nobody claims still has to be presented by somebody.
+  \end{takeaway}
+  \note{Open the shared sheet on the projector and show that claiming is first come, first served. Say that the presentation is worth a full point, which is close to what the lab test is worth.}
+\end{frame}
+
+\begin{frame}[eyebrow=Orientation]{The project: five graded requirements}
+  \vskip 2mm
+  \begin{grid}[3]
+    \cell[\faMicrochip]{1. A device component}{A TinyGo program on a board, or in the Wokwi simulator, reading a sensor.}
+    \cell[\faWifi]{2. Device to phone}{The app shows the reading live, over MQTT or over BLE.}
+    \cell[\faDatabase]{3. Offline-first}{The app works with no network and syncs later, with a conflict rule you state.}
+    \cell[\faServer]{4. gRPC or FFI}{A Go server with a generated Dart client, or native code called from Dart.}
+    \cell[\faClock]{5. A measured claim}{One number you measured: energy, latency, payload size or frame time, with the method.}
+    \cell[\faLock]{Entry conditions}{State in BLoC, real authentication, one WebSocket screen. Your ADMD app has these.}
+  \end{grid}
+  \note{Stress that the project extends the ADMD app rather than starting a new one, so the hours go into device and sync work. All five requirements are needed for approval, not four out of five.}
+\end{frame}
+
+\begin{frame}[eyebrow=Orientation]{Project milestones, one per session}
+  \vskip 2mm
+  {\usebeamerfont{small}
+  \begin{tabular}{@{}rl@{}}
+    \toprule
+    \thead{Week} & \thead{What must be true at the end of the session} \\
+    \midrule
+    1 & Team formed, at most 3 people, and the idea approved \\
+    3 & The device streams a reading to a serial console \\
+    5 & The app receives that reading over MQTT or BLE \\
+    7 & Offline mode works, and the queued writes sync \\
+    9 & gRPC or FFI is integrated and called from the app \\
+    11 & The measurement is done, and the app is polished \\
+    13 & Demo and defense \\
+    \bottomrule
+  \end{tabular}}
+  \vskip 3mm
+  \muted{Teams of at most 3. Approved in Lab 1, defended in the last project session.}
+  \note{Tell teams to treat week 3 as the real deadline: a board that never prints anything to serial is the failure mode that kills projects. Encourage the simulator if hardware delivery looks uncertain.}
+\end{frame}
+
+\begin{frame}[eyebrow=Orientation]{What you are assumed to know already}
+  \vskip 2mm
+  \begin{columns}[T]
+    \begin{column}{0.55\textwidth}
+      \lead{Prerequisite: ADMD, or equivalent Flutter and Dart knowledge.}{You should be able to build a screen, hold state in BLoC, call an HTTP API and sign a user in.}
+      \vskip 3mm
+      \muted{If you took Introduction to SAP in semester I instead, work through the ADMD Lecture 2, 3, 5 and 6 decks before week 3. Lecture 2 here assumes async and await are familiar.}
+    \end{column}
+    \begin{column}{0.41\textwidth}
+      \begin{hint}[Before week 3]
+        The Flutter SDK installed, an emulator or a device that runs your ADMD app, and a GitHub account you can push from.
+      \end{hint}
+    \end{column}
+  \end{columns}
+  \begin{takeaway}{This course does not reteach widgets, layout or Dart syntax.}
+    When a topic belongs to ADMD, the slide names the ADMD lecture and moves on.
+  \end{takeaway}
+  \note{Ask by show of hands who took ADMD and who took Introduction to SAP. If the second group is large, offer a catch-up session in week 2. Make clear that Lecture 2 will not slow down for missing async knowledge.}
+\end{frame}
+
+% =====================================================================
+\divider{Part 2 · The device spectrum}{From the cloud to a microcontroller}[What changes when the machine runs on a battery]
+
+\begin{frame}[eyebrow=Device spectrum]{One spectrum, four points on it}
+  \vskip 2mm
+  {\usebeamerfont{small}
+  \begin{tabular}{@{}lp{24mm}p{26mm}p{22mm}p{24mm}@{}}
+    \toprule
+     & \thead{Cloud} & \thead{Phone} & \thead{Board} & \thead{MCU} \\
+    \midrule
+    RAM      & hundreds of GB  & 8–16 GB             & 1–8 GB     & about 0.5 MB \\
+    Storage  & many terabytes  & 128–512 GB          & SD card    & about 4 MB flash \\
+    Power    & grid, kilowatts & about 5 W, battery  & about 5 W  & milliwatts \\
+    System   & Linux           & Android or iOS      & Linux      & an RTOS, or none \\
+    Code     & Go, Java        & Dart, Kotlin, Swift & Go, Python & TinyGo, C \\
+    \bottomrule
+  \end{tabular}}
+  \begin{takeaway}{This course lives on the right half of the table.}
+    Board means a single-board computer, MCU a microcontroller. The orders of magnitude are the point, not the exact numbers.
+  \end{takeaway}
+  \note{Ask the room to guess the RAM of an ESP32 before you show the last column. The guesses are usually off by three orders of magnitude, which is exactly the reflex this table is meant to reset.}
+\end{frame}
+
+\begin{frame}[eyebrow=Device spectrum]{What changes when you leave the desktop}
+  \vskip 2mm
+  \begin{grid}[3]
+    \cell[\faBatteryHalf]{Battery is a resource}{Every cycle and every radio wake-up costs energy your code cannot replenish.}
+    \cell[\faBolt]{Thermal limits}{Sustained load throttles the chip, so extra CPU time is not always available.}
+    \cell[\faWifi]{Intermittent connectivity}{Offline is a normal state, not an error. Lectures 8 and 9 build on that.}
+    \cell[\faCloud]{No control of deployment}{Store review, staged rollouts, and users who never update the app.}
+    \cell[\faSatelliteDish]{Sensors and radios}{GPS, accelerometer, camera, BLE. Capabilities a desktop does not have.}
+    \cell[\faMicrochip]{ARM almost everywhere}{From flagship phones down to many boards, the instruction set is ARM.}
+  \end{grid}
+  \note{The ARM note matters twice: your Dart release build is compiled to ARM machine code, and a native library built for x86 will not load on a phone. Come back to this in Lecture 12, when we call C from Dart.}
+\end{frame}
+
+\begin{frame}[eyebrow=Device spectrum]{What every app negotiates for}
+  \vskip 1mm
+  \begin{grid}[3]
+    \cell[\faMicrochip]{CPU}{Compute, shared with every other scheduled process.}
+    \cell[\faLayerGroup]{RAM}{Working memory. The OS reclaims it by killing you.}
+    \cell[\faDatabase]{Storage}{Flash, far slower than RAM, shared with photos.}
+    \cell[\faBolt]{GPU}{Graphics, and on-device machine learning.}
+    \cell[\faBatteryHalf]{Battery}{Mobile only. A budget your code never refills.}
+    \cell[\faSatelliteDish]{Radios}{Cellular, Wi-Fi and BLE, each with its own cost.}
+  \end{grid}
+  \begin{takeaway}{On a desktop the first four are effectively elastic.}
+    On a phone all six are hard budgets, and the battery is the one nobody can give back to you.
+  \end{takeaway}
+  \note{Ask what happens when an app asks for more RAM than the phone can give. On both platforms the app is terminated, usually while in the background, which is why Lecture 7 spends time on process lifecycle.}
+\end{frame}
+
+\begin{frame}[eyebrow=Device spectrum]{Resource allocation: loading a model}
+  \vskip 2mm
+  \begin{columns}[T]
+    \begin{column}{0.58\textwidth}
+      \begin{enumerate}
+        \item The app asks the operating system to load the model weights.
+        \item Enough free GPU memory: they land there and inference runs fast.
+        \item Otherwise, enough free RAM: they land there and inference runs, slower.
+        \item Neither: the load fails, and the app falls back to a server.
+      \end{enumerate}
+    \end{column}
+    \begin{column}{0.38\textwidth}
+      \begin{hint}[Unified memory]
+        Phones and Apple laptops share one memory pool between CPU and GPU, so the effective graphics memory is larger than on a desktop with a separate card.
+      \end{hint}
+    \end{column}
+  \end{columns}
+  \begin{takeaway}{On-device machine learning is a resource problem first.}
+    A model that runs on your laptop may not load at all on a mid-range phone.
+  \end{takeaway}
+  \note{This is the clearest example of a budget you cannot negotiate. Ask students how much RAM their own phone has, then ask how much of it is actually free with a browser and a chat app already open.}
+\end{frame}
+
+\begin{frame}[eyebrow=Device spectrum]{The numbers worth carrying in your head}
+  \vskip 2mm
+  \begin{grid}[3]
+    \bignum{8–16 GB}{RAM in a 2026 flagship phone}
+    \bignum{520 KB}{SRAM on an ESP32}
+    \bignum{5 W}{peak draw of a phone chip, on a battery}
+    \bignum{4 MB}{flash on a common ESP32 module}
+    \bignum{8.3 ms}{one frame at 120 Hz}
+    \bignum{16.7 ms}{one frame at 60 Hz, for comparison}
+  \end{grid}
+  \begin{takeaway}{One frame budget equals one divided by the refresh rate.}
+    Most phones sold in 2026 run at 90–120 Hz, so the familiar 16 ms describes a 60 Hz screen and nothing else.
+  \end{takeaway}
+  \note{Write the division on the board once: one second divided by 120 frames gives 8.3 ms. Students who memorized 16 ms in an earlier course need to hear that it was a refresh rate, not a law.}
+\end{frame}
+
+% =====================================================================
+\divider{Part 3 · Embedded}{Where embedded fits, and why the phone is the hub}[Kilobytes of RAM, milliwatts of power, and often no operating system]
+
+\begin{frame}[embedded,eyebrow=Embedded]{The same constraints, taken further}
+  \vskip 2mm
+  \begin{columns}[T]
+    \begin{column}{0.54\textwidth}
+      \begin{itemize}
+        \item Kilobytes of RAM instead of gigabytes, milliwatt power budgets, and often no operating system at all.
+        \item No process to kill and no swap. Allocate more than the chip has and the program stops.
+        \item The program is one loop: wake, measure, send, sleep. Lecture 3 writes that loop.
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.42\textwidth}
+      \begin{hint}[Boards for this course]
+        TinyGo supports the ESP32-C3 and ESP32-S3, with Wi-Fi through the espradio package since TinyGo 0.41, and the Raspberry Pi Pico. Support for the original ESP32 is minimal.
+      \end{hint}
+    \end{column}
+  \end{columns}
+  \begin{takeaway}{Buy an ESP32-C3, an ESP32-S3 or a Raspberry Pi Pico.}
+    If no board arrives in time, the Wokwi simulator is accepted, and Lab 1 names the exact simulator board.
+  \end{takeaway}
+  \note{Say the board recommendation plainly and repeat it in Lab 1. Warn students away from the original Xtensa ESP32, because the TinyGo support is minimal and there is no Wi-Fi or Bluetooth from TinyGo on it.}
+\end{frame}
+
+\begin{frame}[embedded,eyebrow=Embedded]{The phone is the hub}
+  \vskip 1mm
+  \begin{grid}[3]
+    \cell[\faMicrochip]{Sensor and microcontroller}{A TinyGo program reads a sensor and publishes it. Milliwatts, no screen, no user.}
+    \cell[\faIcon{mobile-alt}]{Your Flutter app}{Receives over MQTT or BLE, stores locally, shows it live, survives a lost network.}
+    \cell[\faCloud]{Cloud}{Storage, dashboards and heavier processing, reached when a connection is worth using.}
+  \end{grid}
+  \vskip 3mm
+  \kv{Where the semester goes}{Lectures 3 and 4 build the left box. Lectures 5 to 9 build the middle box. Lectures 10 and 11 build the right box.}
+  \begin{takeaway}{The phone is the only device in the chain with a screen, a battery worth charging and a network stack you trust.}
+    That is why it sits in the middle.
+  \end{takeaway}
+  \note{Draw the three boxes on the board and keep them there for the rest of the lecture. This picture is the shape of the project, so students should recognize it when the requirements are graded.}
+\end{frame}
+
+% =====================================================================
+\divider{Part 4 · How code runs}{From source text to a running program}[Compilers, interpreters, JIT, AOT, and garbage collection]
+
+\begin{frame}[eyebrow=How code runs]{From source text to instructions}
+  \vskip 2mm
+  \begin{grid}[2]
+    \cell[\faCode]{1. Source text}{Characters in a file. The CPU can execute none of it, so something must translate it.}
+    \cell[\faLayerGroup]{2. An intermediate form}{Tokens, a syntax tree, then bytecode or a compiler representation. Type checking happens here.}
+    \cell[\faMicrochip]{3. Machine instructions}{ARM or x86 opcodes for one CPU and one operating system.}
+    \cell[\faBolt]{4. Execution}{The instructions run, over a runtime that handles memory, threads and system calls.}
+  \end{grid}
+  \begin{takeaway}{The question that separates toolchains is when step 3 happens.}
+    Before you ship, on the device at start-up, or once a function turns out to be hot.
+  \end{takeaway}
+  \note{Keep this slide abstract on purpose. Every distinction on the next four slides is a different answer to the question of when translation happens and who pays for it.}
+\end{frame}
+
+\begin{frame}[eyebrow=How code runs]{Compiler and interpreter}
+  \vskip 2mm
+  \begin{columns}[T]
+    \begin{column}{0.55\textwidth}
+      \begin{itemize}
+        \item A compiler translates the whole program ahead of time, for one CPU and one OS. You ship the result, and the translation is paid once, by you.
+        \item An interpreter reads your code and carries out its instructions on every run. You ship the source, and the user's device pays.
+        \item Almost nothing real is purely one or the other.
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.41\textwidth}
+      \begin{hint}[One language, run two ways]
+        Python has an interpreter and a JIT implementation. Java and Kotlin interpret bytecode first, then compile the hot methods. Browser engines do both.
+      \end{hint}
+    \end{column}
+  \end{columns}
+  \begin{takeaway}{Compiled and interpreted describe a toolchain, not a language.}
+    The same source can be run either way, and for Dart it genuinely is.
+  \end{takeaway}
+  \note{Ask the room to name a compiled language and an interpreted one. Then point out that C has interpreters and Python has ahead-of-time compilers. The dichotomy students arrive with is a folk taxonomy.}
+\end{frame}
+
+\begin{frame}[eyebrow=How code runs]{The compilation spectrum}
+  \vskip 2mm
+  {\usebeamerfont{small}
+  \begin{tabular}{@{}lp{24mm}p{24mm}p{24mm}p{24mm}@{}}
+    \toprule
+     & \thead{AOT} & \thead{JIT in a VM} & \thead{Bytecode VM} & \thead{Interpreter} \\
+    \midrule
+    Translated & before you ship & while running & at load time & line by line \\
+    You ship   & machine code    & source, a VM  & bytecode, a VM & source, a runtime \\
+    Start-up   & fastest         & needs warm-up & medium & starts instantly \\
+    Peak speed & high and steady & can beat AOT  & medium & lowest \\
+    Examples   & Go, Rust, Swift & JVM, V8, ART  & CPython & shell scripts \\
+    \bottomrule
+  \end{tabular}}
+  \vskip 2mm
+  \begin{takeaway}{These are a continuum, not four boxes.}
+    Real runtimes mix tiers: a browser engine has an interpreter and two compilers.
+  \end{takeaway}
+  \note{The row students should remember is start-up. On a phone, a cold start that takes an extra second becomes a review complaint, which is a large part of why release builds are compiled ahead of time.}
+\end{frame}
+
+\begin{frame}[eyebrow=How code runs]{Is compiled code faster}
+  \vskip 2mm
+  \begin{columns}[T]
+    \begin{column}{0.56\textwidth}
+      \begin{itemize}
+        \item There is a real gap, and it depends on the workload. A tight numeric loop shows the largest difference. Code dominated by input and output shows almost none.
+        \item A JIT can beat an ahead-of-time compiler, because it sees the actual types and hot branches at run time.
+        \item AOT wins where a phone needs it: cold start, memory footprint, predictable latency.
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.40\textwidth}
+      \begin{warning}[Not a fact]
+        \muted{"Compiled languages are about a hundred times faster than interpreted ones."} There is no single multiplier. Ask instead: faster at what, measured how, on which device.
+      \end{warning}
+    \end{column}
+  \end{columns}
+  \begin{takeaway}{Benchmark the workload you actually have.}
+    Inside a frame, the budget goes to layout, rasterization and storage long before language dispatch.
+  \end{takeaway}
+  \note{This slide exists to kill a number students repeat from the internet. Push back the moment anyone quotes a speed multiplier without naming a workload and a device.}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=How code runs]{Why Dart is compiled two different ways}
+  \vskip 2mm
+  \begin{columns}[T]
+    \begin{column}{0.50\textwidth}
+      \kv{Debug: JIT}{}
+\begin{shell}
+flutter run
+\end{shell}
+      \muted{The VM compiles code as it runs. Hot reload swaps new code into the live isolate. Assertions on, DevTools attached. Slower, and a much larger binary.}
+    \end{column}
+    \begin{column}{0.46\textwidth}
+      \kv{Release: AOT}{}
+\begin{shell}
+flutter build apk --release
+\end{shell}
+      \muted{Compiled ahead of time to native ARM machine code. No VM ships inside the app. Fast cold start, smaller footprint, unused code removed. No hot reload, because there is nothing to reload into.}
+    \end{column}
+  \end{columns}
+  \begin{takeaway}{Never judge performance from a debug build.}
+    Measure in profile or release mode. A debug build can be several times slower, by design.
+  \end{takeaway}
+  \note{Students routinely report performance problems that only exist in debug builds. Show the difference live if there is time: run the same screen with and without the release flag.}
+\end{frame}
+
+\begin{frame}[eyebrow=How code runs]{Garbage collection, in one slide}
+  \vskip 2mm
+  \begin{columns}[T]
+    \begin{column}{0.56\textwidth}
+      \begin{itemize}
+        \item Dart is garbage collected. You never free memory. The runtime reclaims objects that nothing can reach any more.
+        \item Most objects die young. A rebuild allocates thousands of short-lived widget objects and drops them a frame later.
+        \item So the heap is split: a young space collected constantly and cheaply, an old space collected rarely and mostly concurrently.
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.40\textwidth}
+      \begin{hint}[Three parts]
+        \textbf{Young space:} almost everything dies here. \textbf{Scavenge:} copy the few survivors, drop the rest. \textbf{Old space:} collected rarely, alongside your code.
+      \end{hint}
+    \end{column}
+  \end{columns}
+  \begin{takeaway}{Why it matters on a phone.}
+    A pause longer than one frame budget is a visible dropped frame, and every collection costs cycles and therefore battery.
+  \end{takeaway}
+  \note{Connect this to the frame budget from Part 2: 8.3 ms is the whole frame, so a collection pause of a few milliseconds is already most of it. Allocate less inside build, use const constructors, keep heavy work off the UI isolate.}
+\end{frame}
+
+% =====================================================================
+\begin{frame}[eyebrow=Recap]{Three things to remember}
+  \vskip 2mm
+  \begin{enumerate}
+    \item One spectrum, cloud to microcontroller. \muted{This course lives on the constrained half, where the machine runs on a battery.}
+    \item Compiled and interpreted describe a toolchain. \muted{Dart sits at two points on that spectrum: JIT while you develop, AOT for what you ship.}
+    \item Memory is managed for you, not for free. \muted{A collection pause inside a frame budget is a dropped frame the user can see.}
+  \end{enumerate}
+  \vskip 5mm
+  \kv{Further reading}{\link{https://tinygo.org/}{tinygo.org} · \link{https://dart.dev/language/concurrency}{dart.dev on the Dart runtime} · \link{https://docs.flutter.dev/perf}{docs.flutter.dev/perf} · \link{https://mqtt.org/}{mqtt.org}}
+  \note{Ask for the three points back from the room before moving to the closing slide. If nobody offers the second one, repeat the JIT and AOT split, because Lecture 2 depends on it.}
+\end{frame}
+
+\begin{frame}[eyebrow=Next]{Before Lab 1}
+  \vskip 3mm
+  \begin{grid}[3]
+    \cell[\faLayerGroup]{Form your team}{At most 3 people. Names and idea on the team sheet before the first project session.}
+    \cell[\faMicrochip]{Choose a board}{Order an ESP32-C3, an ESP32-S3 or a Raspberry Pi Pico, or commit to the Wokwi simulator.}
+    \cell[\faCode]{Bring a working app}{Your ADMD app, running, with state in BLoC, authentication and one WebSocket screen.}
+  \end{grid}
+  \vskip 3mm
+  \kv{Also this week}{Claim a concept-presentation topic, and read the five project requirements again before you commit to an idea.}
+  \begin{takeaway}{The team and the board are the two decisions that block everything else.}
+    Both are due in Lab 1, in week 2. A board ordered in week 4 will not arrive in time for Lab 2.
+  \end{takeaway}
+  \note{End on the two decisions that block everything else: the team and the board. Remind students that a board ordered in week 4 will not arrive in time for Lab 2.}
+\end{frame}
+
+\closingframe{Questions?}{dinu\_stefan.rusu@upb.ro · Microsoft Teams: course channel · rusudinu.com}
+
+\end{document}

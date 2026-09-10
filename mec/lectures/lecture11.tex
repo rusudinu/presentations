@@ -1,0 +1,502 @@
+% Lecture 11: gRPC, Protocol Buffers, HTTP/2 and HTTP/3. Compile: latexmk -xelatex lecture11.tex
+\documentclass[10pt,aspectratio=169,t]{beamer}
+\usetheme{upbminimal}
+
+\course{Mobile and Embedded Computing}
+\decklabel{Lecture 11}
+\title{gRPC, Protocol Buffers, HTTP/2 and HTTP/3}
+\subtitle{Contract-first calls, streaming, and the transport underneath them}
+\author{Dinu-Ștefan Rusu}
+\institute{FILS, Universitatea Politehnica București}
+\date{Spring 2027}
+
+\begin{document}
+
+\titleframe
+
+\objectivesframe{
+  \cell[\faServer]{Design the contract}{Write a .proto file and generate Go and Dart stubs with protoc, from one source of truth.}
+  \cell[\faCode]{Call all four shapes}{Unary, server streaming, client streaming and bidirectional, and know which one a screen actually needs.}
+  \cell[\faBolt]{Reason about the wire}{Why protobuf is smaller than JSON, how a schema evolves safely, and what HTTP/2 buys for free.}
+  \cell[\faClock]{Survive the network}{Deadlines, cancellation and the radio tail: the habits that keep a mobile client polite.}
+}
+
+\begin{frame}[eyebrow=Overview]{What gRPC actually is}
+  \vskip 3mm
+  \begin{grid}[4]
+    \cell[\faServer]{Contract first}{gRPC is a Remote Procedure Call (RPC) framework: one .proto file is the source of truth for every client and the server.}
+    \cell[\faCode]{Code generation}{protoc turns messages and services into typed classes, in every language you target, from the same file.}
+    \cell[\faBolt]{Binary and HTTP/2}{Compact binary frames, multiplexed on one warm connection instead of text on many short-lived ones.}
+    \cell[\faIcon{sync-alt}]{Streaming built in}{Four call shapes are part of the contract itself, not a library bolted on afterward.}
+  \end{grid}
+  \note{Set the frame for the whole lecture: gRPC bundles a contract, a codec and a transport. Ask which of these four ideas the room has already met without the name attached to it.}
+\end{frame}
+
+\divider{Part 1 · Contracts}{Designing the call before writing code}[RPC versus REST, and the .proto contract]
+
+\begin{frame}[fragile,eyebrow=Contracts]{RPC models verbs, REST models nouns}
+  \begin{columns}[T]
+    \begin{column}{0.53\textwidth}
+      \begin{itemize}
+        \item \textbf{REST (Representational State Transfer) models nouns.} \muted{You name resources and use a few fixed verbs on them, a good fit for a public API that strangers discover from a URL.}
+        \item \textbf{RPC models verbs.} \muted{You name the operation your app needs, such as GetDashboard, and call it like a local function. Client and server agree on a list of procedures, not a URL space.}
+        \item \textbf{On a phone the difference is round trips.} \muted{A resource-shaped screen often needs three or four sequential requests, and each one costs real time on cellular before any data moves.}
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.44\textwidth}
+\begin{shell}
+# REST: four requests
+GET /users/42
+GET /users/42/devices
+GET /devices/9/readings
+GET /devices/9/alerts
+
+# RPC: one call
+GetDashboard(user_id: 42)
+  -> Dashboard
+\end{shell}
+      \begin{takeaway}{Design the call around the screen.}
+        Not around your database tables. The round trip is the expensive part.
+      \end{takeaway}
+    \end{column}
+  \end{columns}
+  \note{Ask the room how many endpoints their ADMD project needed just to render one screen. That number is the argument for RPC before protobuf is even mentioned.}
+\end{frame}
+
+\begin{frame}[eyebrow=Contracts]{Choosing between REST and gRPC}
+  \vskip 1mm
+  \begin{center}
+  {\usebeamerfont{small}
+  \begin{tabular}{@{}p{32mm}p{40mm}p{40mm}@{}}
+    \toprule
+    \thead{Question} & \thead{Favor REST} & \thead{Favor gRPC} \\
+    \midrule
+    Who calls it? & Strangers, from a URL & You control both ends \\
+    Needs streaming? & Rarely & Built into the contract \\
+    Browser calls it? & Yes, plain HTTP & Only via gRPC-Web \\
+    Payload format? & JSON, readable & Binary, needs tooling \\
+    Latency budget? & One request is fine & Every round trip counts \\
+    \bottomrule
+  \end{tabular}}
+  \end{center}
+  \vskip 2mm
+  \begin{takeaway}{Neither one is modern.}
+    gRPC wins where you own both ends of the call. REST wins where you do not.
+  \end{takeaway}
+  \note{This table is the decision your team makes for project requirement four. Point out that a public, discoverable API is the one case where REST is still the right default.}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=Contracts]{Contract first: the .proto file}
+  \begin{columns}[T]
+    \begin{column}{0.62\textwidth}
+\begin{codeblock}
+syntax = "proto3";
+package telemetry.v1;
+message Reading {
+  string device_id        = 1;
+  double temp_c           = 2;
+  int64  taken_at_unix_ms = 3;
+}
+service Telemetry {
+  rpc SubmitReading(Reading) returns (SubmitReadingResponse);
+  rpc WatchReadings(WatchReadingsRequest) returns (stream Reading);
+}
+\end{codeblock}
+    \end{column}
+    \begin{column}{0.35\textwidth}
+      \lead{One file, three teams.}{Backend, Android and iOS build from it in parallel. Field numbers are the wire format: names never travel.}
+      \muted{Enums need a zero: an absent enum decodes as 0, so 0 must mean UNSPECIFIED.}
+    \end{column}
+  \end{columns}
+  \note{Write this live if there is time. The thing students miss: proto3 enums must have a zero value meaning unspecified, because an absent enum always decodes as 0. Versioning the package, not the file, is worth saying out loud too.}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=Contracts]{Generating stubs with protoc}
+  \vskip 1mm
+  Run protoc once per language, pointed at the same .proto file. Commit the generated code and regenerate on change, or run protoc in CI. Pick one and write it down.
+  \vskip 3mm
+\begin{shell}
+# Go: two plugins, messages and service
+protoc -Iproto \
+  --go_out=gen      --go_opt=paths=source_relative \
+  --go-grpc_out=gen --go-grpc_opt=paths=source_relative \
+  proto/telemetry/v1/telemetry.proto
+
+# Dart: the plugin is a pub global executable
+dart pub global activate protoc_plugin
+protoc -Iproto --dart_out=grpc:lib/gen \
+  proto/telemetry/v1/telemetry.proto
+\end{shell}
+  \note{Live demo works well here: run these two commands and show the generated files appearing under gen/ and lib/gen. Both plugins read the exact same .proto file.}
+\end{frame}
+
+\begin{frame}[eyebrow=Contracts]{What the generator produces}
+  \vskip 2mm
+  \begin{itemize}
+    \item \textbf{Typed message classes.} \muted{Reading, SubmitReadingResponse and their siblings, as real classes with typed getters, equality and a binary codec already written.}
+    \item \textbf{A client stub.} \muted{TelemetryClient in Dart: the object your app calls as if it were a local class.}
+    \item \textbf{A server skeleton.} \muted{UnimplementedTelemetryServer in Go: embed it, then implement one method at a time.}
+    \item \textbf{Generated code is build output.} \muted{Never edit it by hand. The pubspec needs the protobuf and grpc packages to compile the result.}
+  \end{itemize}
+  \begin{takeaway}{The compiler writes the parsing code,}
+    which is the code you would otherwise get subtly wrong.
+  \end{takeaway}
+  \note{Ask what happens if two developers hand-edit the same generated file differently. The answer is why generated code stays out of manual review.}
+\end{frame}
+
+\divider{Part 2 · Implementing}{A Go server and a generated Dart client}[Unary calls, then a stream of sensor readings]
+
+\begin{frame}[fragile,eyebrow=Implementing]{A Go server: the unary call}
+  \begin{columns}[T]
+    \begin{column}{0.62\textwidth}
+\begin{golang}
+func (s *server) SubmitReading(ctx context.Context,
+    req *pb.Reading) (*pb.SubmitReadingResponse, error) {
+    id, err := s.store.Save(ctx, req)
+    if err != nil {
+        return nil, status.Error(codes.Internal, "save failed")
+    }
+    return &pb.SubmitReadingResponse{StoredId: id}, nil
+}
+\end{golang}
+    \end{column}
+    \begin{column}{0.35\textwidth}
+      \lead{ctx is the deadline.}{Canceled when the phone gives up; the query stops here too.}
+      \muted{Errors are codes, not strings: codes.InvalidArgument, Internal, and friends.}
+    \end{column}
+  \end{columns}
+  \note{The server struct embeds pb.UnimplementedTelemetryServer so new RPCs keep it compiling. This is the same Go from Lecture 10, now speaking a generated interface. main() wires it up: net.Listen, grpc.NewServer, RegisterTelemetryServer, Serve.}
+\end{frame}
+
+\begin{frame}[eyebrow=Implementing]{Errors are codes, not strings}
+  \vskip 1mm
+  \begin{center}
+  {\usebeamerfont{small}
+  \begin{tabular}{@{}lp{85mm}@{}}
+    \toprule
+    \thead{Code} & \thead{Meaning} \\
+    \midrule
+    InvalidArgument   & The client sent something the server rejects outright \\
+    NotFound          & No resource matches the request \\
+    Unauthenticated   & No valid credentials were presented \\
+    Unavailable       & The server is temporarily down, safe to retry \\
+    DeadlineExceeded  & The call's deadline passed before a response arrived \\
+    \bottomrule
+  \end{tabular}}
+  \end{center}
+  \vskip 2mm
+  \begin{takeaway}{The client branches on \code{e.code},}
+    not on a parsed string. That is the whole point of a status code.
+  \end{takeaway}
+  \note{These codes are the same list on every language's generated client. A Dart catch block and a Go status.Error use the same vocabulary. PermissionDenied is worth a mention too: valid credentials, disallowed call.}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=Implementing]{A Dart client: the unary call}
+  \begin{columns}[T]
+    \begin{column}{0.6\textwidth}
+\begin{dart}
+final channel = ClientChannel('api.example.com', port: 443,
+    options: const ChannelOptions(
+        credentials: ChannelCredentials.secure()));
+final client = TelemetryClient(channel);
+final res = await client.submitReading(
+  Reading()..deviceId = id..tempC = 21.5,
+  options: CallOptions(timeout: const Duration(seconds: 2)),
+);
+debugPrint(res.storedId);
+\end{dart}
+    \end{column}
+    \begin{column}{0.37\textwidth}
+      {\usebeamerfont{small}
+      \begin{itemize}
+        \item \textbf{It looks like a local call.} \muted{That is the point of RPC, and the danger: it is still the network.}
+        \item \textbf{Always set a deadline.} \muted{Without one, a stalled call holds a UI state forever.}
+      \end{itemize}}
+    \end{column}
+  \end{columns}
+  \note{Ask what happens to the UI if this call never sets a timeout and the server never responds. Someone will say it hangs forever, which is exactly right. A GrpcError catch block branches on e.code the same way the Go server used status codes.}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=Implementing]{Server streaming: the Go side}
+  \begin{columns}[T]
+    \begin{column}{0.58\textwidth}
+\begin{golang}
+func (s *server) WatchReadings(
+    req *pb.WatchReadingsRequest,
+    stream pb.Telemetry_WatchReadingsServer,
+) error {
+    ctx := stream.Context()
+    for r := range s.store.Sub(ctx, req.DeviceId) {
+        if err := stream.Send(r); err != nil {
+            return err
+        }
+    }
+    return nil
+}
+\end{golang}
+    \end{column}
+    \begin{column}{0.39\textwidth}
+      \lead{One method, many responses.}{WatchReadings is declared once, as returns (stream Reading). The handler loops and sends until the client goes away.}
+      \muted{ctx is still the deadline or the client's cancel. stream.Send fails once nobody is listening, and returning ends the stream cleanly.}
+    \end{column}
+  \end{columns}
+  \note{This is the shape Lab 6 uses for live sensor readings, and the shape project requirement four needs if a team picks gRPC over FFI.}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=Implementing]{Server streaming: the Dart side}
+  \begin{columns}[T]
+    \begin{column}{0.55\textwidth}
+\begin{dart}
+final call = client.watchReadings(
+  WatchReadingsRequest()..deviceId = id,
+  options: CallOptions(timeout: const Duration(seconds: 5)));
+final sub = call.listen(_onReading, onError: _onError);
+@override
+void dispose() {
+  sub.cancel(); channel.shutdown();
+  super.dispose();
+}
+\end{dart}
+    \end{column}
+    \begin{column}{0.42\textwidth}
+      \lead{Cancel in dispose().}{An open stream keeps the radio and the server busy for a screen the user already left.}
+      \muted{The deadline still applies: a stream silent that long fails too.}
+    \end{column}
+  \end{columns}
+  \begin{takeaway}{Listen, cancel, and set a deadline:}
+    the three habits Lab 6 grades directly.
+  \end{takeaway}
+  \note{Tie this straight to Lab 6's acceptance criteria: canceling stops the stream, and a short deadline against a server that sleeps three seconds fails visibly. call.listen returns a subscription like any other Dart Stream.}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=Implementing]{Client streaming: draining an offline queue}
+  \begin{columns}[T]
+    \begin{column}{0.47\textwidth}
+      Many requests, one response: the shape of an outbox drain from Lecture 9. Queue rows offline, then stream them upstream for one acknowledgement.
+    \end{column}
+    \begin{column}{0.5\textwidth}
+\begin{dart}
+// service Telemetry adds:
+// rpc UploadReadings(stream Reading) returns (Ack);
+Stream<Reading> _drain() async* {
+  for (final r in await outbox.rows()) {
+    yield r.toReading();
+  }
+}
+final sum = await client.uploadReadings(_drain());
+debugPrint('stored: ${sum.accepted}');
+\end{dart}
+    \end{column}
+  \end{columns}
+  \note{Client streaming is the shape offline sync from Lecture 9 actually needs: drain the outbox in order and get one acknowledgement, not one round trip per row.}
+\end{frame}
+
+\divider{Part 3 · The wire}{What actually travels, and how it changes}[Protobuf's size on the wire, and evolving a schema safely]
+
+\begin{frame}[fragile,eyebrow=Wire format]{Why protobuf is smaller, and by how much}
+  \begin{columns}[T]
+    \begin{column}{0.55\textwidth}
+      {\usebeamerfont{small}
+      \begin{itemize}
+        \item \textbf{It is binary.} \muted{No quotes, commas or braces, and numbers are not rendered as text.}
+        \item \textbf{Fields are numbered, not named.} \muted{A tag byte packs the field number and its wire type, so a field name never travels.}
+        \item \textbf{Integers are varints.} \muted{Seven bits of value per byte, so small numbers cost one byte instead of four.}
+        \item \textbf{Defaults are free.} \muted{Nothing is sent for a field left at its default value.}
+      \end{itemize}}
+    \end{column}
+    \begin{column}{0.47\textwidth}
+\begin{codeblock}[basicstyle=\ttfamily\fontsize{7}{9}\selectfont\color{upbInk}]
+# JSON: 38 bytes
+{"device_id":"esp32-a1","temp_c":21.5}
+# protobuf: 19 bytes
+0A 08 65 73 70 33 32 2D 61 31
+11 00 00 00 00 00 80 35 40
+# varint: 300 -> AC 02 (2 bytes)
+\end{codeblock}
+    \end{column}
+  \end{columns}
+  \begin{takeaway}{Quote the mechanism, not a multiplier.}
+    Protobuf is smaller, often by a large factor, but the ratio depends on your schema and data. Measure yours.
+  \end{takeaway}
+  \note{This slide replaces the temptation to quote a multiplier. Have students serialize one real message both ways and print the byte counts themselves.}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=Wire format]{Schema evolution without breaking old apps}
+  \begin{columns}[T]
+    \begin{column}{0.55\textwidth}
+\begin{codeblock}
+message Reading {
+  string device_id        = 1;
+  double temp_c           = 2;
+  int64  taken_at_unix_ms = 3;
+  double humidity         = 5;  // new
+  reserved 4;                   // retired
+}
+\end{codeblock}
+    \end{column}
+    \begin{column}{0.42\textwidth}
+      {\usebeamerfont{small}
+      \lead{Forward: old app, new server.}{The parser skips unknown tag 5 by its wire type. It does not crash.}
+      \muted{Backward: a missing field decodes to its default. Never renumber, reuse, or retype a field.}}
+    \end{column}
+  \end{columns}
+  \begin{takeaway}{Users do not update.}
+    A year-old build is still on the network, and the wire format is the compatibility contract.
+  \end{takeaway}
+  \note{Ask what happens when an old build, still on someone's phone from last year, receives a message with a field it has never heard of. Nothing happens: it skips the bytes.}
+\end{frame}
+
+\begin{frame}[eyebrow=Call shapes]{Four call shapes, not one}
+  {\usebeamerfont{small}\renewcommand\arraystretch{1.0}
+  \begin{tabular}{@{}lp{42mm}p{50mm}@{}}
+    \toprule
+    \thead{Shape} & \thead{Signature} & \thead{When} \\
+    \midrule
+    Unary & \ttfamily rpc Get(Req) returns (Res) & One request, one response: most screens \\
+    Server streaming & \ttfamily returns (stream Reading) & One request, many responses: live feeds \\
+    Client streaming & \ttfamily (stream Reading) returns (Ack) & Many requests, one response: draining a queue \\
+    Bidirectional & \ttfamily (stream In) returns (stream Out) & Both directions at once: chat, presence \\
+    \bottomrule
+  \end{tabular}}
+  \begin{takeaway}{The shape is part of the contract.}
+    Changing a method from unary to streaming changes the generated signature on every client.
+  \end{takeaway}
+  \note{Client streaming is the one students under-use: draining an offline queue is exactly this shape, one call instead of one round trip per row.}
+\end{frame}
+
+\divider{Part 4 · Transport}{HTTP/2, HTTP/3, and what a phone pays for}[One warm connection, and what happens when the network changes]
+
+\begin{frame}[eyebrow=Transport]{HTTP/2: one connection, many streams}
+  {\usebeamerfont{small}
+  \begin{columns}[T]
+    \begin{column}{0.55\textwidth}
+      \begin{itemize}
+        \item \textbf{HTTP/2 multiplexes calls over one connection.} \muted{HTTP/1.1 allowed one request at a time; browsers hid that with six connections. gRPC rides on this: one call per stream.}
+        \item \textbf{What it does not fix: TCP delivers in order.} \muted{One lost packet stalls every stream on that connection until it is retransmitted.}
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.42\textwidth}
+      \begin{itemize}
+        \item \textbf{One TCP + TLS connection.} \muted{Handshake once, reuse it for every call.}
+        \item \textbf{HPACK, HTTP/2's header compression.} \muted{A repeated header costs a table index, not the bytes.}
+        \item \textbf{Streams are independent.} \muted{A slow call does not block a fast one.}
+      \end{itemize}
+    \end{column}
+  \end{columns}}
+  \begin{takeaway}{One connection, kept warm.}
+    That is most of gRPC's mobile advantage, before a single byte of protobuf is counted.
+  \end{takeaway}
+  \note{The head-of-line blocking TCP still causes is the setup for the next slide: QUIC is the fix HTTP/2 could not make on its own. HPACK is HTTP/2's header compression.}
+\end{frame}
+
+\begin{frame}[eyebrow=Transport]{HTTP/3 and QUIC: the mobile case}
+  {\usebeamerfont{small}
+  \begin{columns}[T]
+    \begin{column}{0.55\textwidth}
+      \begin{itemize}
+        \item \textbf{QUIC moves onto UDP and implements streams itself.} \muted{A lost packet now stalls only that stream, so HTTP/2's head-of-line blocking goes away.}
+        \item \textbf{Transport Layer Security (TLS) 1.3 is folded into the handshake.} \muted{A new connection is one round trip; a resumed one can be zero.}
+        \item \textbf{Connection migration matters here.} \muted{A QUIC connection has an id, not an IP and port, so it survives Wi-Fi to 5G.}
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.42\textwidth}
+      \begin{itemize}
+        \item \textbf{Where gRPC stands.} \muted{The wire protocol is specified over HTTP/2.}
+        \item \textbf{In practice.} \muted{HTTP/3 usually reaches you at the edge: a load balancer speaks it to the device, HTTP/2 to your service.}
+        \item \textbf{Treat it as deployment,} \muted{not a code change.}
+      \end{itemize}
+    \end{column}
+  \end{columns}}
+  \begin{takeaway}{Handshakes and reconnects are the mobile cost.}
+    QUIC addresses both, which is why it belongs in the same argument as the radio tail.
+  \end{takeaway}
+  \note{Emphasize connection migration: it is the one QUIC feature with no equivalent fix in HTTP/2, because TCP's identity is tied to the IP and port.}
+\end{frame}
+
+\begin{frame}[eyebrow=Numbers]{One connection, four shapes, zero round trips}
+  \vskip 4mm
+  \begin{grid}[3]
+    \bignum{1}{TCP connection, reused for every call}
+    \bignum{4}{call shapes defined by the .proto, not by you}
+    \bignum{0-RTT}{round-trip time on a resumed QUIC connection}
+  \end{grid}
+  \note{These numbers are structural, not benchmarks: they hold regardless of network or hardware, which is why they are safe to state without a citation.}
+\end{frame}
+
+\begin{frame}[eyebrow=On a phone]{Deadlines, cancellation, and the radio tail}
+  {\usebeamerfont{small}
+  \begin{columns}[T]
+    \begin{column}{0.55\textwidth}
+      \begin{itemize}
+        \item \textbf{A deadline is not a client-side timeout.} \muted{It travels with the call and propagates through every service behind it. When it expires, work stops everywhere.}
+        \item \textbf{The radio has a tail.} \muted{It stays high-power for seconds after a transmission. One burst allows it to sleep; several chatty requests keep it awake.}
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.42\textwidth}
+      \begin{hint}[iOS caveat]
+        A suspended app gets no CPU and its sockets close, so a long-lived stream does not survive backgrounding. Reconnect on resume; use a silent push or a background task to be woken.
+      \end{hint}
+    \end{column}
+  \end{columns}}
+  \begin{takeaway}{Batch, set a deadline, cancel on dispose.}
+    Three habits that show up as battery life in a review.
+  \end{takeaway}
+  \note{This is where Lecture 7's background execution material and this lecture meet. A team whose project needs a live gRPC stream while backgrounded will find it does not survive on iOS. Keepalive pings are not free either: they hold the connection open and wake the radio, so tune the interval.}
+\end{frame}
+
+\divider{Part 5 · Reaching everywhere}{The browser, and the project}[gRPC-Web, Connect, and where Lab 6 picks this up]
+
+\begin{frame}[fragile,eyebrow=gRPC]{gRPC-Web and Connect: the browser problem}
+  \begin{columns}[T]
+    \begin{column}{0.55\textwidth}
+      {\usebeamerfont{small}
+      \begin{itemize}
+        \item \textbf{A browser cannot speak gRPC.} \muted{fetch and XHR give no control over HTTP/2 frames and no way to read trailers, where gRPC puts the call's status.}
+        \item \textbf{gRPC-Web} \muted{is a different wire encoding, over HTTP/1.1, for unary and server streaming only. It needs a translating proxy.}
+        \item \textbf{Connect} \muted{is the pragmatic successor: one Go handler serves all three protocols on the same route.}
+      \end{itemize}}
+    \end{column}
+    \begin{column}{0.42\textwidth}
+\begin{golang}[basicstyle=\ttfamily\fontsize{7}{9}\selectfont\color{upbInk}]
+mux := http.NewServeMux()
+path, h := connect.NewHandler(
+    &server{})
+mux.Handle(path, h)
+http.ListenAndServe(":8080", mux)
+\end{golang}
+      \muted{A Flutter web build cannot open a raw gRPC connection.}
+    \end{column}
+  \end{columns}
+  \begin{takeaway}{The boundary has a shape here too:}
+    what the browser sandbox will let you send is part of your architecture.
+  \end{takeaway}
+  \note{If a team's project ships a Flutter web build, this is the slide that tells them why a raw gRPC channel will not compile for that target.}
+\end{frame}
+
+\begin{frame}[eyebrow=Project]{Where this lands in Lab 6 and the project}
+  \vskip 3mm
+  \begin{grid}[2]
+    \cell[\faServer]{Lab 6}{One .proto with a unary call and a server-streaming call, a Go server, and a generated Dart client. The stream updates live, canceling stops it, and a two-second deadline fails a call against a server that sleeps three seconds.}
+    \cell[\faIcon{tasks}]{The project}{Requirement four accepts gRPC as one boundary choice: a Go server with a generated Dart client, alongside FFI or a platform channel from Lecture 12.}
+  \end{grid}
+  \begin{takeaway}{Everything on this slide, you now have the vocabulary for.}
+    The exact commands and acceptance criteria are in the Lab 6 handout.
+  \end{takeaway}
+  \note{Preview Lab 6 concretely: a .proto with one unary and one server-streaming call, generated stubs, a running server, a Flutter client, a deadline and a cancel.}
+\end{frame}
+
+\begin{frame}[eyebrow=Recap]{Three things to remember}
+  \vskip 2mm
+  \begin{enumerate}
+    \item A .proto is a contract, not a suggestion. \muted{Field numbers are the wire format; never renumber or reuse one.}
+    \item The shape of a call is part of the contract. \muted{Unary, server streaming, client streaming and bidirectional are four different generated signatures.}
+    \item Deadlines and cancellation make gRPC polite on a phone. \muted{Set one, cancel in dispose, and mind the radio tail.}
+  \end{enumerate}
+  \vskip 5mm
+  \kv{Further reading}{\link{https://grpc.io/docs/}{grpc.io/docs} \textperiodcentered\ \link{https://protobuf.dev/programming-guides/encoding/}{protobuf.dev/encoding} \textperiodcentered\ \link{https://www.rfc-editor.org/rfc/rfc9114}{RFC 9114 (HTTP/3)}}
+  \note{Close by connecting back to the objectives slide: contract, wire, transport, and the mobile habits are the same four ideas from the start of the lecture.}
+\end{frame}
+
+\closingframe{Questions?}{dinu\_stefan.rusu@upb.ro · Microsoft Teams: course channel}
+
+\end{document}

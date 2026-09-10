@@ -1,0 +1,486 @@
+% Lecture 10: Authentication, OAuth, and App Check. Compile: latexmk -xelatex lecture10.tex
+\documentclass[10pt,aspectratio=169,t]{beamer}
+\usetheme{upbminimal}
+
+\course{Application Development for Mobile Devices}
+\decklabel{Lecture 10}
+\title{Authentication, OAuth, and App Check}
+\subtitle{Firebase Auth providers, the OAuth handoff, and App Check enforcement}
+\author{Dinu-Ștefan Rusu}
+\institute{FILS, Universitatea Politehnica București}
+\date{Autumn 2026}
+
+\begin{document}
+
+\titleframe
+
+\objectivesframe{
+  \cell[\faFingerprint]{Authentication vs authorization}{Who the user is versus what they may do, and which layer answers each.}
+  \cell[\faCode]{Firebase Auth in Dart}{Sign-up, sign-in, reset, verification, sign-out, and authStateChanges.}
+  \cell[\faKey]{OAuth and tokens}{The client-side credential handoff, and what an ID token proves.}
+  \cell[\faIcon{shield-alt}]{Rules and App Check}{Rules that bind a request to a uid, and enforcement that keeps scripts out.}
+}
+
+\divider{Part 1 · Fundamentals}{Identity, and what it grants}[Two different questions, answered by two different systems]
+
+\begin{frame}[eyebrow=Fundamentals]{Authentication is not authorization}
+  \vskip 2mm
+  \begin{columns}[T]
+    \begin{column}{0.48\textwidth}
+      \begin{panel}
+        {\color{upbBlue}\bfseries``Is this user really who they claim to be?''}\par\vskip 1.5mm
+        Authentication checks a credential: a password, a provider token, a passkey. It issues a session.
+      \end{panel}
+    \end{column}
+    \begin{column}{0.48\textwidth}
+      \begin{panel}
+        {\color{upbBlue}\bfseries``Now that I know who this is, what may they touch?''}\par\vskip 1.5mm
+        Authorization decides, per request, which documents this identity may read, create, update, or delete.
+      \end{panel}
+    \end{column}
+  \end{columns}
+  \begin{takeaway}{Firebase Auth only answers the first question.}
+    The second is answered by your security rules and by your own backend. A signed-in user is not an authorized user.
+  \end{takeaway}
+  \note{Push the room on this: request.auth != null is authentication. It says nothing about authorization. The exact same rule comes back later in this lecture, in the security rules section.}
+\end{frame}
+
+\begin{frame}[eyebrow=Fundamentals]{The three factors, and what MFA means}
+  {\usebeamerfont{small}\begin{tabular}{@{}lp{25mm}p{32mm}p{38mm}@{}}
+    \toprule
+    \thead{Factor} & \thead{What it means} & \thead{Examples} & \thead{How it fails} \\
+    \midrule
+    Knowledge  & something you know  & password, PIN, security question & phished or reused \\
+    Possession & something you have  & phone code, passkey, hardware key & SIM-swappable, unlike a passkey \\
+    Inherence  & something you are   & fingerprint, Face ID, iris & never leaves the device \\
+    \bottomrule
+  \end{tabular}}
+  \begin{takeaway}{Multi-factor authentication (MFA) needs factors from two different rows.}
+    A password plus a security question is one factor, asked twice. Firebase supports SMS and a time-based one-time password (TOTP) as a real second factor.
+  \end{takeaway}
+  \note{Ask how many people in the room reuse a password across sites. A second factor only helps if it comes from a different row: a password plus a security question is not multi-factor, it is one factor asked twice.}
+\end{frame}
+
+\begin{frame}[eyebrow=Fundamentals]{Why you do not write this yourself}
+  \vskip 2mm
+  \begin{columns}[T]
+    \begin{column}{0.48\textwidth}
+      \lead{What Firebase gives you}{}
+      \begin{itemize}
+        \item Password hashing, salting, and rotation you never touch
+        \item Verification and reset mail, delivered and rate-limited
+        \item Twenty-plus federated providers behind one Dart API
+        \item Token minting, refresh, and enumeration protection, on by default
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.48\textwidth}
+      \lead{What you hand over}{}
+      \begin{itemize}
+        \item Identity records live in a Google project, not your database
+        \item Pricing tracks monthly active users past the free tier
+        \item Their email templates and flows: customizable, not arbitrary
+        \item The uid becomes your primary key; migrating it is real work
+      \end{itemize}
+    \end{column}
+  \end{columns}
+  \begin{takeaway}{Identity is a specialty, not a sprint task.}
+    Everything on the left is a place where a subtle bug becomes a breach. For a semester project, the right column is a price worth paying.
+  \end{takeaway}
+  \note{API here means application programming interface. Ask the room to guess what a security incident from a self-rolled password system costs a small team. The right column is a real cost, but for a class project it is a cost worth paying.}
+\end{frame}
+
+\divider{Part 2 · firebase\_auth}{The Dart API for identity}[Sign-up, sign-in, and the rest of the lifecycle]
+
+\begin{frame}[eyebrow=Firebase Auth]{Providers, and the packages they need}
+  {\usebeamerfont{small}\begin{tabular}{@{}llp{30mm}p{40mm}@{}}
+    \toprule
+    \thead{Category} & \thead{Provider} & \thead{Packages} & \thead{Worth knowing} \\
+    \midrule
+    Native     & Email, password, phone & firebase\_auth & enumeration protection is on by default \\
+    Federated  & Google, Apple, others & firebase\_auth plus a provider package & Google is the flow this lecture implements \\
+    Anonymous  & Anonymous           & firebase\_auth & a real uid before sign-up; link it later \\
+    \bottomrule
+  \end{tabular}}
+  \begin{takeaway}{One user, one uid, however many providers.}
+    Firebase keys the account on the email address by default, so signing in with Google using that same address lands on the same user.
+  \end{takeaway}
+  \note{Point out that Firebase keys the account on the email address by default: a student who signs up with email and later taps Google, using the same address, lands on the same account and the same uid.}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=Firebase Auth]{Creating an account}
+  \begin{columns}[T]
+    \begin{column}{0.56\textwidth}
+\begin{dart}
+final auth = FirebaseAuth.instance;
+Future<void> signUp(String email, String pass) async {
+  try {
+    final cred = await auth.createUserWithEmailAndPassword(
+        email: email.trim(), password: pass);
+    await cred.user!.sendEmailVerification();
+  } on FirebaseAuthException catch (e) {
+    throw AuthFailure(mapSignUpError(e.code));
+  }
+}
+\end{dart}
+    \end{column}
+    \begin{column}{0.40\textwidth}
+      \lead{Three things to notice}{The sign-up call also signs the user in immediately. The password never reaches your code again after it returns.}
+      \muted{Send the verification mail here, not later. An unverified account should not reach your data.}
+      \vskip 2mm
+      \muted{Sign-up is the one endpoint that still reveals existence: email-already-in-use is unavoidable on a usable form. Rate limiting and App Check are the mitigation.}
+    \end{column}
+  \end{columns}
+  \note{mapSignUpError is a Dart 3 switch expression that turns Firebase's error code into a message you control. Point out that the failure type thrown here is your own: never let a raw FirebaseAuthException reach the widget layer, because its message field is written for developers, not users.}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=Firebase Auth]{Signing in, and the one message you show}
+  \begin{columns}[T]
+    \begin{column}{0.56\textwidth}
+\begin{dart}
+Future<void> signIn(String email, String pass) async {
+  try {
+    await auth.signInWithEmailAndPassword(
+        email: email.trim(), password: pass);
+  } on FirebaseAuthException catch (e) {
+    throw AuthFailure(mapSignInError(e.code));
+  }
+}
+\end{dart}
+    \end{column}
+    \begin{column}{0.40\textwidth}
+      \lead{Why one message}{Since late 2023, Firebase no longer says which half was wrong: an unknown email and a wrong password both arrive as invalid-credential.}
+      \muted{Only two codes get their own text: too many attempts, and offline. Neither one reveals whether the account exists.}
+      \vskip 2mm
+      \muted{Never give user-disabled its own message either: that confirms the account exists.}
+    \end{column}
+  \end{columns}
+  \note{mapSignInError returns one generic message, ``email or password is incorrect'', for almost every code. Only rate limiting and offline detection get their own text. Ask why: it is the direct consequence of the enumeration protection covered next.}
+\end{frame}
+
+\begin{frame}[eyebrow=Firebase Auth]{Account enumeration through the login form}
+  \vskip 3mm
+  A message like ``no user found for that email'' turns the login form into a lookup service. Sending it ten thousand addresses reports which ones have accounts, with no password and no breach involved.
+  \vskip 3mm
+  That resulting list is itself sensitive data. On a dating app, a health app, or a debt-management app, membership alone is the sensitive fact. It is also the first step of a credential-stuffing run: confirm which accounts exist, then attack only those addresses.
+  \note{Ask whether a generic message feels like worse user experience. It is, slightly, and that is the accepted trade-off: the alternative turns the login form into a lookup service for account existence.}
+\end{frame}
+
+\begin{frame}[eyebrow=Firebase Auth]{What changed, and why it matters}
+  \vskip 2mm
+  {\usebeamerfont{small}\begin{tabular}{@{}lp{40mm}p{40mm}@{}}
+    \toprule
+    \thead{Situation} & \thead{Older error code} & \thead{Current behavior} \\
+    \midrule
+    Unknown email                & user-not-found & invalid-credential \\
+    Wrong password                & wrong-password & invalid-credential \\
+    Reset for an unknown address  & user-not-found & succeeds silently \\
+    fetchSignInMethodsForEmail    & the list of providers & an empty list; the method is deprecated \\
+    \bottomrule
+  \end{tabular}}
+  \begin{takeaway}{Identical message, identical behavior, whatever went wrong.}
+    Back it with rate limiting and App Check, and confirm the protection is still on, in Console under Authentication then Settings.
+  \end{takeaway}
+  \note{This table replaces a version of this material that listed a distinct user-facing message per error code. That is an account-enumeration vulnerability taught as good practice, in a lecture about security.}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=Firebase Auth]{authStateChanges is the source of truth}
+\begin{dart}
+// Don't check-and-push. Listen, and let the UI follow.
+StreamBuilder<User?>(
+  stream: FirebaseAuth.instance.authStateChanges(),
+  builder: (context, snapshot) {
+    if (snapshot.connectionState == ConnectionState.waiting) {
+      return const SplashScreen();  // session still restoring
+    }
+    final user = snapshot.data;
+    if (user == null) return const LoginScreen();
+    if (!user.emailVerified) return const VerifyEmailScreen();
+    return const HomeScreen();
+  },
+)
+\end{dart}
+  \note{Ask the room why check-and-push, reading currentUser once and then navigating, is the wrong pattern. The stream is the only view of auth state guaranteed to be current, including the moment the software development kit (SDK) restores a session from disk at startup.}
+\end{frame}
+
+\begin{frame}[eyebrow=Firebase Auth]{Three streams, not one}
+  \vskip 2mm
+  \begin{enumerate}
+    \item \textbf{authStateChanges()} \muted{fires on sign-in, sign-out, and once at startup when the session is restored from disk.}
+    \item \textbf{idTokenChanges()} \muted{fires on all of that, plus every hourly token refresh and every custom-claim change.}
+    \item \textbf{userChanges()} \muted{fires on all of that, plus profile edits such as a changed display name.}
+  \end{enumerate}
+  \begin{takeaway}{Never cache currentUser in a field of your own.}
+    It goes stale, and stale auth state is a security bug. Route guards belong to the router: feed this stream into go\_router's refreshListenable (Lecture 11).
+  \end{takeaway}
+  \note{Emphasize the bold rule: never cache currentUser in a field of your own. With go\_router, this stream feeds refreshListenable, and the redirect decision itself happens in the router, covered in Lecture 11.}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=Firebase Auth]{Reset, verification, and sign-out}
+\begin{dart}
+// Password reset: never reveal whether the account exists.
+await auth.sendPasswordResetEmail(email: email.trim());
+
+await auth.currentUser?.sendEmailVerification();
+await auth.currentUser?.reload();
+final verified = auth.currentUser?.emailVerified ?? false;
+
+await auth.signOut();
+await GoogleSignIn.instance.signOut();
+\end{dart}
+  \begin{takeaway}{Verification is a gate, not a notification.}
+    Enforce it in the auth gate and again in your security rules, with request.auth.token.email\_verified.
+  \end{takeaway}
+  \note{Point out that emailVerified on the cached User object does not update by itself: call reload(), or listen to the stream, only after the user has followed the link. Flag that signOut() ends only the local session.}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=Firebase Auth]{Linking, re-authentication, second factors}
+  \vskip 1mm
+  \begin{grid}[3]
+    \cell[\faLink]{Account linking}{linkWithCredential attaches Google to an existing email account, or upgrades an anonymous user without losing data.}
+    \cell[\faHistory]{Re-authentication}{Changing an email or password needs a recent login. Catch requires-recent-login and reauthenticate.}
+    \cell[\faQrcode]{Second factors}{SMS and TOTP enrollment via multiFactor. local\_auth's Face ID is a device lock, not a factor.}
+  \end{grid}
+  \vskip 2mm
+\begin{dart}
+// Anonymous to real account: same uid, same data.
+final cred = GoogleAuthProvider.credential(idToken: idToken);
+await FirebaseAuth.instance.currentUser!
+    .linkWithCredential(cred);
+\end{dart}
+  \note{Face ID through local\_auth deserves a beat here: it re-confirms a session the app already holds, which makes it a device lock, not a second authentication factor.}
+\end{frame}
+
+\divider{Part 3 · OAuth and tokens}{Borrowed identity}[The credential handoff, and what the resulting token proves]
+
+\begin{frame}[eyebrow=OAuth]{The credential handoff, client-side}
+  \vskip 1mm
+  \begin{enumerate}
+    \item \textbf{The app asks Google to sign the user in.} \muted{\code{GoogleSignIn.authenticate()}}
+    \item \textbf{Google returns an OAuth ID token.} \muted{a JSON Web Token (JWT) signed by Google, naming this user}
+    \item \textbf{The app wraps it as an AuthCredential.} \muted{\code{GoogleAuthProvider.credential(...)}}
+    \item \textbf{Firebase verifies it and opens a session.} \muted{\code{signInWithCredential(cred)}}
+    \item \textbf{Your own backend verifies the Firebase token.} \muted{\code{admin.auth().verifyIdToken(idToken)}}
+  \end{enumerate}
+  \begin{takeaway}{Every step above runs on the device.}
+    Firebase never sees the Google password: it checks Google's signature, then mints its own session. Step 5 is the one people skip.
+  \end{takeaway}
+  \note{This is the client-side flow used in a Flutter app; a redirect-plus-Cloud-Function variant exists for the web, but that is a different flow. The same five steps apply to Apple, Microsoft, GitHub, and Facebook.}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=OAuth]{Google sign-in, end to end}
+\begin{dart}
+import 'package:google_sign_in/google_sign_in.dart';
+// google_sign_in 7.x: initialize once, at app start.
+await GoogleSignIn.instance.initialize();
+
+Future<UserCredential> signInWithGoogle() async {
+  final account = await GoogleSignIn.instance.authenticate();
+  final idToken = account.authentication.idToken;
+  final credential =
+      GoogleAuthProvider.credential(idToken: idToken);
+  return FirebaseAuth.instance.signInWithCredential(credential);
+}
+\end{dart}
+  \note{Flag the SHA fingerprint requirement now: it is the single most common reason a demo works on a debug build and fails silently in a release build.}
+\end{frame}
+
+\begin{frame}[eyebrow=OAuth]{Before it works}
+  \vskip 3mm
+  \begin{itemize}
+    \item Android release builds need the SHA-1 and SHA-256 fingerprints registered in the Firebase console, or sign-in fails silently.
+    \item A canceled account picker throws a GoogleSignInException with code \code{canceled}. That is a user action, not an error to report.
+    \item On Apple platforms: \code{sign\_in\_with\_apple}, then \code{OAuthProvider('apple.com')} with the ID token and the raw nonce you generated.
+    \item Offer Sign in with Apple on iOS whenever you offer any other social login. App Review enforces it.
+  \end{itemize}
+  \note{A canceled sign-in picker is routine, not an error: show the room the exception code so nobody wraps it in an error banner by mistake.}
+\end{frame}
+
+\begin{frame}[eyebrow=Tokens]{ID token vs refresh token}
+  {\usebeamerfont{small}\begin{tabular}{@{}lp{36mm}p{36mm}@{}}
+    \toprule
+    \thead{} & \thead{ID token} & \thead{Refresh token} \\
+    \midrule
+    Lifetime  & one hour, auto-refreshed & until revoked, or password change \\
+    Format    & signed JWT: uid, email, claims & opaque string, unreadable \\
+    Storage   & memory, via getIdToken() & Keychain or Keystore \\
+    Sent to API & yes, as a header & never; stays on the device \\
+    \bottomrule
+  \end{tabular}}
+  \begin{takeaway}{A JWT is signed, not encrypted.}
+    Anyone holding it can read every claim, so put nothing secret in a custom claim.
+  \end{takeaway}
+  \note{Stress that a JWT is signed, not encrypted: anyone holding the token can read every claim inside it, so nothing secret belongs in a custom claim.}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=Tokens]{Verify on the backend, trust no client uid}
+\begin{dart}
+final token = await FirebaseAuth.instance.currentUser!.getIdToken();
+await http.post(url,
+    headers: {'Authorization': 'Bearer $token'},
+    body: jsonEncode({'item': itemId}));
+\end{dart}
+\begin{codeblock}
+const token = req.get('Authorization').split(' ')[1];
+const decoded = await admin.auth().verifyIdToken(token, true);
+const uid = decoded.uid;
+await db.collection('orders').add({ uid, item: req.body.item });
+\end{codeblock}
+  \begin{takeaway}{Anyone can claim to be someone else in a request body.}
+    The uid you act on has to come out of a token you verified, and from nowhere else.
+  \end{takeaway}
+  \note{Ask the room what stops a client from sending a different uid in the request body. Nothing does, which is exactly why the server must verify the token itself rather than trust a field the client supplied.}
+\end{frame}
+
+\divider{Part 4 · Data, rules, and App Check}{Guarding data and the app}[Where profiles live, rules that actually bind, and keeping scripts out]
+
+\begin{frame}[eyebrow=User data]{Never store the password}
+  \vskip 3mm
+  The identity provider holds the credential. Firebase keeps a salted hash on Google's infrastructure; once account creation returns, the plaintext password is gone from your process and never comes back.
+  \vskip 3mm
+  Your database should store an identifier and profile data, and nothing that could authenticate anyone: no password, no PIN, no security answer, no copy of a token.
+  \begin{takeaway}{The Firebase User object is for identity: uid, email, displayName, photoURL.}
+    Application data goes in your own collection, keyed by the uid.
+  \end{takeaway}
+  \note{An earlier version of this lecture illustrated this slide with a screenshot of a Firestore document holding a plaintext password field. That image modeled exactly the mistake this lecture warns against, so it is gone. Students copy screenshots, not prose.}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=User data]{One document per uid}
+\begin{dart}
+// After sign-up: a profile document keyed by the uid.
+final uid = cred.user!.uid;
+await FirebaseFirestore.instance
+    .doc('users/$uid')
+    .set({
+  'displayName': name,
+  'createdAt': FieldValue.serverTimestamp(),
+});
+// No password. No token. No PIN.
+\end{dart}
+  \begin{takeaway}{The uid is the join key.}
+    It connects the identity system to your data, and that join is exactly what the next two slides defend.
+  \end{takeaway}
+  \note{The uid is the only bridge between the identity system and application data. Everything the next two slides cover is about defending that one bridge correctly.}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=Authorization]{Security rules that actually bind}
+  \muted{A rule for a per-user profile document, split by verb.}
+\begin{codeblock}
+match /users/{userId} {
+  function isOwner() {
+    return request.auth != null && request.auth.uid == userId;
+  }
+  allow read:   if isOwner();
+  allow create: if isOwner()
+                && !request.resource.data.keys().hasAny(['role']);
+  allow update: if isOwner()
+                && request.resource.data.diff(resource.data)
+                     .affectedKeys().hasOnly(['displayName']);
+  allow delete: if false;   // deletion runs on the backend
+}
+\end{codeblock}
+  \note{Walk through the rule verb by verb: read is owner-only, create blocks a client from setting its own role, update is restricted to one field, and delete is refused because deletion runs on the backend.}
+\end{frame}
+
+\begin{frame}[eyebrow=Authorization]{A rule that does not bind}
+  \vskip 1mm
+  \begin{warning}[A rule that does not bind]
+    \texttt{allow create: if request.auth != null;}
+  \end{warning}
+  \begin{itemize}
+    \item Any signed-in user, even one created seconds ago, can write a document at someone else's uid and take over their profile.
+    \item \code{request.auth != null} is authentication. Authorization means binding the request to the exact path it touches.
+    \item Split the verbs: create, update, and delete need different conditions. A blanket write hides all three.
+  \end{itemize}
+  \begin{takeaway}{Rules run on Google's servers, so a client cannot bypass them.}
+    That is exactly why they must be written as if every client is hostile.
+  \end{takeaway}
+  \note{This rule is a real, exploitable hole: any signed-in user can write to any other user's document. Demo it live in the Rules Playground: authenticate as one uid, write to another user's path, and watch it succeed.}
+\end{frame}
+
+\begin{frame}[eyebrow=App Check]{Is this request even from my app?}
+  \vskip 3mm
+  Your Firebase configuration ships inside the binary: an API key, a project ID, an app ID. It identifies the project. It was never a secret, and it never protected anything.
+  \vskip 3mm
+  An attacker can unzip the Android package (APK), read that configuration, and call the Firestore or Storage REST API directly from a script. None of the limits your UI imposes apply there.
+  \begin{takeaway}{Authentication answers who.}
+    App Check answers where from: is this request coming from a genuine build of this app, on a genuine device?
+  \end{takeaway}
+  \note{The cost of a bypass lands on you: millions of extra reads, a poisoned collection, a scraped user table. Authentication does not help here, because the attacking script can sign up like any other user.}
+\end{frame}
+
+\begin{frame}[eyebrow=App Check]{Three layers, three different questions}
+  \vskip 3mm
+  \begin{grid}[3]
+    \cell[\faIcon{shield-alt}]{App Check}{Is this a genuine build of my app? Protects the developer: abuse and billing fraud.}
+    \cell[\faUserLock]{Firebase Auth}{Is this a known, valid user? Protects the user: unauthorized access.}
+    \cell[\faLock]{Security rules}{May this user do this, here? Protects the data: misuse by a valid user.}
+  \end{grid}
+  \vskip 3mm
+  \muted{Three layers, three different questions, answered in order.}
+  \note{Have the room name, for each layer, what a broken version of it would let happen. That is a fast way to show the three questions are genuinely different questions.}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=App Check]{Turning it on: activate and providers}
+\begin{dart}
+import 'package:firebase_app_check/firebase_app_check.dart';
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform);
+  await FirebaseAppCheck.instance.activate(
+    androidProvider: kDebugMode
+        ? AndroidProvider.debug : AndroidProvider.playIntegrity,
+    appleProvider: kDebugMode
+        ? AppleProvider.debug : AppleProvider.appAttest,
+  );
+  runApp(const App());
+}
+\end{dart}
+  \note{Stress that activate() has to run before the first call to any Firebase service, or that first call goes out unprotected.}
+\end{frame}
+
+\begin{frame}[eyebrow=App Check]{Pick the right attestor}
+  \vskip 2mm
+  {\usebeamerfont{small}\begin{tabular}{@{}llp{55mm}@{}}
+    \toprule
+    \thead{Platform} & \thead{Provider} & \thead{Note} \\
+    \midrule
+    Android        & Play Integrity        & confirms the app was installed by Play, unmodified \\
+    iOS 14 and later & App Attest          & a per-install hardware-backed key \\
+    Older iOS      & DeviceCheck           & device-level attestation, weaker but broadly available \\
+    Web            & reCAPTCHA Enterprise  & the browser equivalent of the same check \\
+    Dev, CI        & Debug provider        & emulators and simulators cannot attest for real \\
+    \bottomrule
+  \end{tabular}}
+  \note{CI here means continuous integration: your build server. The debug provider is not a lesser version of the real check, it is a different mechanism entirely, because an emulator or simulator has no hardware root of trust to attest with.}
+\end{frame}
+
+\begin{frame}[eyebrow=App Check]{Enforcement, and debug tokens safely}
+  \vskip 1mm
+  \begin{enumerate}
+    \item \textbf{Ship a build that calls activate().} \muted{Clients start attaching App Check tokens to every request.}
+    \item \textbf{Watch the metrics.} \muted{Console, under App Check: verified traffic versus unverified.}
+    \item \textbf{Wait for old versions to drain.} \muted{Unverified traffic has to fall to near zero first.}
+    \item \textbf{Press Enforce, per product.} \muted{Firestore, Storage, Cloud Functions, Authentication, Realtime Database.}
+  \end{enumerate}
+  \begin{takeaway}{Until you press Enforce, App Check only measures.}
+    A debug token is a permanent bypass of everything you just enabled: never commit one, never paste one in chat.
+  \end{takeaway}
+  \note{Enforcing before old app versions have drained is the classic outage: every user still on a build without activate() is locked out at once. The metrics page exists precisely so you can time this safely.}
+\end{frame}
+
+\begin{frame}[eyebrow=Recap]{Three things to remember}
+  \vskip 2mm
+  \begin{enumerate}
+    \item Authentication answers who; authorization answers what. \muted{Firebase Auth and your security rules are different layers.}
+    \item One generic message for every failed sign-in. \muted{Never confirm, in the UI, that an account exists.}
+    \item Verify the ID token on your backend. \muted{A uid supplied by the client proves nothing on its own.}
+  \end{enumerate}
+  \vskip 5mm
+  \kv{Further reading}{\link{https://firebase.google.com/docs/auth/flutter/start}{Firebase Auth for Flutter} · \link{https://firebase.google.com/docs/rules/rules-and-auth}{Rules and Auth} · \link{https://firebase.google.com/docs/app-check}{App Check docs} · \link{https://owasp.org/www-project-mobile-app-security/}{OWASP MASVS}}
+  \note{Ask the room to state, from memory, the one message they should show for every failed sign-in. If anyone answers with anything other than a single generic sentence, that is the point to revisit before the lab.}
+\end{frame}
+
+\closingframe{Questions?}{dinu\_stefan.rusu@upb.ro · Microsoft Teams: course channel}
+
+\end{document}

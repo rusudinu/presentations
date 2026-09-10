@@ -1,0 +1,180 @@
+% Lab 7: Lab test. Compile: latexmk -xelatex lab07.tex
+\documentclass[10pt,aspectratio=169,t]{beamer}
+\usetheme[lab]{upbminimal}
+
+\course{Mobile and Embedded Computing}
+\decklabel{Lab 7}
+\title{Lab test}
+\subtitle{Rules, format, and two practice specs}
+\author{Dinu-Ștefan Rusu}
+\institute{FILS, Universitatea Politehnica București}
+\date{Week 14}
+
+\begin{document}
+
+\titleframe
+
+\begin{frame}[eyebrow=Today]{What this lab is for}
+  \vskip 2mm
+  \begin{grid}[2]
+    \cell[\faIcon{stopwatch}]{Prove three skills, once}{Build a small app from a one-page spec in ninety minutes: a device message, an offline write, and a remote read.}
+    \cell[\faIcon{graduation-cap}]{Worth 1.5 points}{0.5 points per requirement, graded from your pushed branch. There is no live demo.}
+  \end{grid}
+  \vskip 6mm
+  \taskmeta{Time}{90 minutes}{Submit}{Push to your project repo, branch \code{lab-7}, before time is up}
+\end{frame}
+
+\begin{frame}[eyebrow=Rules]{Individual, timed, your own machine}
+  \begin{steps}
+    \item You work alone. No pair programming, no shared screens, no copying a teammate's branch.
+    \item Ninety minutes, one sitting, starting when you receive the spec.
+    \item Your own laptop, your existing project repository from Labs 1 to 6.
+    \item A real board or the Wokwi simulator, whichever you used in the labs. Either is accepted.
+  \end{steps}
+  \begin{takeaway}{The clock does not pause.}
+    A crashed simulator or a broker that refuses a connection eats into your ninety minutes. Restart calmly and keep going.
+  \end{takeaway}
+\end{frame}
+
+\begin{frame}[eyebrow=Rules]{What you may and may not use}
+  \begin{steps}
+    \item Internet access is allowed: official docs, package pages, your own past labs.
+    \item AI agents are allowed for writing code.
+    \item You must be able to explain any line the grader points to, in your own words.
+    \item Asking another person, in the room or online, to write code for you is not allowed.
+  \end{steps}
+  \begin{warning}
+    An agent-written line you cannot explain earns no credit for that requirement, even if it compiles.
+  \end{warning}
+\end{frame}
+
+\begin{frame}[embedded,eyebrow=Setup]{Infrastructure for the test}
+  \vskip 2mm
+  \begin{grid}[2]
+    \cell[\faWifi]{A broker on the instructor's machine}{A Mosquitto broker for the MQTT requirement. No need to run your own.}
+    \cell[\faServer]{Two Go servers on the instructor's machine}{The outbox server from Lab 5 and the gRPC server from Lab 6, already running.}
+  \end{grid}
+  \vskip 6mm
+  \muted{Addresses and ports are announced at the start of the test. Write them down before the clock starts.}
+\end{frame}
+
+\begin{frame}[eyebrow=Format]{One spec, three requirements}
+  \vskip 2mm
+  \begin{grid}[2]
+    \cell[\faIcon{file-alt}]{One page, handed at the start}{An app idea and three requirements, on paper or a shared document. Nothing changes once the clock starts.}
+    \cell[\faClock]{Ninety minutes, one push}{Build, commit as you go, and push to branch lab-7 before time is up. No extensions.}
+  \end{grid}
+  \vskip 6mm
+  \muted{Every spec asks for the same three kinds of requirement, described next.}
+\end{frame}
+
+\begin{frame}[embedded,eyebrow=Format]{The three requirements, generically}
+  \begin{grid}[3]
+    \cell[\faWifi]{Publish or subscribe over MQTT}{Talk to the broker: publish a reading, or subscribe and show a value live, with reconnect handled.}
+    \cell[\faDatabase]{One offline-capable write}{A local write goes through an outbox and reaches the server once connectivity returns.}
+    \cell[\faBluetoothB]{One gRPC or BLE read}{A unary call to the Go server, or a characteristic read from a peripheral, parsed into a model.}
+  \end{grid}
+\end{frame}
+
+\begin{frame}[eyebrow=Rubric]{0.5 points per requirement}
+  {\usebeamerfont{small}\begin{tabular}{@{}p{30mm}p{42mm}p{42mm}@{}}
+    \toprule
+    \thead{Requirement} & \thead{Full credit (0.5 pt)} & \thead{Partial credit (0.25 pt)} \\
+    \midrule
+    MQTT pub or sub & Connects, and reconnects after a broker drop & Connects once, but does not recover from a drop \\
+    Offline write + outbox & Written offline, reaches the server once online & Outbox exists, but the drain loop never runs \\
+    gRPC or BLE read & Parses the real response into a model, shown live & Call or read succeeds, but fields come from a raw map \\
+    \bottomrule
+  \end{tabular}}
+  \vskip 2mm
+  \muted{Anything not attempted scores zero.}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=Submission]{Push before the clock runs out}
+\begin{shell}
+git checkout -b lab-7
+git push -u origin lab-7
+\end{shell}
+  \begin{steps}
+    \item Create the branch the moment you receive the spec.
+    \item Commit as you finish each requirement, with a message that names it.
+    \item Push before the ninety minutes end.
+    \item Open one pull request titled with your name. It does not need a review to count.
+  \end{steps}
+  \begin{warning}
+    The grader reads the branch as it stands at the deadline. A late push is not graded.
+  \end{warning}
+\end{frame}
+
+\begin{frame}[eyebrow=Prepare]{How to prepare}
+  \vskip 2mm
+  {\usebeamerfont{small}\begin{tabular}{@{}p{62mm}p{20mm}@{}}
+    \toprule
+    \thead{Requirement} & \thead{Taught in} \\
+    \midrule
+    Publish or subscribe over MQTT & Lab 2 \\
+    One offline-capable write with an outbox & Lab 5 \\
+    A gRPC unary call, or a BLE characteristic read & Lab 6, Lab 3 \\
+    \bottomrule
+  \end{tabular}}
+  \vskip 4mm
+  \begin{takeaway}{Nothing on the test is new.}
+    Re-read the Task slides and the reference code in those three labs. Redo one small piece from memory before you come.
+  \end{takeaway}
+\end{frame}
+
+\begin{frame}[embedded,eyebrow=Practice A]{Practice A: greenhouse monitor}
+  \muted{An app that shows a greenhouse reading live and logs manual care events.}
+  \vskip 2mm
+  \begin{columns}[T]
+    \begin{column}{0.56\textwidth}
+      \begin{steps}
+        \item Subscribe with \code{mqtt\_client} to \code{greenhouse/temp} and show the value live in a BlocBuilder, with reconnect on broker loss.
+        \item A \emph{Log watering} button writes to a local table and an outbox in one transaction. A drain loop posts it to the outbox server.
+        \item Call the gRPC server for the care thresholds for the plant and show them once parsed into a model.
+      \end{steps}
+    \end{column}
+    \begin{column}{0.4\textwidth}
+      \kv{Grader checks}{}
+      \begin{checklist}
+        \item Stopping and restarting the broker resumes live updates.
+        \item A watering event logged in airplane mode reaches the server once online.
+        \item The threshold values on screen come from the model, not a raw map.
+      \end{checklist}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}[embedded,eyebrow=Practice B]{Practice B: delivery tracker}
+  \muted{An app that tracks a van's status and one delivery scan.}
+  \vskip 2mm
+  \begin{columns}[T]
+    \begin{column}{0.56\textwidth}
+      \begin{steps}
+        \item Publish the van's status to \code{fleet/van1/status} every few seconds with QoS 1.
+        \item Marking a delivery complete writes to a local table and an outbox in one transaction, synced by a drain loop.
+        \item Connect to the scanner peripheral over BLE and subscribe to the last scanned code, shown live on screen.
+      \end{steps}
+    \end{column}
+    \begin{column}{0.4\textwidth}
+      \kv{Grader checks}{}
+      \begin{checklist}
+        \item Publishing resumes after the broker connection drops and comes back.
+        \item A delivery marked complete offline appears on the server once the sync loop runs.
+        \item The scanned code updates the screen without polling the peripheral.
+      \end{checklist}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}[eyebrow=Troubleshooting]{Mistakes that cost time}
+  \vskip 2mm
+  \trouble{Client not connected}{You published before the MQTT connect finished. Await the connection state before the first publish or subscribe.}
+  \trouble{An outbox row stays queued forever}{The drain loop never marks the row sent after a successful post. Update its status inside the same transaction as the network call.}
+  \trouble{A gRPC call hangs and the screen never updates}{No deadline was set. Attach one, and handle the deadline-exceeded status instead of swallowing it.}
+  \trouble{BLE scan returns no devices}{A runtime permission was never requested: \code{BLUETOOTH\_SCAN} on Android, the usage string on iOS.}
+\end{frame}
+
+\closingframe{Push before time runs out.}{Branch lab-7 · one pull request · nothing after the deadline}
+
+\end{document}

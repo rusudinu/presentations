@@ -1,0 +1,535 @@
+% ADMD Lecture 1. Compile: latexmk -xelatex lecture01.tex
+\documentclass[10pt,aspectratio=169,t]{beamer}
+\usetheme{upbminimal}
+
+\course{Application Development for Mobile Devices}
+\decklabel{Lecture 1}
+\title{Orientation, Git, and how mobile apps are built}
+\subtitle{How the course runs, and four ways to build a mobile app}
+\author{Dinu-Ștefan Rusu}
+\institute{FILS, Universitatea Politehnica București}
+\date{Autumn 2026}
+
+\begin{document}
+
+\titleframe
+
+\objectivesframe{
+  \cell[\faIcon{calendar-alt}]{How this course runs}{The fourteen lectures, the seven labs, how the grade is built, and what to bring to Lab 1.}
+  \cell[\faIcon{code-branch}]{A working Git setup}{A GitHub account and the loop this course grades: branch, commit, push, pull request, review, merge.}
+  \cell[\faLayerGroup]{Four build strategies}{Native, web, cross-platform in two flavors, and shared logic with native user interfaces.}
+  \cell[\faIcon{mobile-alt}]{A choice you can defend}{Why this course uses Flutter, what that choice costs, and when another strategy fits better.}
+}
+
+\divider{Part 1 · Orientation}{How this course works}[Who teaches it, what you build, and how you are graded]
+
+\begin{frame}[eyebrow=Orientation]{Who teaches this course}
+  \vskip 2mm
+  \begin{columns}[T]
+    \begin{column}{0.52\textwidth}
+      \lead{Dinu-Ștefan Rusu}{dinu\_stefan.rusu@upb.ro}
+      \vskip 2mm
+      \muted{Microsoft Teams: course channel}\par
+      \muted{rusudinu.com}
+      \vskip 4mm
+      \muted{I build Flutter apps professionally. What you see in this course is the toolchain I use at work, not a teaching toy.}
+    \end{column}
+    \begin{column}{0.44\textwidth}
+      \begin{grid}[2]
+        \bignum{45+}{Flutter apps shipped}
+        \bignum{400k}{installs across them}
+      \end{grid}
+    \end{column}
+  \end{columns}
+  \begin{takeaway}{Ask during the lecture, not after it.}
+    A question said out loud usually saves five other people the same confusion.
+  \end{takeaway}
+  \note{Introduce yourself in one minute, then move on. The point of the two numbers is credibility, not bragging: everything taught here has shipped to real users. Say that questions are welcome during the lecture, not only at the end.}
+\end{frame}
+
+\begin{frame}[eyebrow=Orientation]{What this course covers, and what comes next}
+  \vskip 2mm
+  \begin{grid}[2]
+    \cell[\faIcon{mobile-alt}]{This course}{Application Development for Mobile Devices. How to build the app: Dart and Flutter, state, networking, Firebase, authentication, release. Fourteen lectures and seven labs.}
+    \cell[\faServer]{Next semester}{Mobile and Embedded Computing. What runs under the app: runtimes, concurrency, rendering cost, synchronization, remote procedure calls, and the embedded side.}
+  \end{grid}
+  \begin{takeaway}{One course builds the app, the other explains the machine.}
+    When a topic belongs to the second course, this one names it in a line and moves on.
+  \end{takeaway}
+  \note{Students often ask why a topic is skipped. This slide is the answer: the sibling course owns it. Say that the two courses are designed as a pair and that the lab app from this semester becomes the project in the next one.}
+\end{frame}
+
+\begin{frame}[eyebrow=Orientation]{The fourteen lectures}
+  \vskip 2mm
+  {\usebeamerfont{small}
+  \begin{columns}[T]
+    \begin{column}{0.47\textwidth}
+      \begin{tabular}{@{}r@{\hspace{2.5mm}}>{\raggedright\arraybackslash}p{50mm}@{}}
+        \toprule
+        \thead{Wk} & \thead{Lecture} \\
+        \midrule
+        01 & Orientation, Git, build strategies \\
+        02 & Dart, null safety, the toolchain \\
+        03 & Widgets and layout \\
+        04 & Async Dart, agent-assisted coding \\
+        05 & Debugging and state, part 1 \\
+        06 & State management, part 2 \\
+        07 & Networking: HTTP and JSON \\
+        \bottomrule
+      \end{tabular}
+    \end{column}
+    \begin{column}{0.47\textwidth}
+      \begin{tabular}{@{}r@{\hspace{2.5mm}}>{\raggedright\arraybackslash}p{50mm}@{}}
+        \toprule
+        \thead{Wk} & \thead{Lecture} \\
+        \midrule
+        08 & Firebase, REST and GraphQL \\
+        09 & Observability and local storage \\
+        10 & Authentication, OAuth, App Check \\
+        11 & Routing, permissions, WebSockets \\
+        12 & AI in the app \\
+        13 & User interface polish and testing \\
+        14 & Release, distribution, push \\
+        \bottomrule
+      \end{tabular}
+    \end{column}
+  \end{columns}}
+  \vskip 2mm
+  \muted{Two hours every week. Each lecture builds on the one before it.}
+  \note{Do not read the table out loud. Point at three anchors: state management in weeks 5 and 6, networking in 7 and 8, release in 14. Say that the order is deliberate because the lab app grows in the same order.}
+\end{frame}
+
+\begin{frame}[eyebrow=Orientation]{The seven labs}
+  \vskip 2mm
+  {\usebeamerfont{small}\begin{tabular}{@{}ll>{\raggedright\arraybackslash}p{78mm}@{}}
+    \toprule
+    \thead{Week} & \thead{Lab} & \thead{What you build} \\
+    \midrule
+    2  & Lab 1 & Set-up, first repository, first pull request \\
+    4  & Lab 2 & Dart classes, null-safe types, collections \\
+    6  & Lab 3 & The todo screen, widgets, and DevTools \\
+    8  & Lab 4 & JSON models and a network call with retry \\
+    10 & Lab 5 & The same app, rebuilt on BLoC \\
+    12 & Lab 6 & Authentication, routing, and a live screen \\
+    14 & Lab 7 & The practical lab test \\
+    \bottomrule
+  \end{tabular}}
+  \vskip 2mm
+  \muted{Labs run in even weeks. There is no semester project: the labs grow one app.}
+  \note{Stress the word cumulative. Lab 5 does not start from an empty folder, it rebuilds the app from Lab 4. A student who skips a lab must catch up before the next one, and Lab 7 tests exactly what Labs 1 to 6 taught.}
+\end{frame}
+
+\begin{frame}[eyebrow=Orientation]{How the grade is built}
+  \vskip 4mm
+  \begin{grid}[3]
+    \bignum{5 p}{lab assignments, graded from your repository}
+    \bignum{4 p}{practical lab test in Lab 7, individual}
+    \bignum{1 p}{participation across the semester}
+  \end{grid}
+  \vskip 4mm
+  \muted{This is a verification, not an exam: there is nothing to sit in the exam session. The exact split is confirmed on the course channel in week 1.}
+  \begin{takeaway}{You pass with at least 5 points out of 10.}
+    Most of the grade is decided in the lab, week by week, not in a single evening at the end.
+  \end{takeaway}
+  \note{Say the pass line out loud and repeat it. The message students need is that lab work is the grade, so falling behind in the labs cannot be recovered later. Mention that the lab test in week 14 is individual and practical.}
+\end{frame}
+
+\begin{frame}[eyebrow=Orientation]{One repository, one branch per lab}
+  \vskip 2mm
+  \begin{grid}[3]
+    \cell[\faIcon{folder-open}]{One repository}{Each student keeps one GitHub repository named \code{admd-labs}. Every lab lands in it. Nothing is submitted by email.}
+    \cell[\faIcon{code-branch}]{One branch per lab}{Work for Lab N goes on a branch named \code{lab-N}, created from \code{main} and pushed before the next lab.}
+    \cell[\faIcon{check-double}]{One pull request}{Each lab ends with a pull request. It is graded, then merged into \code{main} so the next lab starts from it.}
+  \end{grid}
+  \begin{takeaway}{The repository is the submission.}
+    History matters: small commits with real messages read better than one commit called final.
+  \end{takeaway}
+  \note{This rule removes every argument about deadlines and file versions. Show a repository on screen if you have one open. Say explicitly that a lab pushed after the next lab has started is late.}
+\end{frame}
+
+\divider{Part 2 · Git and GitHub}{The workflow you will use}[What Git is, and the loop you will run every lab]
+
+\begin{frame}[eyebrow=Git]{Git, and the services that host it}
+  \vskip 2mm
+  \begin{columns}[T]
+    \begin{column}{0.58\textwidth}
+      \begin{itemize}
+        \item Git is a version control system. It records every change ever made to your source code, and you can return to any of them.
+        \item Several people can work on the same codebase without overwriting each other.
+        \item Git runs on your machine. GitHub, GitLab and Bitbucket are services that host repositories and add collaboration on top: reviews, issues, automation.
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.38\textwidth}
+      \begin{hint}[One Git, many hosts]
+        The commands are identical everywhere. Only the website around them differs.
+        \vskip 1mm
+        \muted{This course uses GitHub.}
+      \end{hint}
+    \end{column}
+  \end{columns}
+  \note{Ask how many students have used Git before. Usually about half, and half of those only through a graphical client. Say that the command line is required here because it is the same on every machine and in every continuous integration pipeline.}
+\end{frame}
+
+\begin{frame}[eyebrow=Git]{Create a GitHub account before Lab 1}
+  \vskip 2mm
+  \begin{columns}[T]
+    \begin{column}{0.55\textwidth}
+      \begin{itemize}
+        \item Sign up, free, at \link{https://github.com/signup}{github.com/signup}. Use a name you are happy to show a future employer.
+        \item Your commits are part of your grade. Every lab is read from your repository.
+        \item Turn on two-factor authentication. GitHub requires it for accounts that contribute code.
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.41\textwidth}
+      \kv{Shared course material}{\link{https://github.com/rusudinu/mobile-and-embedded-computing}{github.com/rusudinu/\\mobile-and-embedded-computing}}
+      \vskip 3mm
+      \kv{Your own repository}{\code{admd-labs}, created in Lab 1}
+    \end{column}
+  \end{columns}
+  \note{Make this the one homework item of the week. A student without an account loses the first thirty minutes of Lab 1. Point at the shared repository: slides, examples and lab starters all live there.}
+\end{frame}
+
+\begin{frame}[eyebrow=Git]{Repositories and branches}
+  \vskip 2mm
+  \begin{columns}[T]
+    \begin{column}{0.57\textwidth}
+      \begin{itemize}
+        \item A repository holds all the files of a project and every revision they have ever had.
+        \item It always has at least one branch. By convention that branch is called \code{main}.
+        \item A branch is a line of work: build a feature or fix a bug without touching anyone else's work.
+        \item A branch is always created from an existing branch, and later merged back into it.
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.39\textwidth}
+      \kv{In this course}{\code{main} is the graded state of your app. \code{lab-3} is the work in progress for Lab 3.}
+      \vskip 3mm
+      \muted{A repository is a Git concept, not a GitHub one. GitHub only hosts it.}
+    \end{column}
+  \end{columns}
+  \note{Draw two lines on the board: main, and a branch leaving it and rejoining. That picture is enough for this course. Warn that committing straight to main is the habit this workflow is meant to break.}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=Git]{The workflow, command by command}
+  \begin{columns}[T]
+    \begin{column}{0.56\textwidth}
+\begin{shell}
+git clone <repo-url>   # once
+git checkout -b lab-1
+
+# edit files, then:
+git add .
+git commit -m "Add todo screen"
+git push -u origin lab-1
+
+# open a pull request, get a review
+
+git checkout main
+git pull
+\end{shell}
+    \end{column}
+    \begin{column}{0.40\textwidth}
+      \lead{Run this loop once per lab.}{Clone, branch, commit, push, review, merge, pull. Nothing else is needed for the whole semester.}
+      \vskip 2mm
+      \muted{\code{git status} answers most questions. Run it whenever you are unsure what Git is about to do.}
+    \end{column}
+  \end{columns}
+  \note{Run this loop live, on the projector, with a throwaway repository. Students remember the demo far better than the slide. Point out that the last two commands are the ones people forget, and that skipping them is why merge conflicts appear.}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=Git]{What a good commit message says}
+  \begin{columns}[T]
+    \begin{column}{0.54\textwidth}
+\begin{codeblock}
+Add swipe to delete on the todo list
+Fix crash when the title is empty
+Move the API base URL into config
+
+fix
+update stuff
+asdf
+\end{codeblock}
+    \end{column}
+    \begin{column}{0.42\textwidth}
+      \lead{The first three are useful.}{They say what changed, in the imperative mood, in one line a reviewer can scan.}
+      \vskip 2mm
+      \muted{Keep the first line short, around seventy characters. One logical change per commit. If you need to explain why, put it in the body under a blank line.}
+    \end{column}
+  \end{columns}
+  \begin{takeaway}{Write the message for the person reading it in six months.}
+    That person is usually you, looking for the commit that broke something.
+  \end{takeaway}
+  \note{Ask the room what the bottom three messages tell a reviewer. Nothing. Say that graders read the history, so message quality is visible. Mention that the imperative mood matches what Git itself writes for merges and reverts.}
+\end{frame}
+
+\begin{frame}[eyebrow=Git]{Pull requests and review}
+  \vskip 2mm
+  \begin{columns}[T]
+    \begin{column}{0.56\textwidth}
+      \begin{itemize}
+        \item A pull request proposes merging your branch into \code{main}, and shows the exact diff.
+        \item A reviewer reads it and either approves it or requests changes. Until the required approvals arrive, the pull request stays open.
+        \item You answer comments by pushing more commits to the same branch. The pull request updates itself.
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.40\textwidth}
+      \kv{In your labs}{The description names what you built, what you could not finish, and any code an agent wrote for you.}
+      \vskip 3mm
+      \muted{A screenshot of the running app in the description saves the grader a build.}
+    \end{column}
+  \end{columns}
+  \begin{takeaway}{Open the pull request early, even when the work is unfinished.}
+    Feedback on a half-built branch is cheap. Feedback on a finished one costs a rewrite.
+  \end{takeaway}
+  \note{Say that review is not a formality: in industry it is where most bugs are caught. Tell students to open the pull request early, even when the work is unfinished, so the conversation starts sooner.}
+\end{frame}
+
+\begin{frame}[eyebrow=Git]{What happens after the merge}
+  \vskip 3mm
+  \begin{grid}[3]
+    \cell[\faIcon{vial}]{1 · Test}{Continuous integration checks out the merged code, installs dependencies, runs the analyzer and the test suite.}
+    \cell[\faCode]{2 · Build}{If the tests pass, it builds the release artifacts: an Android bundle, an iOS archive, or a web bundle.}
+    \cell[\faCloud]{3 · Deliver}{The artifact goes to testers or to a store track. Nobody uploads a build from a laptop.}
+  \end{grid}
+  \vskip 3mm
+  \muted{Continuous integration, usually shortened to CI, is a service that runs those steps on a clean machine for every pull request and every merge.}
+  \begin{takeaway}{If it only builds on your laptop, it does not build.}
+    A clean machine is the honest test of whether the repository holds everything the project needs.
+  \end{takeaway}
+  \note{Keep this short: the full pipeline comes back in Lecture 14. The idea students need now is that a pull request runs checks automatically, and a red check is not someone else's problem.}
+\end{frame}
+
+\divider{Part 3 · Strategies}{Four ways to build an app}[Native, web, cross-platform in two flavors, and shared logic]
+
+\begin{frame}[eyebrow=Strategies]{The baseline: native apps}
+  \vskip 2mm
+  \begin{columns}[T]
+    \begin{column}{0.55\textwidth}
+      \begin{itemize}
+        \item Built for one operating system, with that platform's own software development kit and tools.
+        \item Best possible performance, and access to every capability the platform exposes on day one.
+        \item The platform's own widgets, so the app looks and behaves the way the operating system does.
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.41\textwidth}
+      \kv{iOS}{Swift and SwiftUI, built in Xcode, on a Mac}
+      \vskip 3mm
+      \kv{Android}{Kotlin and Jetpack Compose, built in Android Studio}
+    \end{column}
+  \end{columns}
+  \begin{takeaway}{Every other strategy sits on top of these two kits.}
+    Cross-platform frameworks do not replace them: they generate or drive the same native application.
+  \end{takeaway}
+  \note{The cost is the obvious one: two codebases, two languages, two teams, two release cycles. Ask who has written Kotlin or Swift already, because Lecture 2 compares Dart with Kotlin directly.}
+\end{frame}
+
+\begin{frame}[eyebrow=Strategies]{Strategy 1: web apps and progressive web apps}
+  \vskip 2mm
+  \begin{columns}[T]
+    \begin{column}{0.47\textwidth}
+      \kv{What you get}{}
+      \begin{itemize}
+        \item Opens from a link. No installation and no store review.
+        \item An update reaches every user the moment you deploy it.
+        \item One codebase for every platform that has a browser.
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.47\textwidth}
+      \kv{What you give up}{}
+      \begin{itemize}
+        \item Limited access to sensors and radios: Bluetooth, near-field communication, background location.
+        \item No reliable background execution, especially on iOS.
+        \item A browser performance ceiling, and a single engine on iOS.
+      \end{itemize}
+    \end{column}
+  \end{columns}
+  \vskip 2mm
+  \muted{A progressive web app, or PWA, is a web app that can be installed to the home screen, works offline, and is served over HTTPS.}
+  \note{Say that the web option is often the right answer for content-heavy products and the wrong one for anything that needs hardware. Web architecture itself belongs to a web course, so only the comparison matters here.}
+\end{frame}
+
+\begin{frame}[eyebrow=Strategies]{Strategy 2: React Native drives native widgets}
+  \vskip 2mm
+  \begin{columns}[T]
+    \begin{column}{0.5\textwidth}
+      \kv{Your code}{JavaScript or TypeScript, running in a JavaScript engine on the device}
+      \vskip 2.5mm
+      \kv{The layer under it}{The JavaScript Interface, JSI, and the Fabric renderer, which call into the platform directly}
+      \vskip 2.5mm
+      \kv{What the user sees}{Real native widgets, one set per platform}
+    \end{column}
+    \begin{column}{0.46\textwidth}
+      \begin{itemize}
+        \item The user interface is genuinely native, so each platform keeps its own look and behavior.
+        \item JavaScript can be updated over the air, without a new store release.
+        \item Every interaction crosses the boundary between JavaScript and native code.
+      \end{itemize}
+    \end{column}
+  \end{columns}
+  \begin{takeaway}{The old serialized bridge is gone.}
+    Current React Native calls into native code directly, so older descriptions of a JavaScript bridge no longer apply.
+  \end{takeaway}
+  \note{The old React Native architecture serialized messages over an asynchronous bridge. That is gone, so do not repeat it. Note that a team already writing React on the web is the strongest reason to pick this option.}
+\end{frame}
+
+\begin{frame}[eyebrow=Strategies]{Strategy 2, other flavor: Flutter draws it}
+  \vskip 2mm
+  \begin{columns}[T]
+    \begin{column}{0.5\textwidth}
+      \kv{Your code}{Dart, compiled ahead of time to native machine code for release builds}
+      \vskip 2.5mm
+      \kv{The layer under it}{Impeller, Flutter's renderer, which draws the whole user interface itself}
+      \vskip 2.5mm
+      \kv{What the user sees}{One user interface, identical everywhere}
+    \end{column}
+    \begin{column}{0.46\textwidth}
+      \begin{itemize}
+        \item One rendering pipeline, so there are no per-platform layout surprises.
+        \item It reaches the operating system through platform channels and plugins.
+        \item Hot reload during development: a change appears in the running app in a second.
+      \end{itemize}
+    \end{column}
+  \end{columns}
+  \begin{takeaway}{React Native borrows the platform's widgets. Flutter brings its own.}
+    That single difference explains almost every trade-off between the two.
+  \end{takeaway}
+  \note{This is the slide to slow down on, because the whole course sits on it. Say that drawing everything is why a Flutter app looks identical on an old Android phone and a new iPhone, and also why it cannot inherit a platform redesign for free.}
+\end{frame}
+
+\begin{frame}[eyebrow=Strategies]{Strategy 3: Kotlin Multiplatform shares the logic}
+  \vskip 2mm
+  \begin{columns}[T]
+    \begin{column}{0.52\textwidth}
+      \kv{Shared Kotlin module}{Business logic, networking, storage, models. Compiled natively for each platform.}
+      \vskip 2.5mm
+      \kv{Android app}{Its own user interface, in Jetpack Compose}
+      \vskip 2.5mm
+      \kv{iOS app}{Its own user interface, in SwiftUI or in Compose Multiplatform}
+    \end{column}
+    \begin{column}{0.44\textwidth}
+      \begin{itemize}
+        \item You choose how much to share, from one networking class to everything but the screens.
+        \item The \code{expect} and \code{actual} keywords bridge the parts that must differ per platform.
+        \item It is stable and in production at companies such as McDonald's, Netflix and Forbes.
+      \end{itemize}
+    \end{column}
+  \end{columns}
+  \begin{takeaway}{Flutter shares everything, including the pixels.}
+    Kotlin Multiplatform shares exactly as much as you choose, and keeps each platform's native screens.
+  \end{takeaway}
+  \note{This is the natural path for a company that already has two native apps and wants to stop writing the same logic twice. It is also the option that needs the strongest native skills on the team.}
+\end{frame}
+
+\begin{frame}[eyebrow=Strategies]{The four side by side}
+  {\usebeamerfont{small}\begin{tabular}{@{}>{\raggedright\arraybackslash}p{27mm}>{\raggedright\arraybackslash}p{28mm}>{\raggedright\arraybackslash}p{31mm}>{\raggedright\arraybackslash}p{34mm}@{}}
+    \toprule
+    \thead{Strategy} & \thead{Shared code} & \thead{The user interface} & \thead{Choose it when} \\
+    \midrule
+    Native & none & the platform's own widgets & one platform, every capability \\
+    Web and PWA & all of it & HTML and CSS in a browser & reach without an install \\
+    React Native & logic and layout & native widgets & the team already writes React \\
+    Flutter & everything, drawing included & drawn by Flutter itself & one team, identical screens \\
+    Kotlin Multiplatform & as much as you choose & native, written twice & native apps already exist \\
+    \bottomrule
+  \end{tabular}}
+  \note{Do not read the table. Use it to answer the question students always ask, which is whether one option is simply better. None is: each row trades control against effort.}
+\end{frame}
+
+\begin{frame}[eyebrow=Strategies]{How to choose}
+  \vskip 3mm
+  \begin{tabular}{@{}>{\raggedright\arraybackslash}p{86mm}>{\raggedright\arraybackslash}p{46mm}@{}}
+    \toprule
+    \thead{If this describes you} & \thead{Start with} \\
+    \midrule
+    You need reach without installs, and light hardware needs & Web or PWA \\
+    Your team lives in JavaScript and wants a native feel & React Native \\
+    You already ship two native apps and duplicate the logic & Kotlin Multiplatform \\
+    One small team, identical screens, fast iteration & Flutter \\
+    \bottomrule
+  \end{tabular}
+  \begin{takeaway}{The constraint that decides is almost never technical.}
+    Team skills, deadline and hardware access pick the strategy. Performance rarely does.
+  \end{takeaway}
+  \note{Ask the room to place an app they use daily into one of the rows, and to justify it. The useful habit is deciding on constraints first, then choosing the tool, rather than the other way around.}
+\end{frame}
+
+\divider{Part 4 · Setup}{Flutter, and what to install}[Why this course picked it, what it costs, and what to install]
+
+\begin{frame}[eyebrow=Flutter]{Why this course uses Flutter}
+  \vskip 3mm
+  \begin{grid}[2]
+    \cell[\faCode]{One codebase}{One student, working alone, can build a complete app for Android and iOS inside a two-hour lab.}
+    \cell[\faBolt]{Hot reload}{A change shows up in the running app almost immediately, which is what makes the labs work.}
+    \cell[\faLayerGroup]{One renderer}{What you see on the emulator is what a user sees on a phone. Less time lost to platform differences.}
+    \cell[\faIcon{mobile-alt}]{It is what I ship}{The examples, the packages and the debugging habits come from apps that are in production now.}
+  \end{grid}
+  \note{Be honest that this is a teaching decision, not a claim that Flutter wins every comparison. The skills transfer: state management, networking and authentication look similar in every framework.}
+\end{frame}
+
+\begin{frame}[eyebrow=Flutter]{What choosing Flutter costs}
+  \vskip 2mm
+  \begin{columns}[T]
+    \begin{column}{0.55\textwidth}
+      \begin{itemize}
+        \item Binaries are larger than a native app of the same size, because the framework travels with the app.
+        \item Talking to the operating system goes through platform channels or a plugin, which is extra work and extra latency.
+        \item Dart is used mostly with Flutter, so the language itself transfers less than Kotlin or TypeScript would.
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.41\textwidth}
+      \begin{warning}[Say the cost out loud]
+        Every strategy costs something. An engineer who can only list the advantages of their tool has not finished evaluating it.
+      \end{warning}
+    \end{column}
+  \end{columns}
+  \note{This slide exists so students can defend the choice in an interview. Ask them to name one cost of the web option and one of Kotlin Multiplatform, from the previous section.}
+\end{frame}
+
+\begin{frame}[eyebrow=Setup]{Install this before Lab 1}
+  \vskip 2mm
+  \begin{grid}[2]
+    \cell[\faIcon{download}]{Flutter SDK}{The software development kit, from flutter.dev. Add it to your PATH so \code{flutter} works in any terminal.}
+    \cell[\faIcon{robot}]{Android Studio}{Needed for the Android toolchain and the Android emulator, even if you write code in another editor.}
+    \cell[\faApple]{Xcode, on a Mac}{Only for building and running on iOS and the iOS Simulator. Skip it on Windows or Linux.}
+    \cell[\faIcon{code-branch}]{Git and an account}{Git on your machine, and the GitHub account from Part 2. Both are needed in the first lab.}
+  \end{grid}
+  \vskip 1mm
+  \muted{Install on the machine you bring to the lab. The downloads are large, so start them early.}
+  \note{Warn about the university network: the first Android build downloads a lot. Say that Lab 1 has a troubleshooting slide for the usual failures, and that anyone stuck should message the course channel before the lab, not during it.}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=Setup]{Check the install, and where things live}
+  \begin{columns}[T]
+    \begin{column}{0.54\textwidth}
+\begin{shell}
+flutter doctor
+flutter create hello_admd
+cd hello_admd
+flutter run
+\end{shell}
+    \end{column}
+    \begin{column}{0.42\textwidth}
+      \kv{Course material}{\link{https://github.com/rusudinu/mobile-and-embedded-computing}{github.com/rusudinu/\\mobile-and-embedded-computing}}
+      \vskip 2.5mm
+      \kv{Questions}{Microsoft Teams course channel, or in the lab}
+    \end{column}
+  \end{columns}
+  \vskip 1mm
+  \muted{\code{flutter doctor} prints one line per toolchain component. Every line must be a check mark before Lab 1 starts.}
+  \note{Tell students to send a screenshot of flutter doctor to the course channel if a line stays red. Say the counting app that flutter create writes is the starting point of Lab 1, so seeing it run means they are ready.}
+\end{frame}
+
+\begin{frame}[eyebrow=Recap]{Three things to remember}
+  \vskip 2mm
+  \begin{enumerate}
+    \item The repository is the submission. \muted{One repository, a branch per lab, a pull request per lab, graded from the history.}
+    \item There are four ways to build a mobile app. \muted{Native, web, cross-platform, and shared logic with native screens.}
+    \item Every strategy has a cost. \muted{This course uses Flutter, and states what that choice gives up.}
+  \end{enumerate}
+  \vskip 5mm
+  \kv{Further reading}{\link{https://docs.flutter.dev/get-started/install}{docs.flutter.dev/get-started/install} · \link{https://docs.github.com/get-started}{docs.github.com/get-started} · \link{https://kotlinlang.org/docs/multiplatform.html}{kotlinlang.org multiplatform} · \link{https://reactnative.dev/architecture/overview}{reactnative.dev architecture}}
+  \note{Close by restating the single homework item: a GitHub account and an installed Flutter SDK before Lab 1 in week 2. Ask for questions now, because the next contact is the lab.}
+\end{frame}
+
+\closingframe{Questions?}{dinu\_stefan.rusu@upb.ro · Microsoft Teams: course channel}
+
+\end{document}

@@ -1,0 +1,512 @@
+% Lecture 11: Routing, permissions, and WebSockets. Compile: latexmk -xelatex lecture11.tex
+\documentclass[10pt,aspectratio=169,t]{beamer}
+\usetheme{upbminimal}
+
+\course{Application Development for Mobile Devices}
+\decklabel{Lecture 11}
+\title{Routing, Permissions, and WebSockets}
+\subtitle{Keeping a connection open, asking the OS for the device, and navigation as data}
+\author{Dinu-Ștefan Rusu}
+\institute{FILS, Universitatea Politehnica București}
+\date{Autumn 2026}
+
+\begin{document}
+
+\titleframe
+
+\objectivesframe{
+  \cell[\faBroadcastTower]{Realtime transport}{Which of WebSocket, SSE, long polling and MQTT fits a problem, and the handshake that opens a socket.}
+  \cell[\faIcon{sync-alt}]{Connections that survive}{Backoff, heartbeats, wss, and what the OS does to a socket when the app leaves the screen.}
+  \cell[\faLock]{Permissions, end to end}{Manifest and plist entries, Android 13+ granular media, and every state permission\_handler returns.}
+  \cell[\faRoute]{Routing with go\_router}{Routes as data, parameters, nested shells, and a redirect guard wired to auth state.}
+}
+
+\divider{Part 1 · Realtime}{Keeping a connection open}[WebSockets, and the three other ways to push data to a phone]
+
+\begin{frame}[eyebrow=Realtime]{Why HTTP alone cannot push}
+  HTTP is request and response: the server can never speak first. Apps fake push by polling, paying for a request almost every time.
+  {\usebeamerfont{small}\begin{tabular}{@{}lp{44mm}p{44mm}@{}}
+    \toprule
+     & \thead{Polling over HTTP} & \thead{WebSocket} \\
+    \midrule
+    Connection & a request per poll, or a reused socket & one socket, held open \\
+    Who may speak & the client only & either side, any moment \\
+    Worst-case latency & one full poll interval & one network hop \\
+    Cost while idle & a request every interval, forever & a few bytes of keepalive \\
+    \bottomrule
+  \end{tabular}}
+  \begin{takeaway}{A WebSocket is not faster HTTP.}
+    It is a different conversation shape.
+  \end{takeaway}
+  \note{Ask the room how they would build a live chat with plain HTTP. Most say polling; walk through what that costs at scale. The takeaway is the line to repeat: a socket is a different shape, not a speed boost.}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=Realtime]{The handshake: HTTP 101 Switching Protocols}
+  \begin{columns}[T]
+    \begin{column}{0.58\textwidth}
+\begin{codeblock}
+GET /chat HTTP/1.1
+Host: realtime.example.com
+Upgrade: websocket
+Connection: Upgrade
+Sec-WebSocket-Key: dGhlIHNhbXBsZQ==
+Sec-WebSocket-Version: 13
+
+HTTP/1.1 101 Switching Protocols
+Upgrade: websocket
+Connection: Upgrade
+Sec-WebSocket-Accept: s3pPLMBiTxaQ9kYGzw==
+
+// same TCP connection, now WebSocket frames
+\end{codeblock}
+    \end{column}
+    \begin{column}{0.38\textwidth}
+      \lead{What just happened}{A WebSocket starts as an ordinary HTTP request, so it passes through the same proxies and firewalls as HTTPS.}
+      \muted{The 101 response ends the HTTP part. The same TCP connection now carries binary WebSocket frames (RFC 6455).}
+      \muted{The opening request can carry cookies and a query string, which is how the socket gets authenticated.}
+    \end{column}
+  \end{columns}
+  \note{Sec-WebSocket-Accept is the client key concatenated with a fixed GUID, hashed and encoded. It proves the server understood the upgrade rather than a cache replaying an old 101. It is a cache-poisoning guard, not security.}
+\end{frame}
+
+\begin{frame}[eyebrow=Realtime]{Four ways to push, and when each fits}
+  {\usebeamerfont{small}\begin{tabular}{@{}llp{28mm}p{54mm}@{}}
+    \toprule
+    \thead{Transport} & \thead{Direction} & \thead{Runs over} & \thead{Reach for it when} \\
+    \midrule
+    WebSocket & full duplex & TCP, HTTP upgrade & both sides talk: chat, presence, games \\
+    SSE & server to client & one long HTTP response & a one-way feed; reconnect comes free \\
+    Long polling & server to client & ordinary HTTP requests & a restrictive network blocks everything else \\
+    MQTT & pub/sub & TCP or WebSocket & devices: tiny frames, retained messages \\
+    \bottomrule
+  \end{tabular}}
+  \begin{takeaway}{MQTT is a device topic, not a phone-to-phone one.}
+    A broker fans one reading out to every subscriber. MEC Lecture 4 covers the broker side.
+  \end{takeaway}
+  \note{If a student asks why not just use WebSockets for the sensor too: a broker gives fan-out, a retained last-known value and offline queueing for free. MQTT over WebSocket is common; the transport and the protocol are separate choices.}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=Realtime]{web\_socket\_channel: the whole lifecycle}
+  \begin{columns}[T]
+    \begin{column}{0.60\textwidth}
+\begin{dart}
+// connect() is lazy; wss:// only, always.
+final channel = WebSocketChannel.connect(
+  Uri.parse('wss://realtime.example.com/chat'),
+);
+await channel.ready;  // throws if handshake fails
+final sub = channel.stream.listen(
+  (data) => onMessage(data as String),
+  onError: (e, st) => scheduleReconnect(),
+  onDone: () => scheduleReconnect(),
+);
+channel.sink.add(jsonEncode({'t': 'msg'}));
+await sub.cancel();
+await channel.sink.close(status.goingAway);
+\end{dart}
+    \end{column}
+    \begin{column}{0.36\textwidth}
+      \lead{The two lines everyone forgets}{}
+      \muted{\code{await channel.ready}: connect() returns instantly and never throws. Without it, a rejection surfaces three screens later as a stream error.}
+      \muted{\code{sink.close()} in dispose(): a socket is not garbage collected. Left open, it keeps a radio awake and a server slot held.}
+    \end{column}
+  \end{columns}
+  \note{Demo opportunity: point wss:// at a bad host and show ready throwing. Also mention closeCode: 1000 is a clean close, 1006 is abnormal, no close frame, which is the usual case on mobile.}
+\end{frame}
+
+\begin{frame}[eyebrow=Realtime]{ws:// is plaintext; wss:// is not optional}
+  \lead{Every frame crosses the network in the clear.}{Messages and ids are readable on shared Wi-Fi, and any middlebox can rewrite them. wss:// is the same protocol carried inside TLS, on port 443.}
+  \vskip 1mm
+  \muted{iOS App Transport Security and Android's cleartext policy both block ws:// by default. Do not add a platform exception to work around it.}
+  \vskip 1mm
+  \lead{A socket is authenticated once, then trusted for hours.}{The server checks the token at the upgrade request, and checks it again when it expires.}
+  \begin{takeaway}{Short-lived tokens, re-checked.}
+    A socket opened at nine with a one-hour token must not still be trusted at noon. The server closes it, and the client reconnects with a fresh one.
+  \end{takeaway}
+  \note{Ask what happens to a socket opened before a token expires. The server has to actively re-check and close it: the handshake alone is not enough for a session that can last hours.}
+\end{frame}
+
+\begin{frame}[eyebrow=Realtime]{Three ways to carry the token}
+  \lead{Query string}{\code{?token=...} is simplest and works everywhere, but it lands in server access logs.}
+  \vskip 2mm
+  \lead{Subprotocol header}{Sec-WebSocket-Protocol carries the credential instead. It is not logged, but some proxies handle it awkwardly.}
+  \vskip 2mm
+  \lead{First message}{Connect anonymously, send an auth frame immediately, and have the server close the socket if it does not arrive within a second.}
+  \begin{takeaway}{None of the three is free of trade-offs.}
+    Pick the one your server and proxies support, and keep the token short-lived.
+  \end{takeaway}
+  \note{None of the three is free of trade-offs. Query string is the one students will reach for first; make sure they know it lands in logs before they ship it with a long-lived token.}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=Realtime]{A dead socket still looks open}
+  \begin{columns}[T]
+    \begin{column}{0.55\textwidth}
+      TCP never tells you the peer is gone: only that it sent a FIN, and a phone out of Wi-Fi range sends neither.
+
+      Carrier NAT and a Wi-Fi to LTE handover change your address mid-connection. Keepalive defaults to two hours: far too slow.
+    \end{column}
+    \begin{column}{0.40\textwidth}
+\begin{dart}
+// ping, expect a reply
+beat(_) {
+  if (_awaitingPong) {
+    return reconnect();
+  }
+  _awaitingPong = true;
+  channel.sink.add(ping);
+}
+\end{dart}
+    \end{column}
+  \end{columns}
+  \begin{takeaway}{A half-open connection is worse than closed.}
+    A "sent" message can sit in a kernel buffer while the UI shows it delivered.
+  \end{takeaway}
+  \note{So you prove liveness yourself: send a ping, expect a reply, and treat silence as a closed connection. IOWebSocketChannel also takes a built-in pingInterval. This is the single most common cause of a chat screen that looks fine but has stopped updating.}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=Realtime]{Reconnecting without taking down your server}
+  \begin{columns}[T]
+    \begin{column}{0.60\textwidth}
+\begin{dart}
+// Never reconnect in a tight loop.
+Duration _backoff() {
+  const base = Duration(seconds: 1);
+  const cap = Duration(minutes: 2);
+  final n = base * math.pow(2, _attempt);
+  final ms = (n > cap ? cap : n).inMilliseconds;
+  return Duration(milliseconds: _r.nextInt(ms));
+}
+void scheduleReconnect() {
+  if (_disposed) return;
+  _attempt++;
+  _timer = Timer(_backoff(), _connect);
+}
+\end{dart}
+    \end{column}
+    \begin{column}{0.36\textwidth}
+      \lead{Why jitter, not just doubling}{Ten thousand clients retry at the same instant: a thundering herd. Full jitter spreads them evenly.}
+      \muted{Reset \_attempt on a connection that lasts, not one that merely opens.}
+    \end{column}
+  \end{columns}
+  \note{A server that accepts and immediately drops the connection would otherwise reset the backoff counter every time, which defeats the whole point. Reset on a connection that stuck, not one that merely opened.}
+\end{frame}
+
+\begin{frame}[eyebrow=Realtime]{When the app goes to the background}
+  \begin{columns}[T]
+    \begin{column}{0.58\textwidth}
+      \lead{A WebSocket is a foreground affordance.}{iOS suspends a backgrounded app within seconds; no close frame is sent, the server just stops hearing from you. Android does the same more gradually, through Doze.}
+      \vskip 1mm
+      \muted{Anything that must reach the user while away is a push notification, FCM or APNs, not a frame on the stream.}
+    \end{column}
+    \begin{column}{0.38\textwidth}
+      \kv{Paused}{close the socket yourself, cleanly}
+      \kv{Backgrounded}{FCM or APNs carries what matters}
+      \kv{Resumed}{reconnect, then resync what was missed}
+    \end{column}
+  \end{columns}
+  \begin{takeaway}{A common realtime bug on mobile.}
+    It works foreground and breaks the moment the phone locks. Give every message a server-side id so resync is a gap query, not a guess.
+  \end{takeaway}
+  \note{Ask the room how they would resync: the answer is a monotonic cursor. The client sends the last id it saw on reconnect and the server replays the gap. Without that, a reconnect either duplicates messages or silently loses them.}
+\end{frame}
+
+\divider{Part 2 · Permissions}{Asking the OS for the device}[Manifest, plist, and every answer permission\_handler can give you]
+
+\begin{frame}[eyebrow=Permissions]{Two steps, and both are mandatory}
+  \begin{columns}[T]
+    \begin{column}{0.58\textwidth}
+      Step one is static: you declare, at build time, what the app might ever ask for, in the manifest or Info.plist.
+
+      Step two is at runtime: the user is asked once, in a dialog you cannot style or reword, and can say no.
+    \end{column}
+    \begin{column}{0.38\textwidth}
+      \kv{Declare}{AndroidManifest.xml and Info.plist}
+      \kv{Ask, in context}{permission\_handler's request()}
+      \kv{Handle every answer}{including the one you cannot retry}
+    \end{column}
+  \end{columns}
+  \begin{takeaway}{Skip step one and step two does not fail gracefully.}
+    Android silently denies an undeclared permission forever. iOS terminates the app on first touch, and review rejects the build.
+  \end{takeaway}
+  \note{Emphasize that this is a build-config problem before it is a code problem. Most permission bugs in student projects trace back to a missing manifest or plist entry, not to the Dart code.}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=Permissions]{Android: AndroidManifest.xml}
+\begin{codeblock}[language=XML]
+<!-- android/app/src/main/AndroidManifest.xml -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+  <uses-permission android:name="android.permission.CAMERA"/>
+  <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+  <uses-permission android:name="android.permission.READ_MEDIA_IMAGES"/>
+  <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"
+                    android:maxSdkVersion="32"/>
+  <uses-feature android:name="android.hardware.camera"
+                android:required="false"/>
+</manifest>
+\end{codeblock}
+  \muted{Declaring is not requesting: these entries only make the runtime request legal. \code{maxSdkVersion} keeps the old storage permission for old phones, off on Android 13+. Flutter merges every plugin's manifest into yours at build time.}
+  \note{This slide exists because a real manifest, with real angle brackets, is the point: a permission that is not declared here is denied forever with no dialog at all, and students need to see the exact shape of the file, not a description of it.}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=Permissions]{iOS: Info.plist}
+\begin{codeblock}[language=XML]
+<!-- ios/Runner/Info.plist -->
+<key>NSCameraUsageDescription</key>
+<string>MapChat uses the camera to send photos in a chat.</string>
+<key>NSMicrophoneUsageDescription</key>
+<string>MapChat records a voice note while you hold the button.</string>
+<key>NSLocationWhenInUseUsageDescription</key>
+<string>MapChat shows friends near you while the app is open.</string>
+<key>NSPhotoLibraryUsageDescription</key>
+<string>Pick a photo you already have and send it.</string>
+\end{codeblock}
+  \muted{That sentence is printed inside the system dialog: the only explanation the user gets, once. Say what the user gains, not what the app needs. A missing key is a hard crash, not a warning: the app is terminated on first touch.}
+  \note{Point out the difference in tone between a bad usage string like "to access your camera" and the sentences on this slide. Reviewers and users both read this exact text, and it is the only chance to explain the feature.}
+\end{frame}
+
+\begin{frame}[eyebrow=Permissions]{Android 13+ split storage into media types}
+  One coarse "read everything" permission became several narrow ones, and notifications stopped being granted at install.
+  {\usebeamerfont{small}\begin{tabular}{@{}lll@{}}
+    \toprule
+    \thead{Capability} & \thead{Before: API 32} & \thead{Android 13+ (API 33+)} \\
+    \midrule
+    Photos & READ\_EXTERNAL\_STORAGE & READ\_MEDIA\_IMAGES \\
+    Video & READ\_EXTERNAL\_STORAGE & READ\_MEDIA\_VIDEO \\
+    Audio and music & READ\_EXTERNAL\_STORAGE & READ\_MEDIA\_AUDIO \\
+    Notifications & granted at install & POST\_NOTIFICATIONS prompt \\
+    Part of the library & not possible & user-selected, API 34+ \\
+    \bottomrule
+  \end{tabular}}
+  \begin{takeaway}{POST\_NOTIFICATIONS is the one that matters most here.}
+    Your FCM push silently delivers nothing on an Android 13+ phone until the user grants it at runtime.
+  \end{takeaway}
+  \note{Connect this back to the WebSocket section: the socket only works in the foreground, and the fallback for the background is a push notification that itself needs a runtime permission on modern Android.}
+\end{frame}
+
+\begin{frame}[eyebrow=Permissions]{Every answer you have to handle}
+{\usebeamerfont{small}\begin{tabular}{@{}lp{47mm}p{47mm}@{}}
+    \toprule
+    \thead{State} & \thead{What it means} & \thead{What you do} \\
+    \midrule
+    isGranted & you may call the API & proceed \\
+    isDenied & refused once; Android allows asking again & rationale, request() again \\
+    isPermanentlyDenied & Android "don't ask again"; iOS any refusal & \mbox{request()} is a no-op, use \mbox{openAppSettings()} \\
+    isRestricted & policy blocked: parental controls, MDM & hide the feature \\
+    isLimited & a picked subset: iOS Photos, Android 14+ & treat as granted \\
+    isProvisional & iOS notifications delivered quietly & ask to upgrade later \\
+    \bottomrule
+  \end{tabular}}
+  \note{isLimited and isProvisional are not edge cases: they are the default outcome of two common iOS prompts, and a plain isGranted check treats both of them as a refusal. The next slide expands on why that matters.}
+\end{frame}
+
+\begin{frame}[eyebrow=Permissions]{isLimited and isProvisional are not edge cases}
+  \vskip 2mm
+  \lead{isLimited: the user did not say no.}{On iOS, a Photos request can return a user-picked subset of the library instead of everything. Android 14+ has the same idea for one-time media selection. The picker still works; the app only sees what was chosen.}
+  \vskip 4mm
+  \lead{isProvisional: already delivering, quietly.}{iOS can grant notifications with no system prompt at all. They arrive in the notification center without a sound or a banner, until the user upgrades them from inside the app.}
+  \begin{takeaway}{A plain isGranted check throws both away.}
+    Treat isLimited as granted and offer "select more". Treat isProvisional as granted and ask for the upgrade later, not on launch.
+  \end{takeaway}
+  \note{This is the mistake students make most often with permission\_handler: checking only isGranted and treating a working, user-chosen state as a failure. Walk through both examples on a real device if one is available.}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=Permissions]{permission\_handler, including the dead end}
+  \begin{columns}[T]
+    \begin{column}{0.60\textwidth}
+\begin{dart}
+Future<bool> ensureCamera(c) async {
+  var s = await Permission.camera.status;
+  if (s.isGranted || s.isLimited) {
+    return true;
+  }
+  if (s.isDenied) {
+    if (!await rationale(c)) return false;
+    s = await Permission.camera.request();
+  }
+  if (s.isPermanentlyDenied ||
+      s.isRestricted) return false;
+  return s.isGranted || s.isLimited;
+}
+\end{dart}
+    \end{column}
+    \begin{column}{0.36\textwidth}
+      \lead{Three traps}{}
+      \muted{permanentlyDenied only means something after asking once; a launch check reports denied instead.}
+      \muted{On permanentlyDenied, confirm with the user, then call openAppSettings() and re-read status on resume.}
+    \end{column}
+  \end{columns}
+  \note{Live demo if possible: deny camera twice on an Android emulator and watch request() return instantly with no dialog. Then walk to Settings and back and re-check the status.}
+\end{frame}
+
+\begin{frame}[eyebrow=Permissions]{How to get a permission granted}
+  \begin{grid}[3]
+    \cell[\faClock]{Ask at the moment of need}{Never on launch. Ask when the user taps the camera button.}
+    \cell[\faCommentDots]{Show your own screen first}{A dismissible sheet before the system dialog. Nothing is spent if they say no.}
+    \cell[\faCodeBranch]{Degrade, don't dead-end}{Camera denied? Offer the gallery. The feature still has to work.}
+    \cell[\faCog]{Give them a way back}{When permanently denied, offer a button that opens Settings.}
+    \cell[\faBullseye]{Ask for the narrower one}{Coarse location and read-media-images are granted more often.}
+    \cell[\faEye]{Never ask what you do not use}{Reviewers check declared permissions against behavior.}
+  \end{grid}
+  \note{This slide is the practical payoff of the whole section. If students take one thing from Permissions, it should be: ask in context, and always leave a way back to Settings.}
+\end{frame}
+
+\divider{Part 3 · Routing}{Navigation as data}[go\_router: routes, parameters, shells, and a guard wired to auth]
+
+\begin{frame}[fragile,eyebrow=Routing]{Navigator 1.0, and why the docs steer you off it}
+  \begin{columns}[T]
+    \begin{column}{0.56\textwidth}
+\begin{dart}
+// Fine for a local dialog or sheet.
+Navigator.of(context).push(
+  MaterialPageRoute(
+      builder: (_) => ChatScreen(id: id)),
+);
+// Named routes: no longer recommended.
+MaterialApp(routes: {
+  '/chat': (_) => const ChatScreen(),
+});
+Navigator.pushNamed(context, '/chat');
+\end{dart}
+    \end{column}
+    \begin{column}{0.40\textwidth}
+      \lead{What it cannot do}{}
+      \muted{Deep links: a notification that opens /chat/42 becomes a sequence of pushes, by hand, in order.}
+      \muted{Whole-stack changes: signing out and clearing every screen behind the user is awkward.}
+      \muted{The web: named routes do not become URLs, so the address bar and back button are wrong.}
+    \end{column}
+  \end{columns}
+  \begin{takeaway}{go\_router is the Flutter team's answer.}
+    Navigator 2.0 fixed all three, but its raw API was hard to use directly. go\_router implements it for you with a URL-shaped API on top.
+  \end{takeaway}
+  \note{Most students have only used Navigator.push and pushNamed so far. This slide is where they learn those tools have a ceiling, not that they were wrong to use them for a local dialog.}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=Routing]{go\_router: your navigation, as data}
+  \begin{columns}[T]
+    \begin{column}{0.60\textwidth}
+\begin{dart}
+final router = GoRouter(
+  initialLocation: '/',
+  routes: [
+    GoRoute(path: '/',
+        builder: (c, s) => Home()),
+    GoRoute(
+      path: '/chat/:id',
+      builder: (c, s) => ChatScreen(
+        roomId: s.pathParameters['id']!,
+      ),
+    ),
+  ],
+  errorBuilder: (c, s) => NotFound(),
+);
+\end{dart}
+    \end{column}
+    \begin{column}{0.36\textwidth}
+      \lead{Stack equals a function of state}{You stop saying "go here" and declare what exists instead.}
+      \muted{One \code{MaterialApp.router} line wires it in, and the tree then works from a deep link or a URL bar.}
+      \muted{\code{context.go()} replaces the stack. \code{context.push()} adds to it.}
+    \end{column}
+  \end{columns}
+  \note{Point out that GoRoute reads almost like a routing table you would write for a web server. That is deliberate: go_router treats a Flutter app's navigation the same way.}
+\end{frame}
+
+\begin{frame}[eyebrow=Routing]{Three ways to carry data into a route}
+  {\usebeamerfont{small}\begin{tabular}{@{}lp{40mm}p{38mm}l@{}}
+    \toprule
+    \thead{Kind} & \thead{Navigate with} & \thead{Read it back as} & \thead{Survives?} \\
+    \midrule
+    Path param & \ttfamily go('/chat/42') & pathParameters['id'] & yes \\
+    Query param & \ttfamily go('/search?q=x') & uri.queryParameters['q'] & yes \\
+    Extra & \ttfamily go(path, extra: room) & extra as Room & no \\
+    \bottomrule
+  \end{tabular}}
+  \vskip 2mm
+  All three read back through \code{GoRouterState}, the second argument every builder and redirect callback receives.
+  \begin{takeaway}{Pass ids, not objects.}
+    extra is an in-memory pointer: it does not survive a cold start from a notification or a browser refresh. Put the id in the URL and look the object up on the other side.
+  \end{takeaway}
+  \note{This is the single most common go_router mistake: passing a whole model through extra and being surprised when a cold start from a notification arrives with a null. Tie it back to the bloc or cubit from Lecture 6.}
+\end{frame}
+
+\begin{frame}[eyebrow=Routing]{ShellRoute: chrome that does not rebuild}
+  \begin{columns}[T]
+    \begin{column}{0.55\textwidth}
+      A bottom navigation bar is not a screen, it is a frame around screens. ShellRoute gives a nested Navigator: the Scaffold and its bar are built once, and only the body swaps.
+
+      \lead{StatefulShellRoute.indexedStack goes further.}{Each branch keeps its own navigation stack and its own scroll position.}
+
+      Go three screens deep in Chats, switch to Map and come back, and Chats is still three screens deep, at the same scroll position.
+    \end{column}
+    \begin{column}{0.41\textwidth}
+      \begin{grid}[3]
+        \cell[\faComments]{Chats}{/chat\\own stack}
+        \cell[\faIcon{map-marked-alt}]{Map}{/map\\own stack}
+        \cell[\faUser]{You}{/me\\own stack}
+      \end{grid}
+      \vskip 2mm
+      \muted{One Scaffold, one navigation bar built once, three independent stacks underneath.}
+    \end{column}
+  \end{columns}
+  \begin{takeaway}{Never nest a Navigator by hand.}
+    The shell already is one, and reimplementing this by hand is a common source of navigation bugs.
+  \end{takeaway}
+  \note{This is the behavior users expect from any tabbed app. Ask the room to name an app where switching tabs loses their scroll position; it always reads as a bug, not a feature choice.}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=Routing]{redirect: one guard for the whole app}
+  \begin{columns}[T]
+    \begin{column}{0.60\textwidth}
+\begin{dart}
+final router = GoRouter(
+  refreshListenable: authRefresh,
+  redirect: (context, state) {
+    final user =
+        FirebaseAuth.instance.currentUser;
+    final atLogin =
+        state.matchedLocation == '/login';
+    if (user == null && !atLogin) {
+      return '/login';
+    }
+    if (user != null && atLogin) return '/';
+    return null;
+  },
+);
+\end{dart}
+    \end{column}
+    \begin{column}{0.36\textwidth}
+      \lead{The bridge back to Lecture 10}{redirect runs before every navigation, including the first one. One place decides who may see what.}
+      \muted{authRefresh wraps authStateChanges() in a ChangeNotifier, so sign-out re-runs the guard right away.}
+      \muted{Return null to allow, a location to send them elsewhere.}
+    \end{column}
+  \end{columns}
+  \note{GoRouterRefreshStream is a small ChangeNotifier that calls notifyListeners on every stream event, about ten lines in the go_router examples. Tie this to Lecture 10: authStateChanges is the source of truth, and this is where the router subscribes to it.}
+\end{frame}
+
+\begin{frame}[eyebrow=Synthesis]{One tap through all three parts}
+  \vskip 2mm
+  \begin{grid}[3]
+    \cell[\faIcon{map-marker-alt}]{1 · Permission}{The user taps "Nearby". Show your own rationale, request location, and handle limited, denied and permanently denied before drawing a map.}
+    \cell[\faRoute]{2 · Route}{They tap a friend. context.go('/chat/alice') builds the screen. redirect already checked they are signed in.}
+    \cell[\faBroadcastTower]{3 · Socket}{ChatScreen opens wss://.../chat with a token, listens, sends, heartbeats, reconnects with jitter, and closes cleanly in dispose().}
+  \end{grid}
+  \begin{takeaway}{Three subsystems, one user gesture.}
+    Each of them fails in a way the user can see, and each has exactly one correct place to be handled.
+  \end{takeaway}
+  \note{Walk through this as a single tap in a live demo if possible. The point is that these three subsystems are not separate topics in a real app; they meet on almost every screen.}
+\end{frame}
+
+\begin{frame}[eyebrow=Recap]{Three things to remember}
+  \vskip 2mm
+  \begin{enumerate}
+    \item A WebSocket is one held-open socket, not a faster request. \muted{Keep it alive with wss, heartbeats and jittered backoff, and close it in dispose().}
+    \item Declaring a permission is not requesting it. \muted{Both platforms punish the gap: silent denial on Android, termination on iOS.}
+    \item A route is a location, not a sequence of pushes. \muted{go\_router turns state into a stack, and one redirect guards all of it.}
+  \end{enumerate}
+  \vskip 5mm
+  \kv{Further reading}{\link{https://pub.dev/packages/web_socket_channel}{web\_socket\_channel} \textperiodcentered\ \link{https://pub.dev/packages/permission_handler}{permission\_handler} \textperiodcentered\ \link{https://docs.flutter.dev/ui/navigation}{go\_router docs} \textperiodcentered\ RFC 6455}
+  \note{Restate the three points out loud before closing. They map directly onto the three parts of the lecture and onto the acceptance criteria for Lab 6.}
+\end{frame}
+
+\closingframe{Questions?}{dinu\_stefan.rusu@upb.ro · Microsoft Teams: course channel}
+
+\end{document}

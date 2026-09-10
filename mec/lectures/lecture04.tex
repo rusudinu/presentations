@@ -1,0 +1,542 @@
+% Mobile and Embedded Computing, Lecture 4. Compile: latexmk -xelatex lecture04.tex
+\documentclass[10pt,aspectratio=169,t]{beamer}
+\usetheme{upbminimal}
+
+\course{Mobile and Embedded Computing}
+\decklabel{Lecture 4}
+\title{Device-to-app networking}
+\subtitle{MQTT, CoAP, and TLS on small devices}
+\author{Dinu-Ștefan Rusu}
+\institute{FILS, Universitatea Politehnica București}
+\date{Spring 2027}
+
+\begin{document}
+
+\titleframe
+
+\objectivesframe{
+  \cell[\faSatelliteDish]{Choose a transport}{Why polling a sensor is wrong, what the four push options are, and where MQTT fits.}
+  \cell[\faIcon{project-diagram}]{Use MQTT properly}{Topics and wildcards, QoS levels, retained messages, last will, keep-alive and sessions.}
+  \cell[\faLock]{Secure a small device}{TLS with certificates or pre-shared keys, one identity per device, and credential rotation.}
+  \cell[\faIcon{sync-alt}]{Ship an update}{Two partitions, a signature check and a rollback, so a bad image does not brick the board.}
+}
+
+% =====================================================================
+\divider{Part 1 · Pushing}{Getting a reading off the device}[Why polling is the wrong shape, and the four alternatives]
+
+\begin{frame}[embedded,eyebrow=Pushing]{Why polling a sensor is the wrong shape}
+  \vskip 2mm
+  \begin{columns}[T]
+    \begin{column}{0.56\textwidth}
+      \begin{itemize}
+        \item A sensor produces a value when something happens. Polling asks on a fixed schedule, so the answer is either late or wasted.
+        \item Every poll pays for a full request: a socket, headers, a handler. Several hundred bytes to be told nothing changed.
+        \item The direction is wrong too. The server cannot reach a device that only ever asks questions.
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.40\textwidth}
+      \begin{hint}[The cost is the radio]
+        On a battery the bytes are not the problem. Waking a Wi-Fi radio to hear that nothing changed is the worst trade a device can make, and it makes it every interval, forever.
+      \end{hint}
+    \end{column}
+  \end{columns}
+  \begin{takeaway}{Polling scales with the clock. Events scale with reality.}
+    A device that publishes when it has something to say sends fewer packets, reports faster, and sleeps in between.
+  \end{takeaway}
+  \note{Ask the room what poll interval they would pick for a room thermometer. Whatever number comes back, point out that it is both too slow for an alarm and far too fast for a value that changes twice an hour.}
+\end{frame}
+
+\begin{frame}[eyebrow=Pushing]{Four ways to push, and when each one fits}
+  \vskip 2mm
+  {\usebeamerfont{small}\hyphenpenalty=10000\exhyphenpenalty=10000 \begin{tabular}{@{}lll>{\raggedright\arraybackslash}p{48mm}@{}}
+    \toprule
+    \thead{Transport} & \thead{Direction} & \thead{Runs over} & \multicolumn{1}{l@{}}{\thead{Reach for it when}} \\
+    \midrule
+    WebSocket    & full duplex        & one TCP socket & both sides talk: chat, presence, editing \\
+    SSE          & server to client   & one long HTTP response & a one-way feed, with reconnect for free \\
+    Long polling & server to client   & ordinary requests & a restrictive network blocks the rest \\
+    MQTT         & publish, subscribe & TCP, or WebSocket & devices: tiny frames, QoS, a last will \\
+    \bottomrule
+  \end{tabular}}
+  \begin{takeaway}{MQTT is the one you meet on hardware.}
+    A broker fans one reading out to every subscriber, and a two-byte fixed header suits a part with 520 KB of SRAM.
+  \end{takeaway}
+  \note{If someone asks why not WebSocket for the sensor too: a broker gives you fan-out, a last known value and offline queueing that you would otherwise write yourself. Note that MQTT over WebSocket is common, because the transport and the protocol are separate choices.}
+\end{frame}
+
+\begin{frame}[embedded,eyebrow=Pushing]{Where MQTT fits: a broker in the middle}
+  \vskip 3mm
+  \begin{grid}[3]
+    \cell[\faMicrochip]{The device publishes}{It connects outward to one address, sends a reading on a topic, and knows nothing else about the system.}
+    \cell[\faServer]{The broker fans out}{The only component everyone connects to. It matches topics to subscribers, keeps retained values and queues for absent clients.}
+    \cell[\faIcon{mobile-alt}]{Subscribers receive}{Your Flutter app, a dashboard and a database can all take the same reading without the device changing a line.}
+  \end{grid}
+  \begin{takeaway}{The device never learns who is listening.}
+    That is the whole point of a broker: you add a consumer by subscribing, not by reflashing a board that is glued to a wall.
+  \end{takeaway}
+  \note{Draw the three boxes on the board and then add a fourth subscriber while talking. The picture makes the argument better than the slide does. Mention that the broker is also the single point of failure, which is why the project brief asks for a hosted one.}
+\end{frame}
+
+% =====================================================================
+\divider{Part 2 · MQTT}{The protocol in detail}[Topics, quality of service, retained state, and what a session holds]
+
+\begin{frame}[embedded,eyebrow=MQTT]{The broker, the client, and the connection}
+  \vskip 2mm
+  \begin{columns}[T]
+    \begin{column}{0.56\textwidth}
+      \begin{itemize}
+        \item MQTT stands for Message Queuing Telemetry Transport. It is an OASIS standard, in two versions you will meet: 3.1.1 and 5.0.
+        \item Plain TCP on port 1883, TLS on port 8883, and a WebSocket tunnel where only HTTP gets out.
+        \item A client opens with a CONNECT packet: a client identifier, optional credentials, a keep-alive and the will. The broker answers CONNACK.
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.40\textwidth}
+      \begin{hint}[On the wire]
+        The fixed header is two bytes: a control byte and a length. Everything else is a packet type: PUBLISH, SUBSCRIBE, PINGREQ, DISCONNECT.
+      \end{hint}
+    \end{column}
+  \end{columns}
+  \begin{takeaway}{The client identifier is a name, not an identity.}
+    Anyone can claim it, and a second client using the same one disconnects the first. Authentication is the broker's job: Part 5.
+  \end{takeaway}
+  \note{Point at the client identifier twice. Two boards flashed with the same firmware and the same hard-coded id will fight over the connection all lab, and the symptom looks like a flaky network rather than a bug.}
+\end{frame}
+
+\begin{frame}[fragile,embedded,eyebrow=MQTT]{Topics and wildcards}
+  \vskip 1mm
+\begin{codeblock}
+mec/lab/room1/temp     a topic. Publishers always use a full topic.
+mec/lab/+/temp         '+' matches exactly one level: every room
+mec/lab/#              '#' matches the rest. Last position only
+mec/+/room1/#          both, in one filter
+$SYS/broker/uptime     broker statistics, not matched by a root '#'
+\end{codeblock}
+  \vskip 1mm
+  \muted{Topics are UTF-8 strings split by \code{/}. Levels are case sensitive, there is no schema, and the broker creates a topic the moment somebody publishes to it. Wildcards are valid in a subscription only.}
+  \begin{takeaway}{Identity goes in the topic, data goes in the payload.}
+    A subscriber should be able to select what it wants with a wildcard, instead of receiving everything and parsing its way to the right rows.
+  \end{takeaway}
+  \note{Ask what happens if you publish the temperature as the last level of the topic, such as room1/temp/21.4. It works, and it is unsubscribable: a consumer would have to take the whole subtree. This mistake shows up in about one project a year.}
+\end{frame}
+
+\begin{frame}[embedded,eyebrow=MQTT]{QoS 0, 1 and 2}
+  \vskip 1mm
+  {\usebeamerfont{small}\hyphenpenalty=10000\exhyphenpenalty=10000 \begin{tabular}{@{}lll>{\raggedright\arraybackslash}p{46mm}@{}}
+    \toprule
+    \thead{Level} & \thead{Guarantee} & \thead{Packets} & \multicolumn{1}{l@{}}{\thead{Use it for}} \\
+    \midrule
+    QoS 0 & At most once  & PUBLISH & a reading you resend in two seconds \\
+    QoS 1 & At least once & PUBLISH, PUBACK & telemetry, if duplicates are harmless \\
+    QoS 2 & Exactly once  & a four-packet handshake & an irreversible command, little else \\
+    \bottomrule
+  \end{tabular}}
+  \begin{takeaway}{QoS 1 with an idempotent payload is the right default.}
+    The level delivered is the lower of the two, publisher and subscriber. Put a sequence number in the payload and let the receiver drop repeats.
+  \end{takeaway}
+  \note{Walk through the QoS 2 exchange once so students see four packets for one message. Then ask which of their project messages genuinely cannot be sent twice. Usually the answer is a command such as unlock, and nothing else.}
+\end{frame}
+
+\begin{frame}[embedded,eyebrow=MQTT]{What QoS costs, and what it does not buy}
+  \vskip 2mm
+  \begin{columns}[T]
+    \begin{column}{0.55\textwidth}
+      \begin{itemize}
+        \item QoS is per hop. It covers device to broker, and broker to phone, as two separate promises. The publisher never learns that the phone received anything.
+        \item Above QoS 0 the client stores the message until it is acknowledged, and has to stay awake for that acknowledgement. Both cost a device that wants to sleep.
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.41\textwidth}
+      \begin{hint}[End to end]
+        If you need to know the app got the value, the app has to say so on another topic. A sequence number gives gap detection, which no QoS level provides.
+      \end{hint}
+    \end{column}
+  \end{columns}
+  \begin{takeaway}{Delivery guarantees stop at the broker.}
+    Make a missing reading visible and recoverable in the application, instead of assuming a protocol flag removed the problem.
+  \end{takeaway}
+  \note{This is the slide students argue with. Ask them to trace one message through both hops and say where the guarantee ends. The same reasoning returns in Lecture 9, where an acknowledgement is the only thing that allows a sync engine to drop an outbox row.}
+\end{frame}
+
+\begin{frame}[embedded,eyebrow=MQTT]{Retained messages and the last will}
+  \vskip 2mm
+  \begin{columns}[T]
+    \begin{column}{0.48\textwidth}
+      \kv{Retained}{}
+      \muted{The broker keeps the last message published with the retain flag, one per topic, and hands it to every new subscriber immediately. Publish an empty retained payload to clear it. Use it for state, such as the last reading or a configuration value, never for events.}
+    \end{column}
+    \begin{column}{0.48\textwidth}
+      \kv{Last will}{}
+      \muted{Set in CONNECT: a topic, a payload, a QoS and a retain flag. The broker publishes it when the connection drops without a DISCONNECT packet, which covers a crash, a flat battery and a keep-alive timeout.}
+    \end{column}
+  \end{columns}
+  \vskip 3mm
+  \begin{takeaway}{Together they give you a status topic the app can trust.}
+    Publish a retained \code{online} on connect, register a retained \code{offline} as the will, and the app has a live presence indicator without writing any presence code.
+  \end{takeaway}
+  \note{Demonstrate the will by pulling the board's cable rather than stopping the program. Students remember the difference between a clean DISCONNECT and a dropped socket much better after they have seen the offline message appear on its own.}
+\end{frame}
+
+\begin{frame}[embedded,eyebrow=MQTT]{Keep-alive, sessions and reconnects}
+  \vskip 2mm
+  \begin{columns}[T]
+    \begin{column}{0.56\textwidth}
+      \begin{itemize}
+        \item Keep-alive is a number of seconds in CONNECT. The client sends something inside that window, a PINGREQ if it has nothing else, and the broker closes the connection after one and a half intervals of silence.
+        \item A long keep-alive delays detection of a dead device. A short one keeps the radio busy. Pick it from how fast the app must notice.
+        \item Reconnect with the same identifier and a clean start of false, and the broker restores the subscriptions and any queued messages.
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.40\textwidth}
+      \begin{hint}[Battery first]
+        A session held open exists to receive commands quickly. If the device only publishes, connect, send, disconnect and sleep. The handshake is paid once; the keep-alive is paid forever.
+      \end{hint}
+    \end{column}
+  \end{columns}
+  \note{Connect this to the wake, send, sleep loop from Lecture 3. The point to make out loud is that staying connected is a feature you buy with battery, so buy it only when the device has to be told something.}
+\end{frame}
+
+\begin{frame}[eyebrow=MQTT]{MQTT 5, in one slide}
+  \vskip 2mm
+  \begin{grid}[3]
+    \cell[\faExclamationCircle]{Reason codes}{Every acknowledgement carries a code, so a refused connection or a denied publish says why.}
+    \cell[\faClock]{Expiry intervals}{A session and a message can both expire, so a queue for an absent device empties itself.}
+    \cell[\faIcon{compress-alt}]{Topic aliases}{A short integer replaces a long topic after the first publish. Fewer bytes per message.}
+    \cell[\faIcon{exchange-alt}]{Request and response}{A response topic and correlation data are protocol fields, not a convention you invent.}
+    \cell[\faLayerGroup]{Shared subscriptions}{A group of consumers splits one topic between them, which is how the server side scales.}
+    \cell[\faIcon{tags}]{User properties}{Arbitrary key and value pairs on a packet: the closest thing MQTT has to a header.}
+  \end{grid}
+  \note{Say plainly that 3.1.1 is still everywhere, and that a broker advertising version 5 does not mean both client libraries support the feature you want. Check the device library first, because it is always the poorest of the three.}
+\end{frame}
+
+% =====================================================================
+\divider{Part 3 · Both ends}{From the board to the phone}[A broker on your laptop, TinyGo publishing, Flutter subscribing]
+
+\begin{frame}[fragile,eyebrow=Both ends]{A broker on your own machine}
+  \vskip 1mm
+\begin{shell}
+sudo apt install mosquitto mosquitto-clients
+
+# /etc/mosquitto/conf.d/lab.conf
+listener 1883
+allow_anonymous false
+password_file /etc/mosquitto/passwd
+
+sudo mosquitto_passwd -c /etc/mosquitto/passwd dev
+mosquitto_sub -h localhost -u dev -P pass -t 'mec/lab/#' -v
+mosquitto_pub -h localhost -u dev -P pass -t mec/lab/r1/temp -m '{"c":21.4}'
+\end{shell}
+  \vskip 1mm
+  \muted{Subscribe in one terminal, publish in another, and watch the line appear. Getting that far before any board or app code exists removes half the debugging from Lab 2.}
+  \note{Insist on allow_anonymous false from the first minute. A broker that accepts anyone is a habit, and the habit is what ends up on a public address later. The -v flag prints the topic next to the payload, which is what you want when wildcards are involved.}
+\end{frame}
+
+\begin{frame}[fragile,embedded,eyebrow=Both ends]{TinyGo: join the network and publish}
+  \vskip 1mm
+  \begin{columns}[T]
+    \begin{column}{0.57\textwidth}
+\begin{golang}
+// netlink and net/mqtt, tinygo.org/x
+link, _ := netlink.New()
+link.NetConnect(&netlink.ConnectParams{
+  Ssid: ssid, Passphrase: pass,
+})
+
+opts := mqtt.NewClientOptions().
+  AddBroker("tcp://192.168.1.10:1883").
+  SetClientID("mec-sensor-01")
+c := mqtt.NewClient(opts)
+t := c.Connect(); t.Wait()
+p := fmt.Sprintf(`{"c":%.1f}`, tempC)
+c.Publish(topic, 1, false, p)
+\end{golang}
+    \end{column}
+    \begin{column}{0.39\textwidth}
+      \lead{Wi-Fi is a driver, not a given.}{On the RISC-V ESP32 parts the radio comes from the espradio package. Check your target first.}
+      \begin{hint}[Order of failure]
+        Network first, broker second, sensor third. Print at every step: a silent board says nothing.
+      \end{hint}
+    \end{column}
+  \end{columns}
+  \note{Keep this snippet as a shape rather than a recipe: the package paths move faster than the protocol does. What does not move is the sequence: join, connect, publish, and check the error at each stage.}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=Both ends]{Flutter: connect, subscribe, decode}
+  \vskip 1mm
+\begin{dart}
+final c = MqttServerClient('10.0.2.2', 'phone-1')  // mqtt_client
+  ..port = 1883
+  ..keepAlivePeriod = 30
+  ..onDisconnected = _scheduleReconnect;
+await c.connect('dev', 'pass');
+c.subscribe('mec/lab/+/temp', MqttQos.atLeastOnce);  // + = one level
+c.updates!.listen((events) {
+  final m = events.first.payload as MqttPublishMessage;
+  final text = MqttPublishPayload.bytesToStringAsString(m.payload.message);
+  _bloc.add(ReadingReceived(jsonDecode(text)));
+});
+\end{dart}
+  \muted{\code{10.0.2.2} is the host machine seen from the Android emulator. On a real phone use the laptop's address on the lab network.}
+  \note{The stream goes straight into a BLoC event, exactly like the WebSocket screen from the ADMD labs. Say that out loud: the transport changed, the state management did not, and that is the payoff of keeping the two separate.}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=Both ends]{Reconnect, and the app going to background}
+\begin{dart}
+Future<void> _scheduleReconnect() async {
+  var delay = const Duration(seconds: 1);
+  while (!_disposed && !_connected) {
+    await Future.delayed(delay + _jitter());
+    try { await c.connect(user, pass); } catch (_) {}
+    delay = delay * 2;          // cap this at about a minute
+  }
+}
+\end{dart}
+  \begin{takeaway}{Every long-lived connection needs a reconnect policy.}
+    Backoff, jitter, a ceiling, and cancellation in dispose. The socket also dies while the app is in the background, so reconnect on resume and use a push notification for anything that must reach the user while the app is away.
+  \end{takeaway}
+  \note{Ask what happens without the jitter when the broker restarts. Thirty devices retry on the same schedule forever. This is the thundering herd from Lecture 10, met early and on hardware.}
+\end{frame}
+
+\begin{frame}[eyebrow=Both ends]{The lab broker is not the project broker}
+  \vskip 2mm
+  {\usebeamerfont{small}\hyphenpenalty=10000\exhyphenpenalty=10000 \begin{tabular}{@{}l>{\raggedright\arraybackslash}p{42mm}>{\raggedright\arraybackslash}p{46mm}@{}}
+    \toprule
+    \thead{Concern} & \multicolumn{1}{l}{\thead{Local Mosquitto, Lab 2}} & \multicolumn{1}{l@{}}{\thead{Hosted broker, project}} \\
+    \midrule
+    Reachable from & the lab network only & anywhere, over the internet \\
+    Authentication & a password file you write & an account per device, managed \\
+    Transport      & plain TCP on 1883 & TLS on 8883, without exception \\
+    Persistence    & off unless configured & queues survive a restart \\
+    Who may subscribe & anyone holding the password & only what the ACL permits \\
+    \bottomrule
+  \end{tabular}}
+  \begin{takeaway}{Develop against the local one, demo against the hosted one.}
+    A plain 1883 listener is a lab tool. The moment it is reachable from outside the room it is an open microphone and an open command channel.
+  \end{takeaway}
+  \note{Several hosted brokers offer a free tier that is more than enough for a project. Tell teams to create it during the project session, not the night before the defense, because per-device credentials take longer to get right than the code does.}
+\end{frame}
+
+% =====================================================================
+\divider{Part 4 · CoAP}{Request and response on UDP}[When a datagram protocol beats a broker]
+
+\begin{frame}[embedded,eyebrow=CoAP]{CoAP: REST for constrained devices}
+  \vskip 1mm
+  \begin{grid}[3]
+    \cell[\faCode]{A familiar shape}{GET, POST, PUT and DELETE on URIs, with response codes that mirror HTTP. RFC 7252.}
+    \cell[\faBolt]{Four bytes of header}{Over UDP, so there is no connection to set up. A device can wake, send one datagram, and sleep.}
+    \cell[\faIcon{check-double}]{Reliability per message}{A confirmable message is acknowledged and retransmitted. A non-confirmable one is not.}
+    \cell[\faSatelliteDish]{Observe}{An extension that turns a resource into a subscription: the server keeps sending updates.}
+    \cell[\faLayerGroup]{Block-wise transfer}{A payload larger than one datagram is split into blocks.}
+    \cell[\faLock]{DTLS}{Security is DTLS on port 5684, with pre-shared keys or certificates.}
+  \end{grid}
+  \note{Students who have taken Internet Protocols will recognize every piece here. Keep the emphasis on the device side: no connection state means a node can answer from deep sleep, which no TCP protocol can do.}
+\end{frame}
+
+\begin{frame}[eyebrow=CoAP]{CoAP or MQTT}
+  \vskip 1mm
+  {\usebeamerfont{small}\hyphenpenalty=10000\exhyphenpenalty=10000 \begin{tabular}{@{}l>{\raggedright\arraybackslash}p{42mm}>{\raggedright\arraybackslash}p{46mm}@{}}
+    \toprule
+    \thead{Question} & \multicolumn{1}{l}{\thead{MQTT}} & \multicolumn{1}{l@{}}{\thead{CoAP}} \\
+    \midrule
+    Shape          & publish and subscribe & request and response \\
+    Transport      & TCP, with TLS & UDP, with DTLS \\
+    Extra parts    & a broker you must run & none, the device serves \\
+    Fan-out        & the broker does it & you do it \\
+    Through NAT    & an outbound connection works & hard to reach from outside \\
+    Best at        & a stream of readings for many & one value on demand \\
+    \bottomrule
+  \end{tabular}}
+  \begin{takeaway}{This course uses MQTT, and the reason is NAT.}
+    A phone and a board behind two routers cannot address each other. Both reach a broker outbound.
+  \end{takeaway}
+  \note{CoAP is worth knowing because the other end is not always a phone. On a local mesh, or between a gateway and its nodes, request and response over UDP is often the cheaper design.}
+\end{frame}
+
+% =====================================================================
+\divider{Part 5 · Trust}{Identity, encryption, updates}[What it takes to put a board on a real network and keep it there]
+
+\begin{frame}[embedded,eyebrow=Trust]{What an open broker gives away}
+  \vskip 2mm
+  \begin{columns}[T]
+    \begin{column}{0.55\textwidth}
+      \begin{itemize}
+        \item Anyone who can reach the port can subscribe to \code{\#} and read every reading every device publishes.
+        \item They can publish too. If the device acts on a command topic, they now own the device.
+        \item Without TLS the credentials travel in clear text inside CONNECT, so a password file on its own protects nothing.
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.41\textwidth}
+      \begin{warning}[Not for the demo]
+        Do not forward port 1883 from your home router so the project works from the classroom. Use TLS on 8883 with an account per device, or a tunnel you control.
+      \end{warning}
+    \end{column}
+  \end{columns}
+  \begin{takeaway}{A broker is a command channel, not just a data feed.}
+    Treat write access with the seriousness you would give a shell on the board, because in practice that is what it is.
+  \end{takeaway}
+  \note{Search engines index reachable brokers. Show one anonymized example if you have it, or simply state that scanning the whole address space for port 1883 takes hours, not weeks. Students underestimate how quickly an exposed port is found.}
+\end{frame}
+
+\begin{frame}[embedded,eyebrow=Trust]{TLS on a device with kilobytes of RAM}
+  \begin{columns}[T]
+    \begin{column}{0.56\textwidth}
+      \begin{itemize}
+        \item TLS 1.3 finishes the handshake in one round trip. The expensive parts are the certificate chain the device verifies, and the buffers it holds while doing so.
+        \item A record can be up to 16 KB, so a careless stack wants two buffers that size. A constrained client asks for a smaller limit.
+        \item Elliptic curve key exchange costs tens of milliseconds, and RSA costs more. The ESP32 has hardware for the symmetric work.
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.40\textwidth}
+      \begin{hint}[The clock problem]
+        Validity is checked against the current time. A board with no real-time clock must fetch the time first, or every handshake fails with an expiry error.
+      \end{hint}
+    \end{column}
+  \end{columns}
+  \begin{takeaway}{Ship one root, not a trust store.}
+    The device only talks to your broker, so it needs the one authority that signed it.
+  \end{takeaway}
+  \note{The clock problem is the single most common TLS failure on a board. Ask what a device should do when the time is unknown and the network needs TLS to be reachable. The usual answer is a plain time source first, then everything else over TLS.}
+\end{frame}
+
+\begin{frame}[embedded,eyebrow=Trust]{Certificates versus pre-shared keys}
+  \vskip 1mm
+  {\usebeamerfont{small}\hyphenpenalty=10000\exhyphenpenalty=10000 \begin{tabular}{@{}l>{\raggedright\arraybackslash}p{42mm}>{\raggedright\arraybackslash}p{44mm}@{}}
+    \toprule
+    \thead{} & \multicolumn{1}{l}{\thead{X.509 certificates}} & \multicolumn{1}{l@{}}{\thead{Pre-shared keys}} \\
+    \midrule
+    Handshake size & a chain of one to three certs & a key identity, tens of bytes \\
+    Compute        & a signature to verify each time & symmetric only, cheap \\
+    On the device  & a key, a certificate, and a root & one secret per device \\
+    Retiring one   & a short lifetime, or a deny list & delete the key at the broker \\
+    Forward secrecy & yes, with ephemeral exchange & only with an ephemeral PSK suite \\
+    \bottomrule
+  \end{tabular}}
+  \begin{takeaway}{Both work. Neither survives a shared secret in the firmware.}
+    One key compiled into an image on a thousand boards means one extracted board compromises all of them.
+  \end{takeaway}
+  \note{Pre-shared keys are underrated for small fleets: no certificate authority, no expiry, far less code. The trade is that you need a real way to get a distinct secret onto each unit, which is the next slide.}
+\end{frame}
+
+\begin{frame}[embedded,eyebrow=Trust]{One identity per device}
+  \vskip 2mm
+  \begin{columns}[T]
+    \begin{column}{0.56\textwidth}
+      \begin{enumerate}
+        \item Generate the key on the device where the chip supports it, so the private half never leaves the part. Otherwise inject one at manufacture.
+        \item Register the public key, or have a certificate signed. The serial number of the part is the identity everything else is keyed on.
+        \item Store it where application code cannot leak it: a dedicated partition, with flash encryption on.
+        \item The broker maps that credential to an account and an ACL.
+      \end{enumerate}
+    \end{column}
+    \begin{column}{0.40\textwidth}
+      \begin{hint}[Wi-Fi is separate]
+        The user's network credentials arrive at set-up time, over BLE or a temporary access point, and are stored next to the identity. They are not the identity.
+      \end{hint}
+    \end{column}
+  \end{columns}
+  \note{For the project a manual step is fine: one account and one topic prefix per board, written down in the team's README. The point is that the process exists and is per device, not that it is automated.}
+\end{frame}
+
+\begin{frame}[fragile,embedded,eyebrow=Trust]{Rotating credentials and the ACL}
+  \vskip 1mm
+  \begin{columns}[T]
+    \begin{column}{0.46\textwidth}
+\begin{codeblock}
+# mosquitto ACL file
+user sensor01
+topic write mec/dev/sensor01/#
+topic read  mec/cmd/sensor01/#
+\end{codeblock}
+    \end{column}
+    \begin{column}{0.50\textwidth}
+      \muted{A credential with no expiry is a credential you will never replace. Give it a lifetime you can actually meet, and build the renewal path before the first board ships.}
+      \vskip 2mm
+      \muted{Rotation has to be interruptible. The device keeps the old credential until the new one has completed a handshake, then discards it.}
+    \end{column}
+  \end{columns}
+  \begin{takeaway}{An ACL limits the blast radius.}
+    Revocation lists do not work well on devices, so rely on short lifetimes plus a deny list at the broker. Even a stolen device key should then only be able to publish under its own prefix.
+  \end{takeaway}
+  \note{Ask what a device should do when its credential expires while it is offline in a basement. Any honest answer involves a local grace period and a way to re-provision by hand, which is exactly why expiry dates have to be realistic.}
+\end{frame}
+
+\begin{frame}[embedded,eyebrow=Trust]{Over the air: two slots and a bootloader}
+  \vskip 1mm
+  {\usebeamerfont{small}\hyphenpenalty=10000\exhyphenpenalty=10000 \begin{tabular}{@{}l>{\raggedright\arraybackslash}p{48mm}>{\raggedright\arraybackslash}p{38mm}@{}}
+    \toprule
+    \thead{Partition} & \multicolumn{1}{l}{\thead{Holds}} & \multicolumn{1}{l@{}}{\thead{Written by}} \\
+    \midrule
+    bootloader & the code that picks a slot and verifies it & the factory only \\
+    app A      & one application image & the updater, while B runs \\
+    app B      & the other application image & the updater, while A runs \\
+    ota data   & which slot to boot, and whether it is confirmed & the running application \\
+    settings   & Wi-Fi credentials, identity, counters & the application \\
+    \bottomrule
+  \end{tabular}}
+  \begin{takeaway}{Plan the flash for two applications on day one.}
+    The device never overwrites the image it is running. It fills the inactive slot, verifies it, flips one pointer and reboots.
+  \end{takeaway}
+  \note{Point out the cost: an update path roughly halves the space available for the application. Teams that fill 90 percent of flash with features discover this late, and the fix is a smaller program, not a bigger part.}
+\end{frame}
+
+\begin{frame}[embedded,eyebrow=Trust]{Rollback and signing}
+  \vskip 2mm
+  \begin{columns}[T]
+    \begin{column}{0.48\textwidth}
+      \kv{Rollback}{}
+      \muted{The new image boots and runs a self test: network up, sensor readable, broker reachable. Only then does it mark itself confirmed. Until that happens a watchdog reset sends the bootloader back to the previous slot. A version counter that only moves up stops an attacker replaying an old, vulnerable image.}
+    \end{column}
+    \begin{column}{0.48\textwidth}
+      \kv{Signing}{}
+      \muted{The build signs the image with a private key that stays on the build machine. The bootloader verifies it against a public key held in the chip, and secure boot makes that check impossible to skip. The transport is not the trust boundary: verify the image even when it arrived over TLS.}
+    \end{column}
+  \end{columns}
+  \begin{takeaway}{An unsigned update path is remote code execution with a nice name.}
+    Whoever can answer the update request owns every board you shipped, whether or not they ever touched one.
+  \end{takeaway}
+  \note{Ask what a self test should check. The useful answer is whatever failure would make the device unreachable, because that is the only class of bug rollback can save you from. A wrong sensor reading is not one of them.}
+\end{frame}
+
+\begin{frame}[fragile,embedded,eyebrow=Trust]{Topic design for your project}
+  \vskip 1mm
+\begin{codeblock}
+mec/<team>/<device>/telemetry/<sensor>   device publishes, QoS 1
+mec/<team>/<device>/status               retained, and the last will
+mec/<team>/<device>/cmd/<name>           app publishes, device listens
+mec/<team>/<device>/cmd/<name>/ack       device answers, same request id
+\end{codeblock}
+  \vskip 2mm
+  \muted{Put identity in the topic and values in the payload. Keep the levels short, because every publish carries the whole string. Give each device exactly one retained status topic, and point its last will at that topic so the app gets a presence indicator for free.}
+  \begin{takeaway}{Write the topic tree down before you write the firmware.}
+    It is the contract between the two halves of your project, and changing it later means reflashing a board and editing an app on the same afternoon.
+  \end{takeaway}
+  \note{Have each team read their topic tree out loud in the project session. Most problems are visible immediately: a value in the topic name, no team prefix, or a command topic that any device could subscribe to.}
+\end{frame}
+
+% =====================================================================
+\begin{frame}[eyebrow=Recap]{Three things to remember}
+  \vskip 2mm
+  \begin{enumerate}
+    \item MQTT is publish and subscribe through a broker. \muted{The device never learns who is listening, and a retained message plus a last will give the app a status topic it can trust.}
+    \item Quality of service is per hop, not end to end. \muted{QoS 1 plus an idempotent payload with a sequence number is the right default for telemetry.}
+    \item Identity and updates are part of the design. \muted{One credential per device over TLS, and a signed image in a second partition with a rollback that actually works.}
+  \end{enumerate}
+  \vskip 4mm
+  \kv{Further reading}{\link{https://mqtt.org/}{mqtt.org} · \link{https://mosquitto.org/man/mosquitto-conf-5.html}{mosquitto.conf reference} · \link{https://datatracker.ietf.org/doc/html/rfc7252}{RFC 7252, CoAP} · \link{https://pub.dev/packages/mqtt_client}{pub.dev/packages/mqtt\_client}}
+  \note{Ask for the three points back before the closing slide. If the second one does not come back, repeat the two-hop diagram, because Lab 2 has an acceptance criterion that depends on understanding it.}
+\end{frame}
+
+\begin{frame}[eyebrow=Next]{Before Lab 2}
+  \vskip 2mm
+  \begin{grid}[3]
+    \cell[\faServer]{A broker running}{Mosquitto on your laptop, anonymous access off, and mosquitto\_sub printing what mosquitto\_pub sends.}
+    \cell[\faMicrochip]{A sensor reading}{The I2C sensor from Lecture 3 printing a value to the serial console every two seconds.}
+    \cell[\faIcon{mobile-alt}]{An app ready to listen}{mqtt\_client added to the pubspec, and a BLoC event for a reading arriving on a stream.}
+  \end{grid}
+  \vskip 4mm
+  \kv{Also this week}{Agree the topic tree inside your team and write it into the repository README, so both halves of Lab 2 are built against the same names.}
+  \note{The three items are independent, so a team can split them across three people and still finish the lab. Say that explicitly, because teams tend to watch one person type.}
+\end{frame}
+
+\closingframe{Questions?}{dinu\_stefan.rusu@upb.ro · Microsoft Teams: course channel · rusudinu.com}
+
+\end{document}

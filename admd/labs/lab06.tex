@@ -1,0 +1,234 @@
+% Lab 6: Authentication, routing, and a live screen. Compile: latexmk -xelatex lab06.tex
+\documentclass[10pt,aspectratio=169,t]{beamer}
+\usetheme[lab]{upbminimal}
+
+\course{Application Development for Mobile Devices}
+\decklabel{Lab 6}
+\title{Auth, routing \& a live screen}
+\subtitle{Firebase Auth, go\_router guards, and a WebSocket screen}
+\author{Dinu-Ștefan Rusu}
+\institute{FILS, Universitatea Politehnica București}
+\date{Week 12}
+
+\begin{document}
+
+\titleframe
+
+\begin{frame}[eyebrow=Today]{What this lab is for}
+  \vskip 2mm
+  \begin{grid}[2]
+    \cell[\faLock]{Gate the app on identity}{Wire Firebase Auth (email and password, plus Google) so authStateChanges drives what the user sees.}
+    \cell[\faIcon{route}]{Guard routes, show live data}{Add go\_router with a redirect guard, then a screen that updates from a WebSocket without a refresh.}
+  \end{grid}
+  \vskip 6mm
+  \taskmeta{Time}{2 hours}{Submit}{Branch \code{lab-6}, admd-labs repo, before next lab}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=Setup]{Before you write a line}
+  \begin{steps}
+    \item Branch from the Lab 5 state: \code{git checkout -b lab-6}
+    \item Add packages: \code{firebase\_auth}, \code{google\_sign\_in}, \code{go\_router}, \code{web\_socket\_channel}.
+    \item Run \code{flutterfire configure} again to regenerate \code{firebase\_options.dart}.
+    \item Register your Android debug \emph{and} release SHA-1 fingerprints in the Firebase console. Google sign-in fails silently without them.
+  \end{steps}
+  \begin{hint}
+\begin{shell}
+keytool -list -v -keystore ~/.android/debug.keystore -alias androiddebugkey
+\end{shell}
+  \end{hint}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=Task I]{Sign-up and sign-in with Firebase Auth}
+  \begin{columns}[T]
+    \begin{column}{0.55\textwidth}
+\begin{dart}
+Future<void> signUp(String email, String pw) async {
+  try {
+    await FirebaseAuth.instance
+        .createUserWithEmailAndPassword(
+            email: email.trim(), password: pw);
+  } on FirebaseAuthException catch (e) {
+    throw mapAuthError(e.code);
+  }
+}
+\end{dart}
+    \end{column}
+    \begin{column}{0.41\textwidth}
+      \begin{steps}
+        \item Email, password, a sign-up/sign-in toggle, and \code{mapAuthError} for one message per code.
+      \end{steps}
+    \end{column}
+  \end{columns}
+  \begin{takeaway}{One generic message for a failed sign-in.}
+    Do not reveal whether an email is registered.
+  \end{takeaway}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=Task I]{Google sign-in and the auth gate}
+  \begin{columns}[T]
+    \begin{column}{0.55\textwidth}
+\begin{dart}
+Future<UserCredential> signInWithGoogle() async {
+  final account =
+      await GoogleSignIn.instance.authenticate();
+  final token = account.authentication.idToken;
+  final cred = GoogleAuthProvider.credential(
+      idToken: token);
+  return FirebaseAuth.instance
+      .signInWithCredential(cred);
+}
+\end{dart}
+    \end{column}
+    \begin{column}{0.41\textwidth}
+      \kv{Done when}{}
+      \begin{checklist}
+        \item Google sign-in returns a signed-in user on a real device.
+        \item Sign-out clears both sessions.
+      \end{checklist}
+      \vskip 3mm
+      \muted{Call \code{initialize()} once at app start, before the first sign-in.}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=Task I]{authStateChanges drives the app}
+\begin{dart}
+StreamBuilder<User?>(
+  stream: FirebaseAuth.instance.authStateChanges(),
+  builder: (context, snapshot) {
+    if (snapshot.connectionState == ConnectionState.waiting) {
+      return const SplashScreen();
+    }
+    final user = snapshot.data;
+    return user == null ? const LoginScreen() : const HomeScreen();
+  },
+)
+\end{dart}
+  \begin{takeaway}{Listen to the stream. Never cache currentUser.}
+    A cached field goes stale after a sign-out elsewhere or a token refresh. This stream is what Task II hooks the router into.
+  \end{takeaway}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=Task II]{go\_router with a redirect guard}
+  \begin{columns}[T]
+    \begin{column}{0.6\textwidth}
+\begin{dart}
+final router = GoRouter(
+  refreshListenable: GoRouterRefreshStream(
+      FirebaseAuth.instance.authStateChanges()),
+  redirect: (context, state) {
+    final signedIn =
+        FirebaseAuth.instance.currentUser != null;
+    final atLogin = state.matchedLocation == '/login';
+    if (!signedIn && !atLogin) return '/login';
+    if (signedIn && atLogin) return '/';
+    return null;
+  },
+);  // routes: [...]
+\end{dart}
+    \end{column}
+    \begin{column}{0.36\textwidth}
+      \begin{steps}
+        \item Add \code{/login}, \code{/}, \code{/live} routes.
+        \item Wire \code{refreshListenable} to \code{authStateChanges}.
+        \item Sign-out button on Home calls \code{signOut()}.
+      \end{steps}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}[eyebrow=Task II]{Why the guard belongs to the router}
+  \begin{grid}[2]
+    \cell[\faIcon{unlock}]{Without \code{refreshListenable}}{The redirect only runs on navigation. A background sign-out leaves the private screen on display until the user taps something.}
+    \cell[\faIcon{sync}]{With it}{Every auth change re-runs \code{redirect} immediately, including the very first frame and any deep link.}
+  \end{grid}
+  \vskip 6mm
+  \kv{Done when}{}
+  \begin{checklist}
+    \item Signing out from Home returns to \code{/login} without a manual navigation call.
+    \item Opening \code{admd://live} while signed out lands on \code{/login}, not on \code{LiveScreen}.
+    \item Signing in from \code{/login} lands back on \code{/}, never on \code{/login} itself.
+  \end{checklist}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=Task III]{One screen, live messages}
+\begin{dart}
+final channel = WebSocketChannel.connect(
+    Uri.parse('ws://10.0.2.2:8080/echo'));
+await channel.ready;
+StreamBuilder(
+  stream: channel.stream,
+  builder: (context, snapshot) => Text(
+      snapshot.data as String? ?? 'Waiting...'),
+)
+\end{dart}
+  \begin{takeaway}{await channel.ready is the line everyone forgets.}
+    \code{connect()} returns instantly and never throws. Without \code{ready}, a rejected handshake surfaces later as a stream error.
+  \end{takeaway}
+\end{frame}
+
+\begin{frame}[eyebrow=Task III]{Building the live screen}
+  \begin{columns}[T]
+    \begin{column}{0.55\textwidth}
+      \begin{steps}
+        \item Connect in \code{initState}, close in \code{dispose}.
+        \item Keep the last N messages in a list; show them in a \code{ListView}.
+        \item A text field and a send button that write to \code{channel.sink}.
+        \item Show a connection-state banner: connecting, live, disconnected.
+      \end{steps}
+    \end{column}
+    \begin{column}{0.41\textwidth}
+      \kv{Done when}{}
+      \begin{checklist}
+        \item A message typed on one run appears without pressing refresh.
+        \item Leaving the screen closes the socket (check the server log).
+        \item The screen recovers after toggling airplane mode.
+      \end{checklist}
+    \end{column}
+  \end{columns}
+  \begin{hint}
+    Android emulators reach your laptop's \code{localhost} at \code{10.0.2.2}, not \code{127.0.0.1}.
+  \end{hint}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=Reference]{The echo server, in full}
+\begin{golang}
+var upgrader websocket.Upgrader
+func main() {
+  http.HandleFunc("/echo", func(w http.ResponseWriter, r *http.Request) {
+    conn, _ := upgrader.Upgrade(w, r, nil)
+    defer conn.Close()
+    for {
+      mt, msg, err := conn.ReadMessage()
+      if err != nil { return }
+      conn.WriteMessage(mt, msg)
+    }
+  })
+  log.Fatal(http.ListenAndServe(":8080", nil))
+}
+\end{golang}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=Reference]{Why a local echo server}
+  \begin{grid}[2]
+    \cell[\faServer]{No public dependency}{A public echo endpoint can be slow, rate-limited, or offline during grading. This one runs on your laptop, on port 8080.}
+    \cell[\faIcon{vial}]{You can see both sides}{The terminal running \code{go run .} prints every frame, which makes the WebSocket lifecycle from Lecture 11 concrete instead of abstract.}
+  \end{grid}
+  \vskip 4mm
+\begin{shell}
+go mod init echo
+go get github.com/gorilla/websocket
+go run .
+\end{shell}
+\end{frame}
+
+\begin{frame}[eyebrow=Troubleshooting]{Errors and their fixes}
+  \trouble{PlatformException(sign\_in\_failed, ApiException: 10)}{The SHA-1 fingerprint is missing or wrong in the Firebase console. Re-run \code{keytool} and re-download \code{google-services.json}.}
+  \trouble{Too many redirects, or a blank screen at startup}{\code{redirect} returned the location it is already on. Return \code{null} to allow, never the current route.}
+  \trouble{WebSocketChannelException: Connection refused}{The Go server is not running, or the emulator is using \code{127.0.0.1} instead of \code{10.0.2.2}.}
+  \trouble{setState() called after dispose()}{A stream event arrived after the screen closed. Cancel the subscription in \code{dispose} before calling \code{sink.close}.}
+\end{frame}
+
+\closingframe{Push before you leave.}{Branch lab-6 · one commit per task · echo server included in the repo}
+
+\end{document}

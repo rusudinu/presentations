@@ -1,0 +1,189 @@
+% Lab 4: Serialization and networking
+\documentclass[10pt,aspectratio=169,t]{beamer}
+\usetheme[lab]{upbminimal}
+
+\course{Application Development for Mobile Devices}
+\decklabel{Lab 4}
+\title{Serialization and networking}
+\subtitle{Code generation · equality · HTTP · retry}
+\author{Dinu-Ștefan Rusu}
+\institute{FILS, Universitatea Politehnica București}
+\date{Week 8}
+
+\begin{document}
+
+\titleframe
+
+\begin{frame}[eyebrow=Today]{What this lab is for}
+  \vskip 1mm
+  \begin{grid}[2]
+    \cell[\faCode]{Generate JSON code}{Writes fromJson and toJson for you.}
+    \cell[\faIcon{equals}]{Compare by value}{Same fields make two todos equal.}
+    \cell[\faCloud]{Fetch live data}{dio loads the list from a public API.}
+    \cell[\faIcon{redo}]{Retry with backoff}{Delay and jitter survive slow servers.}
+  \end{grid}
+  \vskip 2mm
+  \taskmeta{Time}{2 hours}{Submit}{Push to \code{admd-labs}, branch \code{lab-4}, before Lab 5}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=Setup]{Where your code goes}
+  \begin{steps}
+    \item Continue in \code{admd-labs}. Branch: \code{git checkout -b lab-4}.
+    \item Two new files: \code{lib/models/todo.dart} and \code{lib/api/todo\_api.dart}.
+    \item Add the packages with the two commands below.
+    \item After each model change: \code{dart run build\_runner build --delete-conflicting-outputs}
+  \end{steps}
+\begin{shell}
+flutter pub add json_annotation equatable dio
+flutter pub add dev:build_runner dev:json_serializable
+\end{shell}
+\end{frame}
+
+\begin{frame}[eyebrow=Task I]{Generate and compare the Todo model}
+  \begin{columns}[T]
+    \begin{column}{0.55\textwidth}
+      \begin{steps}
+        \item Define \code{Todo} with \code{userId}, \code{id}, \code{title}, \code{completed}, all final.
+        \item Annotate the class with \code{@JsonSerializable()} and add the \code{part} directive.
+        \item Add typed \code{fromJson} and \code{toJson} factory methods.
+        \item Run build\_runner and confirm \code{todo.g.dart} appears.
+        \item Extend \code{Equatable} and list every field in \code{props}.
+        \item Build two identical todos and print \code{a == b}.
+      \end{steps}
+    \end{column}
+    \begin{column}{0.41\textwidth}
+      \kv{Done when}{}
+      \begin{checklist}
+        \item \code{todo.g.dart} is generated and committed.
+        \item \code{a == b} prints \code{true}.
+        \item \code{flutter analyze} reports no issues.
+      \end{checklist}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=Reference]{Code generation for Todo}
+\begin{dart}
+part 'todo.g.dart';
+@JsonSerializable()
+class Todo {
+  final int userId, id;
+  final String title; final bool completed;
+  const Todo({required this.userId, required this.id,
+      required this.title, required this.completed});
+  factory Todo.fromJson(Map<String, dynamic> j) => _$TodoFromJson(j);
+  Map<String, dynamic> toJson() => _$TodoToJson(this);
+}
+\end{dart}
+  \begin{takeaway}{The generator writes the boring half.}
+    Rebuilt from \code{todo.g.dart} after every model change.
+  \end{takeaway}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=Reference]{Value equality with Equatable}
+\begin{dart}
+class Todo extends Equatable {
+  final int userId, id;
+  final String title;
+  final bool completed;
+  const Todo({required this.userId,
+      required this.id, required this.title,
+      required this.completed});
+  @override
+  List<Object?> get props => [userId, id, title, completed];
+}
+\end{dart}
+  \begin{takeaway}{Same fields, same value.}
+    Without Equatable, \code{==} compares identity: two separate instances are never equal.
+  \end{takeaway}
+\end{frame}
+
+\begin{frame}[eyebrow=Task II]{Fetch todos, then retry with backoff}
+  \begin{columns}[T]
+    \begin{column}{0.55\textwidth}
+      \begin{steps}
+        \item Fetch \code{/todos} from the API and map each item with \code{Todo.fromJson}.
+        \item Load the app's todo list from this call instead of typing entries by hand.
+        \item Wrap the call in \code{withRetry} with a fixed maximum number of attempts.
+        \item Grow the delay exponentially between attempts.
+        \item Add random jitter so retries do not line up.
+        \item Point at an invalid path and log each attempt with its delay.
+      \end{steps}
+    \end{column}
+    \begin{column}{0.41\textwidth}
+      \kv{Done when}{}
+      \begin{checklist}
+        \item Todos render from the live API on launch.
+        \item An invalid path retries several times with growing delays.
+        \item The retry log is saved for the pull request.
+      \end{checklist}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=Reference]{The API}
+\begin{shell}
+GET https://jsonplaceholder.typicode.com/todos
+GET https://jsonplaceholder.typicode.com/todos/1
+GET https://jsonplaceholder.typicode.com/nope
+# One element:
+{
+  "userId": 1,
+  "id": 1,
+  "title": "delectus aut autem",
+  "completed": false
+}
+\end{shell}
+  \begin{takeaway}{Field names match Todo exactly.}
+    No renaming needed. \code{/nope} returns 404: the failure case for Task II.
+  \end{takeaway}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=Reference]{Fetching the list}
+\begin{dart}
+final _dio = Dio(BaseOptions(
+  baseUrl: 'https://jsonplaceholder.typicode.com',
+));
+Future<List<Todo>> fetchTodos() async {
+  final res = await _dio.get('/todos');
+  final raw = res.data as List<dynamic>;
+  return raw
+      .map((j) => Todo.fromJson(j as Map<String, dynamic>))
+      .toList();
+}
+\end{dart}
+  \begin{takeaway}{Decode once, here.}
+    Nothing past this function ever sees raw JSON again.
+  \end{takeaway}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=Reference]{Backoff and jitter}
+\begin{dart}
+Future<T> withRetry<T>(Future<T> Function() op) async {
+  for (var i = 0; i < 5; i++) {
+    try {
+      return await op();
+    } catch (_) {
+      final b = 400 * (1 << i);
+      await Future.delayed(Duration(milliseconds: b + Random().nextInt(b)));
+    }
+  }
+  rethrow;
+}
+\end{dart}
+  \begin{takeaway}{Retry what can succeed later.}
+    A 404 stays a 404.
+  \end{takeaway}
+\end{frame}
+
+\begin{frame}[eyebrow=Troubleshooting]{Errors and fixes}
+  \vskip 1mm
+  \trouble{Target of URI hasn't been generated}{Run \code{build\_runner} from Setup. Confirm \code{todo.g.dart} exists.}
+  \trouble{Conflicting outputs were detected}{Add \code{--delete-conflicting-outputs} to the command.}
+  \trouble{Undefined name \_\$TodoFromJson}{The \code{part} directive must name the file exactly: \code{todo.g.dart}.}
+  \trouble{a == b is still false}{props is missing a field, or Todo does not extend Equatable.}
+\end{frame}
+
+\closingframe{Push before you leave.}{Branch lab-4 · one commit per task · retry log saved under /screenshots}
+
+\end{document}

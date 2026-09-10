@@ -1,0 +1,468 @@
+% Lecture 5: Debugging and state management, part 1. Compile: latexmk -xelatex lecture05.tex
+\documentclass[10pt,aspectratio=169,t]{beamer}
+\usetheme{upbminimal}
+
+\course{Application Development for Mobile Devices}
+\decklabel{Lecture 5}
+\title{State Management, Part 1}
+\subtitle{Debugging, Stateless vs Stateful, and where state should live}
+\author{Dinu-Ștefan Rusu}
+\institute{FILS, Universitatea Politehnica București}
+\date{Autumn 2026}
+
+\begin{document}
+
+\titleframe
+
+\objectivesframe{
+  \cell[\faBug]{Debug on purpose}{Launch and attach DevTools, read the inspector, set breakpoints and step through Dart.}
+  \cell[\faLayerGroup]{The three trees}{Widget, Element and RenderObject, and what setState actually triggers.}
+  \cell[\faToggleOn]{Stateless vs Stateful}{When a widget really needs a State object, and when it genuinely does not.}
+  \cell[\faIcon{share-alt}]{Sharing state}{Lifting state up, InheritedWidget, and why value equality decides rebuilds.}
+}
+
+\divider{Part 1 · Debugging}{Seeing what your app is actually doing}[DevTools, breakpoints, and useful logging]
+
+\begin{frame}[eyebrow=Debugging]{The debugging toolbox}
+  \vskip 2mm
+  \begin{grid}[3]
+    \cell[\faIcon{sync-alt}]{Hot reload}{Injects changed source into the running VM and rebuilds. State objects survive.}
+    \cell[\faPowerOff]{Hot restart}{Rebuilds from scratch and drops all state. Use it whenever initState or a global changed.}
+    \cell[\faTerminal]{debugPrint \& assert}{Cheap, always available, and compiled out of release builds entirely.}
+    \cell[\faPause]{Breakpoints}{Stop on a line, inspect every variable in scope, step through the frame.}
+    \cell[\faIcon{tachometer-alt}]{DevTools}{Inspector, performance, CPU, memory, network: a browser tab attached to your app.}
+    \cell[\faExclamationCircle]{Read the error}{Flutter's exception boxes name the widget and the constraint that failed.}
+  \end{grid}
+  \note{Ask the room how many have ever opened DevTools. Usually very few; that is the gap this section closes. Hot reload versus hot restart is a common source of "my change did not apply".}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=Debugging]{print, debugPrint, and assert}
+  \begin{columns}[T]
+    \begin{column}{0.56\textwidth}
+\begin{dart}
+print('value: $x');       // logcat truncates
+debugPrint('value: $x');  // throttled, lossless
+assert(count >= 0, 'count negative');
+
+// Three switches worth memorizing:
+debugDumpApp();            // widget tree
+debugDumpRenderTree();     // sizes + constraints
+(*@\hl{debugPrintRebuildDirtyWidgets = true;}@*)
+\end{dart}
+    \end{column}
+    \begin{column}{0.40\textwidth}
+      \lead{Why not just print?}{Android's logcat silently drops lines beyond a length limit. \code{debugPrint} throttles output so nothing disappears.}
+      \muted{\code{assert} takes a message. Use it for invariants you want to hear about in the lab and never in production.}
+    \end{column}
+  \end{columns}
+  \begin{takeaway}{Logging is a primary debugging tool.}
+    It is the only tool that works identically on a simulator, a real phone and a colleague's machine.
+  \end{takeaway}
+  \note{debugPrintRebuildDirtyWidgets is the print statement that matters for this lecture: it names every widget that rebuilt, in build order. Show it live if time allows.}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=Debugging]{Launching and attaching DevTools}
+\begin{shell}
+(*@\hl{flutter run}@*)
+#   DevTools debugger and profiler is available at:
+#   http://127.0.0.1:9100?uri=http://127.0.0.1:53412/AbCdEfGh=/
+
+dart devtools   # already running? paste that VM Service URI
+
+# From the IDE, skip all of it:
+#   VS Code:        Cmd/Ctrl+Shift+P -> "Dart: Open DevTools"
+#   Android Studio: the "Flutter Inspector" tool window
+\end{shell}
+  \begin{takeaway}{Attach the tools before you need them.}
+    Performance work needs \code{flutter run --profile}: debug builds are JIT and assertion-heavy, so their timings mean nothing.
+  \end{takeaway}
+  \note{This is the step the labs never spell out. Demo it live: run the app, copy the printed URL, open it in a browser tab. Point out that VS Code and Android Studio can skip the copy-paste entirely.}
+\end{frame}
+
+\begin{frame}[eyebrow=Debugging]{What each DevTools tab is for}
+  \begin{grid}[3]
+    \cell[\faLayerGroup]{Inspector}{The live widget tree and the Layout Explorer for overflow.}
+    \cell[\faIcon{tachometer-alt}]{Performance}{Frame timeline, UI versus raster thread, which frames missed budget.}
+    \cell[\faMicrochip]{CPU Profiler}{Where Dart time goes: a flame chart of your own functions.}
+    \cell[\faDatabase]{Memory}{Heap snapshots and allocation tracking. Find the controller you forgot to dispose.}
+    \cell[\faWifi]{Network}{HTTP and WebSocket traffic, request by request. Back in Lecture 7.}
+    \cell[\faTerminal]{Logging}{The console stream, plus structured events and timeline entries.}
+  \end{grid}
+  \note{Walk through the tabs in the order a real session uses them: Inspector to find the widget, Performance to find the slow frame, CPU Profiler to find the slow function.}
+\end{frame}
+
+\begin{frame}[eyebrow=Debugging]{The Widget Inspector: selecting and layout}
+  \vskip 2mm
+  \begin{itemize}
+    \item Select Widget Mode: tap a pixel on the running device and the inspector jumps to that widget, and your IDE jumps to the source line that built it.
+    \item The Layout Explorer shows flex factors and incoming constraints. It is where you find the cause of a RenderFlex overflow, the yellow-and-black stripes.
+  \end{itemize}
+  \vskip 3mm
+  \begin{takeaway}{You cannot reason about layout from the source alone.}
+    The Layout Explorer shows the constraints your widget actually received, not the ones you assumed.
+  \end{takeaway}
+  \note{Demo Select Widget Mode live if a device is attached. Ask the room what the yellow-and-black stripes mean; most have seen them without knowing the name.}
+\end{frame}
+
+\begin{frame}[eyebrow=Debugging]{The Widget Inspector: rebuilds and repaints}
+  \begin{columns}[T]
+    \begin{column}{0.56\textwidth}
+      \lead{Track widget rebuilds}{Counts how many times each widget rebuilt. That count is the measurement this lecture is about.}
+      \muted{Highlight repaints wraps every layer in a rotating color. Anything flashing constantly is repainting when it should not.}
+    \end{column}
+    \begin{column}{0.40\textwidth}
+      \begin{hint}[Try this in the lab]
+        \begin{steps}
+          \item Run your lab app
+          \item Open the Inspector
+          \item Turn on Track widget rebuilds
+          \item Type one character into a field
+          \item Count what rebuilt
+        \end{steps}
+      \end{hint}
+    \end{column}
+  \end{columns}
+  \note{Ask a volunteer to run the five steps out loud. Most students expect only the text field to rebuild; the parent Scaffold often rebuilds too, which is the point.}
+\end{frame}
+
+\begin{frame}[eyebrow=Debugging]{Why the frame budget matters}
+  \vskip 4mm
+  \begin{grid}[3]
+    \bignum{16.7 ms}{per frame at 60 Hz}
+    \bignum{8.3 ms}{per frame at 120 Hz, most 2026 phones}
+    \bignum{1}{missed frame is visible jank}
+  \end{grid}
+  \note{Correct an old myth here: there is no fixed 16 ms rule. One frame budget is 1 divided by the refresh rate, and most phones students are graded on run at 90 to 120 Hz.}
+\end{frame}
+
+\begin{frame}[eyebrow=Debugging]{Frames, jank, and their causes}
+  \vskip 2mm
+  \begin{itemize}
+    \item The performance overlay draws two bar charts: the UI thread, which runs your Dart build and layout, and the raster thread, where Impeller turns the layer tree into GPU commands. A bar that crosses the line is a dropped frame.
+    \item The usual causes sit squarely in this lecture: setState called too high in the tree, expensive work inside build, and a missing const.
+  \end{itemize}
+  \vskip 3mm
+  \begin{takeaway}{Debug-mode timings are meaningless.}
+    Debug builds are JIT and run with assertions on. Measure jank only with \code{flutter run --profile}.
+  \end{takeaway}
+  \note{Stress that the two threads are separate and both matter: a fast build with an expensive raster step still janks, and vice versa.}
+\end{frame}
+
+\begin{frame}[eyebrow=Debugging]{Breakpoints and stepping}
+  \begin{columns}[T]
+    \begin{column}{0.54\textwidth}
+      \begin{itemize}
+        \item Click the gutter in VS Code or Android Studio to set a breakpoint, then start the app with the debugger attached. Plain \code{flutter run} has no debugger.
+        \item Right-click a breakpoint to make it conditional, for example \code{todo.id == 42}. That beats a print inside a loop.
+        \item While paused, hover any variable, edit it in the Variables pane, and evaluate arbitrary Dart in the console.
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.42\textwidth}
+      \begin{steps}
+        \item Step over: run this line, do not descend into its calls
+        \item Step into: descend into the call on this line
+        \item Step out: finish this function, stop at the caller
+        \item Resume: run until the next breakpoint or exit
+      \end{steps}
+    \end{column}
+  \end{columns}
+  \begin{takeaway}{Hot reload keeps your State objects; hot restart throws them away.}
+    If a change does not appear, that is nearly always the reason.
+  \end{takeaway}
+  \note{Mention \code{debugger()} from dart:developer as a way to break from inside a callback you cannot click on in the gutter.}
+\end{frame}
+
+\divider{Part 2 · State}{What changes, and who owns it}[Three trees, setState, and why Stateless still rebuilds]
+
+\begin{frame}[eyebrow=State]{What counts as state}
+  \vskip 3mm
+  {\usebeamerfont{small}\begin{tabular}{@{}lp{55mm}p{55mm}@{}}
+    \toprule
+    & \thead{Ephemeral: UI state} & \thead{App: shared state} \\
+    \midrule
+    Lives in & one widget's State object & above every widget that reads it \\
+    Looks like & a checkbox tick, a page index, text being typed & the signed-in user, theme mode, a cached feed \\
+    Disposed when & the widget leaves the tree & never, ideally: it outlives navigation \\
+    Reach for & setState & lift it up, then a shared holder \\
+    \bottomrule
+  \end{tabular}}
+  \vskip 4mm
+  \begin{takeaway}{Most state is ephemeral.}
+    If setState in one widget is enough, that is the correct answer, not a beginner's answer.
+  \end{takeaway}
+  \note{Ask for an example of app state from the todo lab: the signed-in user once auth arrives, or the list of todos itself once it is shared across two screens.}
+\end{frame}
+
+\begin{frame}[eyebrow=State]{Widgets are immutable blueprints}
+  \begin{columns}[T]
+    \begin{column}{0.56\textwidth}
+      \begin{itemize}
+        \item A widget is a description of a piece of UI, not the UI itself. Once constructed, its fields never change.
+        \item Changing the screen means constructing a new description, never editing the old one.
+        \item That is what makes the framework's job cheap: comparing two immutable descriptions is fast, and whole subtrees can be skipped.
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.40\textwidth}
+      \lead{const goes further.}{The compiler canonicalizes a const widget, so the identical instance comes back every build.}
+      \muted{\code{const Text('Ready')} is the same instance every build. \code{Text('Ready')} is a new instance every build.}
+    \end{column}
+  \end{columns}
+  \begin{takeaway}{Immutability is what makes rebuilding cheap.}
+    The framework can prove nothing changed only because nothing can change in place.
+  \end{takeaway}
+  \note{Ask the room why const matters for a StatelessWidget that never changes: the framework literally reuses the same object, so it skips the comparison entirely.}
+\end{frame}
+
+\begin{frame}[eyebrow=State]{The three trees}
+  \vskip 2mm
+  \muted{Every Flutter app maintains three parallel trees. Almost every rebuild question is answered by knowing which one you mean.}
+  \vskip 3mm
+  \begin{grid}[3]
+    \cell[\faCode]{Widget}{Immutable configuration, created and thrown away on every build. You write this.}
+    \cell[\faLayerGroup]{Element}{One per position in the tree. Holds your State object and decides: reuse it, or rebuild it.}
+    \cell[\faIcon{paint-brush}]{RenderObject}{Layout, paint and hit testing. Expensive to create, mutated in place whenever possible.}
+  \end{grid}
+  \vskip 2mm
+  \begin{takeaway}{You build the left tree.}
+    The middle tree decides how little of the right tree has to change.
+  \end{takeaway}
+  \note{Correct an old myth: Flutter does not rebuild the widget tree every frame. Widgets are rebuilt, Elements are reused, RenderObjects are mutated in place. That asymmetry is where the performance comes from.}
+\end{frame}
+
+\begin{frame}[eyebrow=State]{What setState actually does}
+  \begin{columns}[T]
+    \begin{column}{0.55\textwidth}
+      \begin{itemize}
+        \item[] \textbf{Flutter does not rebuild the widget tree every frame.}
+        \item setState marks exactly one Element dirty and requests a frame. Only the dirty subtrees run build again.
+        \item Sibling subtrees are never visited: their Elements, State objects and RenderObjects stay untouched.
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.42\textwidth}
+      \begin{steps}
+        \item \code{setState()}: you mutate State fields
+        \item \code{markNeedsBuild()}: Element is dirty
+        \item Next frame: build runs on dirty subtrees only
+        \item Reconcile children: runtimeType, then key
+        \item Layout and paint: only what changed
+      \end{steps}
+    \end{column}
+  \end{columns}
+  \begin{takeaway}{Only dirty subtrees rebuild.}
+    Push the setState call as far down the tree as you can.
+  \end{takeaway}
+  \note{Pedantic but worth saying aloud: the mutation is what matters, not the call itself. setState only schedules the rebuild; an empty setState body still compiles and still does nothing useful.}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=State]{Reuse: runtimeType, then key}
+\begin{dart}
+// Same runtimeType AND same key: Element and State reused.
+// Different runtimeType or key: subtree disposed, new one built.
+ListView(
+  children: [
+    for (final todo in todos)
+      TodoTile(key: ValueKey(todo.id), todo: todo),
+  ],
+);
+// No key: Flutter matches children by position. Delete the first
+// todo and the second row inherits the first row's state.
+\end{dart}
+  \note{When a parent rebuilds, each Element compares its old widget with the new one at the same position. Classic demo: a list of stateful tiles with no keys. Type into one, delete the row above it, and the text jumps to the wrong row. Add ValueKey and repeat to show the fix.}
+\end{frame}
+
+\begin{frame}[eyebrow=State]{Stateless vs Stateful, precisely}
+  \vskip 2mm
+  {\usebeamerfont{small}\begin{tabular}{@{}lp{50mm}p{50mm}@{}}
+    \toprule
+    & \thead{StatelessWidget} & \thead{StatefulWidget} \\
+    \midrule
+    Mutable state & none of its own & a separate, long-lived State object \\
+    build() runs & on insert, and on every parent rebuild & all of that, plus on every setState \\
+    Lifecycle hooks & none & initState, didUpdateWidget, dispose \\
+    Genuinely fits & a label, an icon, a button that only calls a callback & a text field, an animation, a timer \\
+    \bottomrule
+  \end{tabular}}
+  \vskip 4mm
+  \begin{takeaway}{A StatelessWidget does not "build once".}
+    It rebuilds whenever its parent does. It simply holds no mutable state of its own.
+  \end{takeaway}
+  \note{Two corrections from older material. First, StatelessWidget does rebuild, with its parent. Second, a button is usually stateless: the state lives in whatever its callback changes, not in the button.}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=State]{Inside a State object: the code}
+\begin{dart}
+class _CounterFieldState extends State<CounterField> {
+  final _controller = TextEditingController();
+  int _count = 0;
+
+  @override
+  void dispose() {
+    _controller.dispose();   // release what you created
+    super.dispose();
+  }
+  void _increment() => setState(() => _count++);
+  @override
+  Widget build(BuildContext context) => Text('Count: $_count');
+}
+\end{dart}
+  \note{Point at the field declarations first: they survive rebuilds, unlike the widget's own fields. Then point at dispose: whatever you create in a State object, you must release there.}
+\end{frame}
+
+\begin{frame}[eyebrow=State]{Inside a State object: the rules}
+  \vskip 3mm
+  \begin{itemize}
+    \item State lives in the State class, never on the widget. Widget fields are re-created on every rebuild.
+    \item Read the widget's fields through \code{widget.something}; the framework refreshes that reference for you.
+    \item Anything you create, such as controllers, timers or stream subscriptions, you dispose.
+    \item Never call setState from build, and never after dispose: check \code{mounted} after an await.
+  \end{itemize}
+  \note{The mounted check after an await is the single most common source of a real crash in student lab apps: an async callback fires after the widget has already been removed from the tree.}
+\end{frame}
+
+\divider{Part 3 · Sharing State}{When one widget is not enough}[Lifting state up, InheritedWidget, and value equality]
+
+\begin{frame}[fragile,eyebrow=Sharing state]{Lifting state up: the pattern}
+  \muted{Two widgets need the same value, so it moves to their nearest common ancestor. Data flows down as constructor arguments; events flow back up as callbacks.}
+\begin{dart}
+class _ParentState extends State<Parent> {
+  double _target = 20;
+
+  @override
+  Widget build(BuildContext context) => Column(
+    children: [
+      TargetInput(onChanged: (v) => setState(() => _target = v)),
+      TargetChart(target: _target),
+    ],
+  );
+}
+\end{dart}
+  \note{Trace the arrows out loud: onChanged flows up into the parent's callback, the new target flows back down into TargetChart as a constructor argument. Neither child widget knows the other exists.}
+\end{frame}
+
+\begin{frame}[eyebrow=Sharing state]{Lifting state up: the cost}
+  \vskip 3mm
+  \begin{itemize}
+    \item The children stay reusable and know nothing about each other. That is the whole benefit.
+    \item Lift too far and you get prop drilling: a value threaded through five widgets that do not care about it, just to reach the sixth.
+    \item That is precisely the problem InheritedWidget solves.
+  \end{itemize}
+  \vskip 4mm
+  \begin{takeaway}{Lifting state up is the default answer.}
+    Reach for a package only when the drilling becomes a real problem.
+  \end{takeaway}
+  \note{Ask the room to imagine a five-screen-deep widget just to pass a signed-in user object down. That mental image is the entire motivation for the next slide.}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=Sharing state]{InheritedWidget: skip the drilling}
+\begin{dart}
+class TargetScope extends InheritedWidget {
+  const TargetScope({
+    super.key,
+    required this.target,
+    required super.child,
+  });
+  final double target;
+  static double of(BuildContext context) =>
+      context.dependOnInheritedWidgetOfExactType<TargetScope>()!.target;
+
+  @override
+  bool updateShouldNotify(TargetScope old) => old.target != target;
+}
+\end{dart}
+  \note{updateShouldNotify is the whole trick: only the contexts that depended on this scope rebuild, and only when the value actually differs. Provider is a thin wrapper around exactly this mechanism. Usage below it in the tree is just TargetScope.of(context), with no constructor plumbing.}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=Sharing state]{Value equality: the Equatable pattern}
+\begin{dart}
+class CounterState extends Equatable {
+  const CounterState({required this.count, required this.status});
+  final int count;
+  final LoadStatus status;
+
+  @override
+  List<Object?> get props => [count, status];
+}
+
+const a = CounterState(count: 1, status: LoadStatus.ready);
+const b = CounterState(count: 1, status: LoadStatus.ready);
+
+a == b;   // true with Equatable, false without it
+\end{dart}
+  \note{Equatable generates == and hashCode from exactly the props list. Ask what happens if a field is added but not added to props: that is the classic bug this pattern invites.}
+\end{frame}
+
+\begin{frame}[eyebrow=Sharing state]{Value equality: why it matters}
+  \vskip 3mm
+  \begin{itemize}
+    \item Every state consumer asks one question: is this state different from the last one?
+    \item Identity equality answers yes every time. Two structurally identical objects are still two objects, so the UI rebuilds when nothing changed.
+    \item The mirror failure: mutate a state object in place and re-emit the same instance, and identity answers no, so the UI does not rebuild even though the data did change.
+  \end{itemize}
+  \vskip 3mm
+  \begin{takeaway}{State classes are immutable and compared by value.}
+    Add a field, add it to props. Forgetting is the classic bug.
+  \end{takeaway}
+  \note{Say both failure directions out loud: without value equality the UI rebuilds when it should not, and with in-place mutation it fails to rebuild when it should. Immutable, value-equal state fixes both.}
+\end{frame}
+
+\begin{frame}[eyebrow=Sharing state]{Pick the smallest tool that works}
+  \vskip 1mm
+  {\usebeamerfont{small}\begin{tabular}{@{}lllp{14mm}p{44mm}@{}}
+    \toprule
+    \thead{Tool} & \thead{Scope} & \thead{Boilerplate} & \thead{Testable} & \thead{Use when} \\
+    \midrule
+    setState        & one widget       & none   & partly    & the state never leaves the screen \\
+    Lifting up      & a subtree        & low    & yes       & two siblings share one value \\
+    InheritedWidget & any descendant   & medium & yes       & a value is read far below its owner \\
+    Provider        & any descendant   & low    & yes       & the same, with less ceremony \\
+    BLoC / Cubit    & whole feature    & high   & excellent & events and side effects \\
+    \bottomrule
+  \end{tabular}}
+  \vskip 3mm
+  \muted{Provider wraps InheritedWidget. Riverpod is its successor, without the BuildContext.}
+  \begin{takeaway}{This is Part 1.}
+    setState, lifting up and InheritedWidget carry most screens. The last column is Lecture 6.
+  \end{takeaway}
+  \note{Ask the room to name, for the current lab app, which row already applies. Most will land on setState or lifting up; that is the correct answer for a todo screen.}
+\end{frame}
+
+\begin{frame}[eyebrow=Sharing state]{How Provider, Riverpod, and BLoC relate}
+  \vskip 3mm
+  \begin{itemize}
+    \item Provider is a thin, ergonomic wrapper around InheritedWidget. It is not a different mechanism, just less code to write.
+    \item Riverpod is Provider's successor: the same idea without needing a BuildContext, and checked at compile time.
+    \item BLoC turns state into a stream of states driven by a stream of events. It costs a dependency and a pattern, in exchange for testability.
+  \end{itemize}
+  \vskip 3mm
+  \begin{takeaway}{We name all three so you recognize them in a code review.}
+    Do not adopt a package you cannot explain. BLoC and Cubit are Lecture 6, and the graded lab app depends on them.
+  \end{takeaway}
+  \note{Preview Lecture 6 in one sentence: the graded lab app rebuilds this exact todo state on flutter_bloc, so what feels abstract today becomes the shape of every remaining lab.}
+\end{frame}
+
+\begin{frame}[eyebrow=Recap]{Three things to remember}
+  \vskip 2mm
+  \begin{enumerate}
+    \item Widgets are immutable blueprints. \muted{The State object is what persists across builds.}
+    \item setState marks one Element dirty. \muted{Only that subtree rebuilds on the next frame.}
+    \item Value equality decides rebuilds. \muted{That is the whole reason Equatable exists.}
+  \end{enumerate}
+  \note{Run through the three points as a checklist against the lab app: which widgets are const, where does setState live, and does any model class need Equatable yet.}
+\end{frame}
+
+\begin{frame}[eyebrow=Recap]{Further reading}
+  \vskip 3mm
+  \begin{itemize}
+    \item \link{https://docs.flutter.dev/tools/devtools}{docs.flutter.dev/tools/devtools}
+    \item \link{https://docs.flutter.dev/data-and-backend/state-mgmt/intro}{docs.flutter.dev/data-and-backend/state-mgmt/intro}
+    \item \link{https://api.flutter.dev}{api.flutter.dev}: InheritedWidget, State, Key
+    \item \link{https://pub.dev/packages/equatable}{pub.dev/packages/equatable}
+  \end{itemize}
+  \vskip 4mm
+  \kv{This week}{Run the lab app under DevTools, add ValueKey to a stateful list, and make one model extend Equatable.}
+  \note{Point students at the DevTools guide before the next lab session; it is the one link that turns into a hands-on requirement almost immediately.}
+\end{frame}
+
+\closingframe{Questions?}{dinu\_stefan.rusu@upb.ro · Microsoft Teams: course channel}
+
+\end{document}

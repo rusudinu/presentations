@@ -1,0 +1,535 @@
+% Lecture 10: Backends for mobile: serverless, VPS, and Go
+% Compile: latexmk -xelatex lecture10.tex
+\documentclass[10pt,aspectratio=169,t]{beamer}
+\usetheme{upbminimal}
+
+\course{Mobile and Embedded Computing}
+\decklabel{Lecture 10}
+\title{Backends for mobile}
+\subtitle{Serverless, a VPS, and Go}
+\author{Dinu-Ștefan Rusu}
+\institute{FILS, Universitatea Politehnica București}
+\date{Spring 2027}
+
+\begin{document}
+
+\titleframe
+
+\objectivesframe{
+  \cell[\faIcon{code-branch}]{Split client and server}{What must run on a machine you control, and why the client is untrusted input.}
+  \cell[\faCloud]{Choose serverless or a VPS}{Cold starts, scaling and cost shape, and the case where each one wins.}
+  \cell[\faIcon{plug}]{Design an API for mobile}{Pagination, versioning, conditional requests, compression and rate limits.}
+  \cell[\faServer]{Ship a Go backend}{A minimal Docker image, a systemd unit, environment variables, health checks and logs.}
+}
+
+\divider{Part 1 \textperiodcentered\ Server and client}{Where does the code run?}[The same feature costs different things on either side of the wire]
+
+\begin{frame}[eyebrow=Server and client]{Server-side and client-side execution}
+  \begin{columns}[T]
+    \begin{column}{0.6\textwidth}
+      \begin{itemize}
+        \item Client-side code runs on the phone: rendering, local state, caching, and the optimistic update that makes a form feel instant.
+        \item Server-side code runs on a machine you control: secrets, durable storage, authorization, billing, and anything that must be identical for every user.
+        \item One request and one response cross the network between them. On mobile that round trip costs roughly 40–200 ms on a good connection, seconds on a bad one, and nothing at all inside a tunnel.
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.36\textwidth}
+      \kv{Request lifecycle}{}
+      \begin{enumerate}
+        \item Client builds the request and holds the token.
+        \item Network: a handshake, then the round trip.
+        \item Server: authenticate, authorize, execute.
+        \item Response: a status code and a body.
+      \end{enumerate}
+    \end{column}
+  \end{columns}
+  \begin{takeaway}{Put work on the client for latency.}
+    Put it on the server when the answer has to be correct for every user.
+  \end{takeaway}
+  \note{Ask the room where they would put: a password strength check (both), a price calculation (server), a dark-mode toggle (client), whether a coupon is still valid (server, always). The client copy is a courtesy; the server copy is the rule.}
+\end{frame}
+
+\begin{frame}[eyebrow=Server and client]{The client is untrusted input}
+  \begin{columns}[T]
+    \begin{column}{0.58\textwidth}
+      \begin{itemize}
+        \item Everything that arrives from a client is user input, including fields your own app filled in.
+        \item An Android package (APK) can be unpacked and release Dart code inspected. There is no secret you can ship inside a client.
+        \item Client-side validation is a courtesy: an instant warning, a disabled button, no wasted round trip.
+        \item The server repeats every check it cares about; it is the only copy nobody else can edit.
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.38\textwidth}
+      \begin{hint}[Server-side only]
+        API keys, and anything signed with one. Who may read or write which record. Prices, totals, discounts, balances. Rate limits and quotas.
+      \end{hint}
+    \end{column}
+  \end{columns}
+  \begin{takeaway}{Validate on the client for speed, on the server for correctness.}
+    Any rule enforced only in the app can be bypassed.
+  \end{takeaway}
+  \note{An Application Programming Interface (API) key is the clearest example: ship it inside the app and every user has it within a day of release. The rule is simple: if leaking it would hurt, it does not belong on the client.}
+\end{frame}
+
+\divider{Part 2 \textperiodcentered\ Where the server runs}{Serverless vs a VPS}[Two cost shapes, two failure modes, and two different sets of operational work]
+
+\begin{frame}[eyebrow=Serverless]{Serverless: functions as a service}
+  \begin{columns}[T]
+    \begin{column}{0.6\textwidth}
+      \begin{itemize}
+        \item Functions as a Service (FaaS) means you deploy a function, not a machine. The platform provisions, scales, patches, and terminates Transport Layer Security (TLS) connections for you.
+        \item It creates instances on demand and destroys them when traffic stops, scaling all the way down to zero.
+        \item Billing is per invocation plus gigabyte-seconds of memory, so no traffic means no bill.
+        \item AWS Lambda, Google Cloud Run functions, Azure Functions, and Cloudflare Workers all follow this model.
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.36\textwidth}
+      \kv{The shape of it}{}
+      \begin{enumerate}
+        \item Your handler: one function, one job.
+        \item The platform: provision, scale, patch, terminate TLS.
+        \item 0 to n instances, killed when idle.
+      \end{enumerate}
+    \end{column}
+  \end{columns}
+  \begin{takeaway}{You stop operating servers.}
+    In exchange you work within the platform's limits.
+  \end{takeaway}
+  \note{Ask who has already used a FaaS platform without knowing the term. Most students have, through Firebase Cloud Functions or a hosting provider's edge functions. The unfamiliar part is usually the billing model, not the code.}
+\end{frame}
+
+\begin{frame}[eyebrow=Serverless]{Cold starts: the latency of the first request}
+  \vskip 1mm
+  {\usebeamerfont{small}\begin{tabular}{@{}lll@{}}
+    \toprule
+    \thead{Case} & \thead{Startup} & \thead{Why} \\
+    \midrule
+    Warm instance & 0 ms & the container is already running \\
+    Go or Rust binary & 10–50 ms & nothing to boot: one static executable \\
+    JVM, .NET, large Node graphs & 0.3–2 s & runtime start, plus every import \\
+    \bottomrule
+  \end{tabular}}
+  \vskip 4mm
+  \begin{itemize}
+    \item A cold start is the platform building a new instance because no warm one was free: pull the image, start the runtime, run top-level code, then finally the handler.
+    \item It lands on the first user after a period of no traffic, and again on every traffic spike.
+  \end{itemize}
+  \muted{Minimum instances, or provisioned concurrency, mean paying for idle capacity, the exact cost serverless was meant to remove. A smaller package and a fast-starting runtime cost nothing extra, which is one reason for the Go section later in this lecture.}
+  \note{Numbers are orders of magnitude, not benchmarks. Tell students to measure their own p99 on the platform they picked. Cold-start cost is unusually a language choice: almost nothing else about a small backend depends on the runtime.}
+\end{frame}
+
+\begin{frame}[eyebrow=VPS]{VPS: renting the whole machine}
+  \begin{columns}[T]
+    \begin{column}{0.6\textwidth}
+      \begin{itemize}
+        \item A Virtual Private Server (VPS) is a virtual machine you rent from a provider such as Hetzner Cloud, DigitalOcean, or OVH: root access, one IP address, and nothing else.
+        \item Everything above the hypervisor is yours: operating system updates, firewall rules, TLS certificates, process supervision, backups, monitoring.
+        \item Billing is hourly or monthly for the machine, not for the requests it serves. An idle VPS costs what a busy one costs.
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.36\textwidth}
+      \kv{The shape of it}{}
+      \begin{enumerate}
+        \item Your binary: systemd or Docker restarts it.
+        \item The OS you patch: firewall, TLS certificates.
+        \item The VM you rent: CPU, RAM, disk, a public IP.
+      \end{enumerate}
+    \end{column}
+  \end{columns}
+  \begin{takeaway}{Nobody patches it for you.}
+    In exchange, no platform limits what you can run.
+  \end{takeaway}
+  \note{A floating IP, an address you can repoint at a fresh box during an upgrade, is worth mentioning: it allows replacing a machine without changing DNS. Hetzner and DigitalOcean both offer it.}
+\end{frame}
+
+\begin{frame}[eyebrow=Serverless vs VPS]{The same backend, two cost shapes}
+  {\fontsize{8}{9.5}\selectfont\renewcommand\arraystretch{1.0}
+  \begin{tabular}{@{}lp{42mm}p{42mm}@{}}
+    \toprule
+    \thead{Aspect} & \thead{Serverless (FaaS)} & \thead{VPS} \\
+    \midrule
+    Scaling & automatic, zero to peak and back & you resize the box yourself \\
+    Cost when idle & nothing & the full monthly price \\
+    Cost under load & per invocation and memory time & flat, until you outgrow the machine \\
+    First request & a cold start, unless paid to avoid it & already warm \\
+    You operate & your handler & OS, runtime, TLS, backups, monitoring \\
+    Long-running work & capped by the platform timeout & runs as long as you let it \\
+    Wins when & spiky, small, or unknown traffic & steady traffic, or state on disk \\
+    \bottomrule
+  \end{tabular}}
+  \vskip 1mm
+  \begin{takeaway}{Pick by cost shape and operational load.}
+    Spiky or unknown favors serverless. Steady and predictable favors one small VPS.
+  \end{takeaway}
+  \note{This table is the one slide worth photographing. Every project team will face this choice for the backend in Lab 5 and Lab 6, and the honest answer for a semester project is usually one small VPS.}
+\end{frame}
+
+\begin{frame}[eyebrow=Serverless]{Writing code that survives a FaaS runtime}
+  \begin{grid}[3]
+    \cell[\faIcon{box}]{Ship a small package}{Every megabyte and import adds cold-start time. Trim dependencies first.}
+    \cell[\faIcon{sync-alt}]{Initialize outside the handler}{Database pools and HTTP clients belong at module scope, reused by warm invocations.}
+    \cell[\faDatabase]{Keep the handler stateless}{Local disk and memory vanish between calls. State belongs in a database or a cache.}
+    \cell[\faIcon{redo}]{Make it idempotent}{The platform retries on its own. A duplicate must not charge a card twice.}
+    \cell[\faClock]{Respect the timeout}{Work that can exceed it belongs on a queue with a job record, not a longer function.}
+    \cell[\faIcon{cogs}]{Know your concurrency}{One provider serves one request per instance; another serves many at once.}
+  \end{grid}
+  \note{Every one of these is a bug students will eventually hit: a handler that opens a new database connection per call, or stores a counter in a global variable that resets on the next cold start.}
+\end{frame}
+
+\begin{frame}[eyebrow=VPS]{Running a box you will not regret}
+  \vskip 2mm
+  \begin{grid}[3]
+    \cell[\faIcon{terminal}]{Rebuild it from a script}{A Dockerfile plus one provisioning script. The machine should be reproducible, never hand-tuned.}
+    \cell[\faIcon{sync-alt}]{Run it as a service}{systemd or Docker with a restart policy. A crash at 3 a.m. must recover without you.}
+    \cell[\faLock]{Lock down access}{Key-only SSH, no root login, a firewall open only on ports 80 and 443, automatic security updates.}
+    \cell[\faIcon{shield-alt}]{Terminate TLS properly}{Caddy or nginx in front, with automatic certificates. Never serve an API over plain HTTP.}
+    \cell[\faIcon{save}]{Test the restore}{Snapshots plus an off-box copy of the database. A backup you never restored is unverified.}
+    \cell[\faIcon{bell}]{Make it page you}{An uptime check, log shipping, a disk-full alert. A bare VPS does not tell you it went down.}
+  \end{grid}
+  \note{Ask who has ever restored a backup they took. Almost nobody has, which is the point of the fifth cell: an untested backup is a hope, not a plan.}
+\end{frame}
+
+\divider{Part 3 \textperiodcentered\ Go backends}{A backend that fits in one binary}[One static binary, milliseconds to start, deployable anywhere]
+
+\begin{frame}[fragile,eyebrow=Go backends]{Why Go for a small mobile backend}
+  \begin{columns}[T]
+    \begin{column}{0.6\textwidth}
+      \lead{One static binary.}{One executable: no runtime, no dependency folder.}
+      \lead{It starts in milliseconds.}{Cold starts on a scale-to-zero platform stay short.}
+      \lead{It cross-compiles from your laptop.}{One variable retargets it: a server or a Pi.}
+      \lead{The standard library is already the server.}{net/http, encoding/json, goroutines (Lecture 2).}
+    \end{column}
+    \begin{column}{0.36\textwidth}
+\begin{shell}
+CGO_ENABLED=0 GOOS=linux \
+  GOARCH=arm64 \
+  go build -o server
+scp server \
+  root@vps:/opt/api/
+ssh root@vps \
+  systemctl restart api
+\end{shell}
+    \end{column}
+  \end{columns}
+  \begin{takeaway}{A small binary that starts fast.}
+    Those are the properties a mobile client's backend needs.
+  \end{takeaway}
+  \note{Cross-compilation is the detail students forget: the same laptop that runs Flutter builds a Linux server binary and a Raspberry Pi binary with one environment variable each, no cross-compiler toolchain to install.}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=Go backends]{A handler, and the Dart call that hits it}
+  \begin{columns}[T]
+    \begin{column}{0.52\textwidth}
+      {\bfseries Go: standard library only}\par
+\begin{golang}
+type Reading struct {
+    DeviceID string `json:"device_id"`
+}
+func handle(w http.ResponseWriter,
+    r *http.Request) {
+    var in Reading
+    json.NewDecoder(r.Body).Decode(&in)
+    w.WriteHeader(http.StatusCreated)
+    json.NewEncoder(w).Encode(in)
+}
+\end{golang}
+    \end{column}
+    \begin{column}{0.44\textwidth}
+      {\bfseries Dart: the client side of the call}\par
+\begin{dart}
+final dio = Dio(BaseOptions(
+  baseUrl: 'https://api.example.com',
+));
+final res = await dio.post(
+  '/readings',
+  data: {'device_id': id},
+);
+\end{dart}
+    \end{column}
+  \end{columns}
+  \muted{\code{Reading.fromJson(res.data)} decodes the reply. The JSON tags are the contract between Go and Dart.}
+  \note{Live demo: go run the file, curl the endpoint with a JSON body, then point the Flutter app at it. Total moving parts: one file and one binary. This is the whole backend a semester project usually needs.}
+\end{frame}
+
+\begin{frame}[eyebrow=Go backends]{Thundering herds and hedged requests}
+  \begin{columns}[T]
+    \begin{column}{0.62\textwidth}
+      \begin{itemize}
+        \item When a service fails briefly, ten thousand clients fail at once and every one retries after exactly one second. The retry wave is larger than the original load: a brief outage becomes a long one. That is a thundering herd.
+        \item Full jitter spreads retries across the whole interval, so a recovering server sees load ramp up instead of arriving all at once.
+        \item Hedging is the opposite problem: a small fraction of requests are simply slow. Send a second copy after a short delay, take whichever answers first, and cancel the other.
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.34\textwidth}
+      {\usebeamerfont{small}\begin{tabular}{@{}p{16mm}p{25mm}@{}}
+        \toprule
+        \thead{Attempt} & \thead{Result} \\
+        \midrule
+        sent at 0 ms & silent at 250 ms, canceled \\
+        sent at 250 ms & answers at 310 ms, used \\
+        \bottomrule
+      \end{tabular}}
+      \vskip 2mm
+      \muted{Cap it: hedge only past the 95th percentile, and only for safe or idempotent calls.}
+    \end{column}
+  \end{columns}
+  \begin{takeaway}{Retries fix failures. Hedges fix slowness.}
+    Both multiply load, so both need a cap.
+  \end{takeaway}
+  \note{The winner is whichever attempt replies first; the loser is simply canceled, not an error. Ask which methods are safe to hedge: GET freely, POST only behind an idempotency key the server remembers.}
+\end{frame}
+
+\divider{Part 4 \textperiodcentered\ API design for a mobile client}{Design decisions clients actually feel}[Pagination, versioning, conditional requests, compression, and rate limits]
+
+\begin{frame}[fragile,eyebrow=API design]{Pagination with cursors, not page numbers}
+  \begin{columns}[T]
+    \begin{column}{0.56\textwidth}
+      \begin{itemize}
+        \item An offset-and-limit page breaks when rows are inserted or deleted between requests: page two can skip or repeat rows.
+        \item A cursor is an opaque token that encodes the last item's sort key. The client sends it back to get the next page; nothing else has to stay stable.
+        \item Cursors compose with real-time inserts, work with any sort order, and never need a total row count the database would have to compute.
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.4\textwidth}
+\begin{golang}
+// cursor, limit: query params
+type Page struct {
+    Items []Reading `json:"items"`
+    Next  string `json:"next,omitempty"`
+}
+\end{golang}
+    \end{column}
+  \end{columns}
+  \begin{takeaway}{A cursor is a fact about the last row returned.}
+    It is not a page count the server has to keep consistent across writes.
+  \end{takeaway}
+  \note{Ask what happens to page two of an offset query if a row is deleted from page one while the user is still scrolling. Every item after it shifts up by one, and the user sees a duplicate or a skip.}
+\end{frame}
+
+\begin{frame}[eyebrow=API design]{Versioning: give clients time to update}
+  \vskip 1mm
+  \begin{itemize}
+    \item A mobile client cannot be forced to update. Old app versions can stay installed for years, so the server must keep serving them.
+    \item Put the version in the URL path, like \code{/v1/readings}, or in an Accept header. A path is simpler to log, cache, and route.
+    \item Add fields freely: a client that ignores unknown JSON fields never breaks. Never remove or rename a field, and never change what a field means, without a new version.
+    \item Deprecate loudly: a \code{Sunset} header and a fixed shutdown date, announced early and enforced only after clients had time to move.
+  \end{itemize}
+  \begin{takeaway}{Additive changes are free.}
+    Anything else needs a new version number.
+  \end{takeaway}
+  \note{The failure mode students will hit in the project is renaming a JSON field mid-semester and breaking every teammate's app at once. A new version number, or an additive field, avoids that entirely.}
+\end{frame}
+
+\begin{frame}[eyebrow=API design]{ETags and conditional requests}
+  \begin{itemize}
+    \item An entity tag (ETag) is a short identifier for one exact representation of a resource: a hash or a version number.
+    \item The server returns \code{ETag}. The client sends it back as \code{If-None-Match}; unchanged means 304 Not Modified, no body.
+    \item \code{If-Match} on a write rejects it with 412 Precondition Failed if the resource changed since it was last read.
+  \end{itemize}
+  {\fontsize{8}{9.5}\selectfont\renewcommand\arraystretch{1.0}
+  \begin{tabular}{@{}lll@{}}
+    \toprule
+    \thead{Header} & \thead{Direction} & \thead{Meaning} \\
+    \midrule
+    ETag & response & fingerprint of this representation \\
+    If-None-Match & request & send a new copy only if this changed \\
+    If-Match & request & write only if it still matches this version \\
+    \bottomrule
+  \end{tabular}}
+  \begin{takeaway}{Conditional requests turn a download into a status code.}
+    And a blind write into a safe one.
+  \end{takeaway}
+  \note{This is the same idea Lecture 9 used for optimistic concurrency in the sync engine, applied at the transport layer instead of inside the database.}
+\end{frame}
+
+\begin{frame}[eyebrow=API design]{Compression: fewer bytes on a metered radio}
+  \vskip 1mm
+  \begin{itemize}
+    \item A phone often pays for every byte in time, battery, and sometimes money. Compression trades a little CPU time for fewer bytes on the radio.
+    \item The client sends \code{Accept-Encoding: gzip}. The server compresses the body and answers with \code{Content-Encoding: gzip}. Most HTTP client libraries decompress transparently.
+    \item JSON compresses well: repeated keys and whitespace shrink hard, often 70–90 percent smaller. A response already under about 1 KB rarely benefits enough to bother.
+    \item Do not compress what is already compressed: images, video, and most binary formats gain nothing and waste CPU cycles.
+  \end{itemize}
+  \begin{takeaway}{Compress text responses by default.}
+    Skip it for anything already binary.
+  \end{takeaway}
+  \note{Brotli, requested as br in Accept-Encoding, compresses text slightly better than gzip and is supported by most modern HTTP stacks, but gzip alone already covers most of the gain for a small API.}
+\end{frame}
+
+\begin{frame}[eyebrow=API design]{Rate limits: protecting the server from its clients}
+  \vskip 1mm
+  \begin{itemize}
+    \item A rate limit caps how many requests one client, one API key, or one IP address may make in a window, so one runaway client or a retry storm cannot take the service down for everyone else.
+    \item The token bucket is the common shape: a bucket refills at a fixed rate, and each request costs one token; a burst is allowed until the bucket is empty.
+    \item The server answers 429 Too Many Requests with a \code{Retry-After} header, so a well-behaved client waits exactly that long instead of guessing.
+    \item Return the budget in headers on every response, such as \code{X-RateLimit-Remaining}, so a client can back off before it gets rejected.
+  \end{itemize}
+  \begin{takeaway}{A limit the client can see in headers is one clients cooperate with.}
+    Not one they fight.
+  \end{takeaway}
+  \note{Connect a rate limit back to the retry and hedge slides: a client that retries without jitter against a rate-limited endpoint produces the exact thundering herd from Part 3.}
+\end{frame}
+
+\divider{Part 5 \textperiodcentered\ Deploying and operating}{Shipping the binary and keeping it healthy}[A Docker image, Cloud Run, systemd, secrets, health checks, and logs]
+
+\begin{frame}[fragile,eyebrow=Deploying]{A minimal Dockerfile for a Go binary}
+\begin{codeblock}
+FROM golang:1 AS build
+WORKDIR /src
+COPY . .
+RUN CGO_ENABLED=0 go build -o /server ./cmd/server
+
+FROM gcr.io/distroless/static
+COPY --from=build /server /server
+EXPOSE 8080
+ENTRYPOINT ["/server"]
+\end{codeblock}
+  \vskip 2mm
+  \muted{Multi-stage build: the first stage compiles with the full Go toolchain; the second stage copies only the binary into a distroless image with no shell and no package manager, which shrinks the image and the attack surface.}
+  \note{Ask why the final image has no shell. It means an attacker who compromises the process cannot exec into a shell to look around, because there is no shell binary in the image at all.}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=Deploying]{The same image, deployed to Cloud Run}
+  \begin{itemize}
+    \item \code{gcloud run deploy} builds and deploys the container behind a managed load balancer. Nobody patches the machine.
+    \item Concurrency, instances, memory, and CPU are flags, not hand-provisioned infrastructure.
+    \item A new revision gets traffic gradually, so a bad deploy rolls back in seconds.
+  \end{itemize}
+\begin{shell}
+gcloud run deploy api \
+  --source . \
+  --region europe-west1 \
+  --set-env-vars ENV=production \
+  --min-instances=0 --max-instances=10
+\end{shell}
+  \begin{takeaway}{Cloud Run is the serverless model from Part 2.}
+    With your own container, not a vendor runtime.
+  \end{takeaway}
+  \note{This is the bridge between Part 2 and Part 3: the platform behavior (scale to zero, cold starts, per-request billing) is identical, only the runtime inside the box changed from a vendor function to a container you built.}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=Deploying]{A systemd unit on a VPS}
+  \begin{columns}[T]
+    \begin{column}{0.56\textwidth}
+\begin{codeblock}
+[Unit]
+Description=api backend
+After=network.target
+
+[Service]
+ExecStart=/usr/local/bin/server
+Restart=always
+RestartSec=2
+User=api
+EnvironmentFile=/etc/api/api.env
+
+[Install]
+WantedBy=multi-user.target
+\end{codeblock}
+    \end{column}
+    \begin{column}{0.4\textwidth}
+      \lead{One file, one service.}{\code{systemctl enable --now api} starts it and keeps it running across reboots.}
+      \muted{\code{Restart=always} with a short \code{RestartSec} means a crash recovers in about two seconds, with nobody paged at 3 a.m.}
+    \end{column}
+  \end{columns}
+  \note{Point out that this is the whole operational story for a project backend: one unit file, one restart policy, one environment file. Nothing here needs Kubernetes.}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=Deploying]{Environment variables and secrets}
+  \begin{columns}[T]
+    \begin{column}{0.58\textwidth}
+      \begin{itemize}
+        \item Configuration that changes between environments belongs in environment variables, read once at startup, never hardcoded.
+        \item Secrets are configuration too, but never in the code or the git repository. A leaked key is compromised the moment it is pushed, even after deletion.
+        \item On a VPS: a root-only environment file loaded by systemd. On Cloud Run: a secret manager, never baked into the image.
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.38\textwidth}
+\begin{golang}
+dsn := os.Getenv("DATABASE_URL")
+if dsn == "" {
+    log.Fatal("DATABASE_URL is required")
+}
+\end{golang}
+    \end{column}
+  \end{columns}
+  \begin{takeaway}{A required variable that is missing should crash at startup.}
+    Not on the first request, hours later.
+  \end{takeaway}
+  \note{Ask the room whether they have ever committed an API key by accident. Most have. The fix is not remembering harder: it is a .gitignore entry and a pre-commit check that scans for secret-shaped strings.}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=Deploying]{Health checks: liveness and readiness}
+  \vskip 1mm
+  \begin{itemize}
+    \item Liveness answers one question: is the process still running and not deadlocked. A failing liveness check gets the process restarted, so keep it cheap and dependency-free.
+    \item Readiness answers a different question: is this instance ready for traffic. Failing it removes the instance from the load balancer without a restart.
+    \item Cloud Run, most orchestrators, and load balancers expect a plain HTTP endpoint that returns 200 when healthy, checked every few seconds.
+  \end{itemize}
+\begin{golang}
+http.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
+    w.WriteHeader(http.StatusOK)
+})
+\end{golang}
+  \begin{takeaway}{Liveness restarts the process. Readiness redirects traffic.}
+    Confusing the two either restarts a healthy process or sends traffic to a broken one.
+  \end{takeaway}
+  \note{The distinction matters most under database failure: the process itself is fine, so liveness should stay green while readiness goes red and the load balancer quietly stops sending it traffic.}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=Deploying]{Structured logs: fields, not sentences}
+  \begin{columns}[T]
+    \begin{column}{0.58\textwidth}
+      \begin{itemize}
+        \item A log line meant for a person cannot be filtered, aggregated, or alerted on reliably. A structured log line is a set of key-value fields a machine can query.
+        \item Go's log/slog, in the standard library, writes JSON by default: a level, a message, and any fields attached, one line per event.
+        \item Always include a request identifier a client sends or the server generates, so one failing mobile session can be traced through every log line it touched.
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.38\textwidth}
+\begin{golang}
+h := slog.NewJSONHandler(
+  os.Stdout, nil,
+)
+logger := slog.New(h)
+logger.Info("reading saved",
+  "device_id", id,
+  "duration_ms", ms)
+\end{golang}
+    \end{column}
+  \end{columns}
+  \begin{takeaway}{If you cannot turn it into a chart, it is not a structured log yet.}
+    A sentence in a log file is for a human reading it live, once.
+  \end{takeaway}
+  \note{Log the boring successful requests too, not just the errors: status code, duration, and device identifier on every call is what tells you the baseline changed before it becomes an outage.}
+\end{frame}
+
+\begin{frame}[eyebrow=Deploying]{What the project backend needs}
+  \vskip 1mm
+  \begin{itemize}
+    \item Lab 5's sync server is this lecture in miniature: a small Go program, an in-memory list with a version per row, one endpoint that accepts offline writes and returns what changed since a cursor.
+    \item Lab 6 adds gRPC (Lecture 11) to the same binary: one unary call and one server-streaming call, both served from the process that already answers HTTP.
+    \item Keep it on one small VPS or one Cloud Run service for the whole semester. The project needs a reliable box, not a distributed system.
+    \item Everything in this lecture applies at project scale: environment variables for broker and database URLs, a health check the grading script can poll, and structured logs for the night before the defense.
+  \end{itemize}
+  \begin{takeaway}{The project backend is small on purpose.}
+    The skill being graded is running it correctly, not scaling it.
+  \end{takeaway}
+  \note{Reassure the room: nobody needs Kubernetes for this project. One VPS, one binary, one systemd unit, and the checklist from this lecture is a complete, defensible backend.}
+\end{frame}
+
+\begin{frame}[eyebrow=Recap]{Three things to remember}
+  \vskip 2mm
+  \begin{enumerate}
+    \item The client is untrusted input. \muted{Every rule that matters is checked again on the server.}
+    \item Serverless bills per request and cold-starts; a VPS bills per month and never does. \muted{Pick by cost shape, not by fashion.}
+    \item A cursor, an ETag, and a rate-limit header are what make an API pleasant to build a mobile client against. \muted{Small, additive changes keep old app versions working.}
+  \end{enumerate}
+  \vskip 5mm
+  \kv{Further reading}{\link{https://go.dev/doc/tutorial/web-service-gin}{go.dev/doc/tutorial/web-service-gin} \textperiodcentered\ \link{https://pkg.go.dev/net/http}{pkg.go.dev/net/http} \textperiodcentered\ \link{https://pkg.go.dev/log/slog}{pkg.go.dev/log/slog} \textperiodcentered\ \link{https://cloud.google.com/run/docs}{cloud.google.com/run/docs}}
+  \note{Close by pointing at the Lab 5 branch due next: the sync server they build there is a direct application of the Go backend and deployment material from this lecture.}
+\end{frame}
+
+\closingframe{Questions?}{dinu\_stefan.rusu@upb.ro \textperiodcentered\ Microsoft Teams: course channel}
+
+\end{document}

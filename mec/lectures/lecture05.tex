@@ -1,0 +1,530 @@
+% Mobile and Embedded Computing, Lecture 5. Compile: latexmk -xelatex lecture05.tex
+\documentclass[10pt,aspectratio=169,t]{beamer}
+\usetheme{upbminimal}
+
+\course{Mobile and Embedded Computing}
+\decklabel{Lecture 5}
+\title{Bluetooth Low Energy}
+\subtitle{Advertising, GATT, permissions, and a peripheral written in Go}
+\author{Dinu-Ștefan Rusu}
+\institute{FILS, Universitatea Politehnica București}
+\date{Spring 2027}
+
+\begin{document}
+
+\titleframe
+
+\objectivesframe{
+  \cell[\faBluetoothB]{Read the link}{Advertising, scanning, GAP roles, connection parameters and MTU, and what each costs in energy.}
+  \cell[\faDatabase]{Model with GATT}{Services, characteristics, descriptors and UUIDs, and when to read, write, notify or indicate.}
+  \cell[\faLock]{Ask for the radio}{Android 12 and later runtime permissions, the iOS usage string, and the background limits on both.}
+  \cell[\faMicrochip]{Build both sides}{A Flutter central with flutter\_blue\_plus and a Go peripheral with one notifying characteristic.}
+}
+
+% =====================================================================
+\divider{Part 1 · The link}{Two radios, one name}[Advertising, scanning, connecting, and the parameters that cost power]
+
+\begin{frame}[eyebrow=The link]{Classic Bluetooth and BLE are different radios}
+  \vskip 1mm
+  {\usebeamerfont{small}\begin{tabular}{@{}lp{44mm}p{48mm}@{}}
+    \toprule
+    & \thead{Classic (BR/EDR)} & \thead{Bluetooth Low Energy} \\
+    \midrule
+    Designed for   & continuous streams: audio, files & short messages, seconds to hours apart \\
+    Connection     & held open, always costing power & set up, used and torn down in milliseconds \\
+    Throughput     & about a megabit per second & tens of kilobits per second \\
+    Idle current   & milliamps & microamps between advertisements \\
+    Typical device & headset, speaker, keyboard & sensor, tag, wearable, beacon \\
+    \bottomrule
+  \end{tabular}}
+  \vskip 2mm
+  \muted{They share a name, a band and a chip, and almost no protocol. \code{flutter\_blue\_plus} is BLE only: it will never see a Classic serial module.}
+  \note{Ask who has tried to pair an HC-05 module with a Flutter app. That is Classic serial and it will never work with this plugin. Name the failure early so nobody loses an afternoon to it in Lab 3.}
+\end{frame}
+
+\begin{frame}[eyebrow=The link]{Why BLE fits a sensor}
+  \vskip 2mm
+  \begin{grid}[3]
+    \cell[\faBolt]{The radio is off}{A BLE device sleeps almost all the time. It wakes, sends a few bytes, and goes back down.}
+    \cell[\faClock]{Short exchanges}{An advertisement is under a millisecond of air time. A connection event can be as short.}
+    \cell[\faBatteryHalf]{Coin-cell budgets}{A tag reporting once a second runs for months on a button cell. Wi-Fi cannot.}
+    \cell[\faSatelliteDish]{Forty channels}{2.4 GHz in 2 MHz steps: three channels for advertising, thirty-seven for data.}
+    \cell[\faIcon{mobile-alt}]{Every phone has it}{No access point, no IP address, no infrastructure. The phone is the gateway.}
+    \cell[\faExclamationCircle]{Not for bulk}{Firmware images and audio over BLE are slow. Use it for readings and commands.}
+  \end{grid}
+  \note{The point of this slide is the duty cycle, not the peak rate. Energy is average current times time, and BLE wins by making both terms small. Tie it back to the wake, send, sleep loop from Lecture 3.}
+\end{frame}
+
+\begin{frame}[eyebrow=GAP]{GAP: four roles, two that matter}
+  \vskip 2mm
+  \begin{columns}[T]
+    \begin{column}{0.48\textwidth}
+      \lead{Peripheral}{Advertises, waits, accepts one connection. Your sensor. It owns the data and the GATT server.}
+      \vskip 3mm
+      \lead{Central}{Scans, picks a peripheral, opens the connection, and drives every exchange. Your phone.}
+    \end{column}
+    \begin{column}{0.48\textwidth}
+      \lead{Broadcaster}{Advertises and never accepts a connection. A beacon. The data is in the advertisement itself.}
+      \vskip 3mm
+      \lead{Observer}{Scans and never connects. Useful when many tags report the same tiny value.}
+    \end{column}
+  \end{columns}
+  \begin{takeaway}{The central controls the timing.}
+    The peripheral proposes parameters and the central decides. Every power question is really a question about that decision.
+  \end{takeaway}
+  \note{Draw the asymmetry on the board. Students expect a symmetric socket and BLE is not that. Note that a phone can act as a peripheral on both platforms, but flutter\_blue\_plus does not do it, which is why the lab uses Go for that side.}
+\end{frame}
+
+\begin{frame}[eyebrow=GAP]{Advertising: the peripheral talks first}
+  \vskip 3mm
+  \begin{grid}[2]
+    \cell[\faSatelliteDish]{What goes out}{A short packet on the three advertising channels, repeated at an interval you pick, from about 20 ms to about 10 s.}
+    \cell[\faLayerGroup]{How much fits}{A legacy advertising packet carries 31 bytes. A scan response, requested by an active scanner, carries 31 more.}
+    \cell[\faToggleOn]{Connectable or not}{A connectable advertisement invites a central. A non-connectable one is a broadcast: the payload is the message.}
+    \cell[\faBatteryHalf]{The interval is the bill}{Advertising faster is found faster and costs more. This one knob decides a tag's battery life.}
+  \end{grid}
+  \note{Thirty-one bytes is the number to remember. A student who tries to advertise a JSON object will find out the hard way. Mention extended advertising as the modern escape hatch, without promising that every phone in the room supports it.}
+\end{frame}
+
+\begin{frame}[eyebrow=GAP]{Scanning: passive, active, and duty cycle}
+  \vskip 2mm
+  \begin{columns}[T]
+    \begin{column}{0.52\textwidth}
+      \lead{Passive scan}{Listen only. You see the advertisement and nothing more.}
+      \vskip 2mm
+      \lead{Active scan}{The scanner sends a scan request and the peripheral replies with a scan response. More data, more air time, more current on both sides.}
+    \end{column}
+    \begin{column}{0.44\textwidth}
+      \begin{warning}[Scanning is expensive]
+        Continuous scanning keeps the phone's receiver powered. It is the most common reason a BLE app drains a battery.
+      \end{warning}
+    \end{column}
+  \end{columns}
+  \begin{takeaway}{Filter in the platform, not in Dart.}
+    Passing a service UUID to the scan call pushes the filter into the operating system, so unwanted advertisements never cross the platform channel.
+  \end{takeaway}
+  \note{A scan window inside a scan interval sets the duty cycle, and a window equal to the interval means the receiver never turns off. Point out that an unfiltered scan in a crowded room delivers hundreds of results per second and will visibly drop frames.}
+\end{frame}
+
+\begin{frame}[eyebrow=Connection]{Connection parameters decide the power bill}
+  \vskip 2mm
+  {\usebeamerfont{small}\begin{tabular}{@{}lp{24mm}p{58mm}@{}}
+    \toprule
+    \thead{Parameter} & \thead{Range} & \thead{What it does} \\
+    \midrule
+    Connection interval  & 7.5 ms to 4 s & how often the two radios meet \\
+    Peripheral latency   & 0 to 499 events & how many meetings the peripheral may skip \\
+    Supervision timeout  & 100 ms to 32 s & how long silence lasts before the link is lost \\
+    \bottomrule
+  \end{tabular}}
+  \begin{takeaway}{Latency is the free win.}
+    It keeps the link alive and the response fast when it matters, while letting the device sleep through the events where it has nothing to send.
+  \end{takeaway}
+  \note{Work one example out loud: an interval of one second with a latency of four means the peripheral must answer at most every five seconds, but still replies at once when the central writes. Warn that a supervision timeout shorter than interval times latency is invalid.}
+\end{frame}
+
+\begin{frame}[eyebrow=Connection]{MTU: how much fits in one packet}
+  \vskip 3mm
+  \begin{grid}[3]
+    \bignum{23 B}{default ATT MTU, negotiated at connection time}
+    \bignum{20 B}{payload left for one notification after the header}
+    \bignum{512 B}{largest value a characteristic may hold}
+  \end{grid}
+  \vskip 4mm
+  \muted{Android asks for a large MTU during connection and \code{flutter\_blue\_plus} does it for you. iOS negotiates on its own and gives you no control. A value larger than the MTU is fetched in several round trips.}
+  \begin{takeaway}{Design to the default, not to the best case.}
+    Assume twenty usable bytes per notification until you have measured the negotiated MTU on the actual phone.
+  \end{takeaway}
+  \note{Have the room compute how many readings fit in twenty bytes if each is a two-byte integer. That number decides the batching strategy in the project. A larger MTU also means fewer packets, and therefore less energy for the same bytes.}
+\end{frame}
+
+% =====================================================================
+\divider{Part 2 · GATT}{Data as a tree of attributes}[Services, characteristics, descriptors, UUIDs, and the four operations]
+
+\begin{frame}[eyebrow=GATT]{GATT is a tree of attributes}
+  \begin{columns}[T]
+    \begin{column}{0.50\textwidth}
+      \lead{Service}{A named group of related values. A device exposes several: yours, plus battery and device info.}
+      \vskip 2mm
+      \lead{Characteristic}{One value, with properties that say what may be done to it, and a handle.}
+      \vskip 2mm
+      \lead{Descriptor}{Metadata on a characteristic: a name, a unit, a range, or the subscription switch.}
+    \end{column}
+    \begin{column}{0.46\textwidth}
+      \begin{hint}[The one descriptor you will meet]
+        The Client Characteristic Configuration Descriptor, \code{0x2902}, is how a central turns notifications on. Writing it is what \code{setNotifyValue} does.
+      \end{hint}
+    \end{column}
+  \end{columns}
+  \begin{takeaway}{The peripheral is a small database.}
+    The central discovers the schema after every connection.
+  \end{takeaway}
+  \note{Draw the three levels on the board while you talk. Stress that discovery must be repeated after every reconnect, because that is the bug students hit in Lab 3 when they cache a characteristic object and reuse it.}
+\end{frame}
+
+\begin{frame}[eyebrow=GATT]{UUIDs: 16 bits or 128}
+  \vskip 3mm
+  \begin{grid}[2]
+    \cell[\faDatabase]{Adopted, 16-bit}{Numbers assigned by the Bluetooth SIG for standard services: \code{0x180D} heart rate, \code{0x180F} battery.}
+    \cell[\faCode]{Custom, 128-bit}{A random UUID you generate once for your own service. Nobody assigns it and nobody will collide with it.}
+    \cell[\faLayerGroup]{The short form expands}{A 16-bit UUID is shorthand for a full one built on a fixed base. Only the short form travels, which saves bytes.}
+    \cell[\faExclamationCircle]{Prefer the standard one}{If a standard service matches your data, use it. Test tools and the operating system already understand it.}
+  \end{grid}
+  \note{Point at the byte cost: a custom service UUID takes sixteen of the thirty-one advertising bytes, an adopted one takes two. Tell them to generate the custom UUID once, write it into the repository, and never change it after a device ships.}
+\end{frame}
+
+\begin{frame}[eyebrow=GATT]{Read, write, notify, indicate}
+  \vskip 2mm
+  {\usebeamerfont{small}\begin{tabular}{@{}lp{17mm}p{21mm}p{44mm}@{}}
+    \toprule
+    \thead{Operation} & \thead{Started by} & \thead{Confirmed} & \thead{Use it for} \\
+    \midrule
+    Read                   & central    & yes & a value read once, on demand \\
+    Write                  & central    & yes & a command that must not be lost \\
+    Write without response & central    & no  & commands where a loss is fine \\
+    Notify                 & peripheral & no  & a value that changes often \\
+    Indicate               & peripheral & yes & a rare event that must arrive \\
+    \bottomrule
+  \end{tabular}}
+  \begin{takeaway}{Notify for readings, indicate for events.}
+    A dropped temperature sample is replaced a second later. A dropped alarm is gone.
+  \end{takeaway}
+  \note{Notify and indicate both require the central to subscribe first, and indications are confirmed one at a time, so they cannot carry a fast stream. Ask which one a step counter needs and which one a low-battery warning needs.}
+\end{frame}
+
+\begin{frame}[eyebrow=GATT]{A heart-rate sensor, drawn out}
+  \vskip 2mm
+  {\usebeamerfont{small}\begin{tabular}{@{}llp{20mm}p{42mm}@{}}
+    \toprule
+    \thead{Level} & \thead{UUID} & \thead{Properties} & \thead{Meaning} \\
+    \midrule
+    Service        & 0x180D &        & Heart Rate \\
+    Characteristic & 0x2A37 & notify & measurement: flags, then the rate \\
+    Descriptor     & 0x2902 & read, write & the subscription switch \\
+    Characteristic & 0x2A38 & read & body sensor location, one byte \\
+    Characteristic & 0x2A39 & write & control point: reset the counter \\
+    \bottomrule
+  \end{tabular}}
+  \vskip 2mm
+  \muted{Copy this shape: one characteristic for the reading, one for metadata, one for control.}
+  \note{This is the template for the project device. Say that generic BLE test apps already decode this service, so a device that speaks it can be checked without writing any Flutter code at all. Adding the battery service costs almost nothing.}
+\end{frame}
+
+% =====================================================================
+\divider{Part 3 · Security}{Pairing, bonding, and what is encrypted}[Association models, security levels, and private addresses]
+
+\begin{frame}[eyebrow=Security]{Pairing, bonding, and what they buy}
+  \vskip 3mm
+  \begin{grid}[3]
+    \cell[\faLock]{Pairing}{The two devices agree on keys and turn on link-layer encryption. It lasts until the link drops.}
+    \cell[\faDatabase]{Bonding}{Pairing, then storing the long-term key on both sides. The next connection encrypts with no user interaction.}
+    \cell[\faExclamationCircle]{Neither is automatic}{A plain BLE link is unencrypted. Encryption starts only when a characteristic demands it.}
+  \end{grid}
+  \begin{takeaway}{Bond once, then forget about it.}
+    A bonded sensor reconnects silently. An unbonded one asks the user every time, and users say no.
+  \end{takeaway}
+  \note{Modern pairing uses an elliptic-curve exchange that defeats a passive listener even in the weakest model; the older legacy pairing does not. Explain that the operating system owns the bond, so clearing it means going into the phone's Bluetooth settings.}
+\end{frame}
+
+\begin{frame}[eyebrow=Security]{Association models and security levels}
+  {\usebeamerfont{small}\begin{tabular}{@{}lp{34mm}p{50mm}@{}}
+    \toprule
+    \thead{Model} & \thead{Needs} & \thead{Protects against} \\
+    \midrule
+    Just Works         & nothing & a passive listener, and nothing else \\
+    Passkey Entry      & a display on one side, a keypad on the other & a device in the middle, if the user reads it \\
+    Numeric Comparison & a display and a yes/no button on both sides & the same, with less typing \\
+    Out of Band        & a second channel, such as an NFC tap & the same, with nothing to compare \\
+    \bottomrule
+  \end{tabular}}
+  \begin{takeaway}{No display means no protection from a device in the middle.}
+    A screenless sensor can only pair with Just Works. If the data matters, sign the payload above BLE.
+  \end{takeaway}
+  \note{Security levels run from one to four: no security, encryption after unauthenticated pairing, encryption after authenticated pairing, and authenticated pairing with the modern key exchange. This is the honest answer to the question of whether BLE is secure.}
+\end{frame}
+
+\begin{frame}[eyebrow=Security]{Addresses, privacy, and what is encrypted}
+  \vskip 2mm
+  \begin{columns}[T]
+    \begin{column}{0.50\textwidth}
+      \lead{Advertisements are in the clear}{Anyone with a radio reads your name, your service UUID and any broadcast payload. Put nothing personal there.}
+      \vskip 2mm
+      \lead{Encryption covers the link}{After pairing, reads, writes and notifications are all encrypted.}
+      \vskip 2mm
+      \lead{Addresses rotate}{A private device advertises an address that changes periodically. Only a bonded peer can resolve it.}
+    \end{column}
+    \begin{column}{0.46\textwidth}
+      \begin{warning}[Do not key on the address]
+        Both platforms hand you an identifier that is stable for your app and useless anywhere else. On iOS it is not the hardware address at all.
+      \end{warning}
+    \end{column}
+  \end{columns}
+  \note{Connect this to the reconnect strategy later in the deck: saving the identifier is right, and expecting it to match a MAC address printed on the board is not. On iOS the value differs from phone to phone.}
+\end{frame}
+
+% =====================================================================
+\divider{Part 4 · The phone}{Asking for the radio}[Android and iOS permissions, and flutter\_blue\_plus end to end]
+
+\begin{frame}[eyebrow=Permissions]{Permissions: two steps, both mandatory}
+  \vskip 2mm
+  \begin{columns}[T]
+    \begin{column}{0.54\textwidth}
+      \lead{Step one is static}{You declare at build time what the app may ever ask for. Android reads the manifest, iOS reads Info.plist and the sentence shown to the user.}
+      \vskip 2mm
+      \lead{Step two is at runtime}{The user sees a system dialog you cannot style, move or reword, and may refuse.}
+    \end{column}
+    \begin{column}{0.42\textwidth}
+      \begin{hint}[Order of operations]
+        Declare, then check the adapter state, then request, then scan. Scanning first gives you an unauthorized adapter and no useful error.
+      \end{hint}
+    \end{column}
+  \end{columns}
+  \begin{takeaway}{Permissions are a build-config problem first.}
+    An undeclared Android permission is denied forever with no dialog. A missing iOS usage string terminates the app on first use.
+  \end{takeaway}
+  \note{ADMD Lecture 8 covered the general permission flow and permission\_handler, so refer to it and stay on the Bluetooth specifics here. Say that the merged manifest under build is the file that actually ships.}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=Permissions]{Android: the manifest entries}
+\begin{codeblock}
+<!-- android/app/src/main/AndroidManifest.xml -->
+<uses-feature android:name="android.hardware.bluetooth_le"
+              android:required="true"/>
+
+<!-- Android 12 and later: runtime permissions, no location -->
+<uses-permission android:name="android.permission.BLUETOOTH_SCAN"
+                 android:usesPermissionFlags="neverForLocation"/>
+<uses-permission android:name="android.permission.BLUETOOTH_CONNECT"/>
+
+<!-- Android 11 and earlier: install-time, plus location to scan -->
+<uses-permission android:name="android.permission.BLUETOOTH"
+                 android:maxSdkVersion="30"/>
+<uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"
+                 android:maxSdkVersion="30"/>
+\end{codeblock}
+  \note{Walk the two blocks separately. The lower one exists only for old phones, and maxSdkVersion is what stops a modern phone from ever asking for location. Show the merged manifest under build to prove that plugins add lines of their own.}
+\end{frame}
+
+\begin{frame}[eyebrow=Permissions]{Android: neverForLocation and the scan story}
+  \vskip 2mm
+  {\usebeamerfont{small}\begin{tabular}{@{}lp{46mm}p{34mm}@{}}
+    \toprule
+    \thead{Version} & \thead{To scan} & \thead{To connect} \\
+    \midrule
+    Android 12 and later & BLUETOOTH\_SCAN at runtime & BLUETOOTH\_CONNECT at runtime \\
+    Android 10 and 11    & ACCESS\_FINE\_LOCATION, location switched on & BLUETOOTH, at install \\
+    Android 9 and older  & ACCESS\_COARSE\_LOCATION at runtime & BLUETOOTH, at install \\
+    \bottomrule
+  \end{tabular}}
+  \begin{takeaway}{Do not ask for location to read a sensor.}
+    The \code{neverForLocation} flag promises the system you do not derive position from what you scan.
+  \end{takeaway}
+  \note{This table is the most useful slide in the deck for Lab 3. Location was once required because a scan reveals which beacons are nearby, which is a location signal. Leave the flag off and you must request fine location on every supported version.}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=Permissions]{iOS: Info.plist and background modes}
+  \vskip 1mm
+\begin{codeblock}
+<!-- ios/Runner/Info.plist -->
+<key>NSBluetoothAlwaysUsageDescription</key>
+<string>Shows the live reading from your lab sensor.</string>
+
+<!-- Only when the app must keep working with the screen off -->
+<key>UIBackgroundModes</key>
+<array>
+  <string>bluetooth-central</string>
+</array>
+\end{codeblock}
+  \begin{takeaway}{Background BLE is narrow on both platforms.}
+    iOS wakes the app briefly for a subscribed value and refuses an unfiltered background scan. Android needs a foreground service.
+  \end{takeaway}
+  \note{There is no runtime request to write on iOS: the dialog appears on the first call into the Bluetooth API, and that string is the only explanation the user ever sees. A missing key is a termination, not a catchable exception, and review rejects the build.}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=Flutter]{flutter\_blue\_plus: scanning}
+  \vskip 1mm
+\begin{dart}
+await FlutterBluePlus.adapterState
+    .where((s) => s == BluetoothAdapterState.on).first;
+
+final sub = FlutterBluePlus.onScanResults.listen(
+    (results) => emit(results), onError: (e) => log('$e'));
+FlutterBluePlus.cancelWhenScanComplete(sub);
+
+await FlutterBluePlus.startScan(
+    withServices: [Guid('180D')], timeout: Duration(seconds: 15));
+\end{dart}
+  \begin{takeaway}{Always pass a filter and a timeout.}
+    \code{onScanResults} clears between scans, \code{scanResults} keeps the previous batch, and \code{cancelWhenScanComplete} removes the listener for you.
+  \end{takeaway}
+  \note{This is the only stream in the plugin that can emit an error, so onError is not optional here. Point at the adapter-state await: it is what makes the code work on a cold start, while Bluetooth is still coming up.}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=Flutter]{Connect, then discover}
+  \vskip 1mm
+\begin{dart}
+final sub = device.connectionState.listen((s) {
+  if (s == BluetoothConnectionState.disconnected) {
+    log('${device.disconnectReason?.code}');
+  }
+});
+device.cancelWhenDisconnected(sub, delayed: true, next: true);
+
+await device.connect();
+final services = await device.discoverServices();
+\end{dart}
+  \begin{takeaway}{Rediscover after every reconnection.}
+    Service and characteristic objects belong to one connection. Reusing them after a drop throws, and that is the most common exception in this lab.
+  \end{takeaway}
+  \note{Subscribe to the connection state before connecting, so the first disconnect is not missed. Show the disconnect reason code during the demo: a timeout, a user action and a peripheral-initiated close each want a different response.}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=Flutter]{Subscribe to a characteristic}
+  \vskip 1mm
+\begin{dart}
+final c = services
+    .firstWhere((s) => s.uuid == Guid('180D'))
+    .characteristics
+    .firstWhere((c) => c.uuid == Guid('2A37'));
+
+final sub = c.onValueReceived.listen((v) => emit(decode(v)));
+device.cancelWhenDisconnected(sub);
+
+await c.setNotifyValue(true);   // writes the CCCD for you
+\end{dart}
+  \begin{takeaway}{Listen first, then enable.}
+    Enabling notifications before the listener exists loses whatever the peripheral sends in between.
+  \end{takeaway}
+  \note{onValueReceived fires on a notification and on an explicit read. lastValueStream also fires on your own writes and replays the last value, which suits a toggle and confuses a sensor. Remind them BLE values are little-endian by convention.}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=Flutter]{Disconnect, and reconnect on purpose}
+  \vskip 1mm
+\begin{dart}
+await device.disconnect();
+
+// Later, with no scan: the id was saved on the first connect.
+final d = BluetoothDevice.fromId(savedRemoteId);
+await d.connect(autoConnect: true, mtu: null);
+await d.connectionState
+    .where((s) => s == BluetoothConnectionState.connected).first;
+await d.discoverServices();
+\end{dart}
+  \begin{takeaway}{A reconnect loop is part of the feature.}
+    Sensors go out of range, run flat and get switched off. An app that needs a manual retry after every drop is not finished.
+  \end{takeaway}
+  \note{With autoConnect the call returns at once and the platform connects whenever the device appears, with no timeout. It is incompatible with the mtu argument, so pass null and request the MTU yourself on Android. Task III of Lab 3 is this slide.}
+\end{frame}
+
+% =====================================================================
+\divider{Part 5 · The peripheral}{The other side, written in Go}[tinygo.org/x/bluetooth, the two lab set-ups, and how to size a characteristic]
+
+\begin{frame}[embedded,eyebrow=Peripheral]{What tinygo.org/x/bluetooth supports}
+  \vskip 2mm
+  {\usebeamerfont{small}\begin{tabular}{@{}lp{28mm}p{20mm}p{28mm}@{}}
+    \toprule
+    \thead{Host} & \thead{Underneath} & \thead{Central} & \thead{Peripheral} \\
+    \midrule
+    Linux, Windows     & BlueZ, WinRT & yes & yes \\
+    macOS              & CoreBluetooth & yes & no, central only \\
+    Nordic nRF52840    & SoftDevice & yes & yes \\
+    ESP32-C3, ESP32-S3 & espradio, over HCI & yes & yes \\
+    Original ESP32     & HCI co-processor & with firmware & with firmware \\
+    \bottomrule
+  \end{tabular}}
+  \begin{takeaway}{macOS cannot advertise.}
+    A Mac can be the central for a test, never the peripheral. Run the Go peripheral on Linux, on Windows, or on a board.
+  \end{takeaway}
+  \note{The same source builds for a laptop with go build and for a board with tinygo flash. The Xtensa ESP32 modules used earlier in this course are not a straightforward BLE target; the RISC-V parts are. Ask for a show of hands on Mac laptops.}
+\end{frame}
+
+\begin{frame}[embedded,fragile,eyebrow=Peripheral]{A peripheral in Go}
+  \vskip 2mm
+\begin{golang}
+var adapter = bluetooth.DefaultAdapter
+var value bluetooth.Characteristic
+
+func main() {
+    must(adapter.Enable())
+    adv := adapter.DefaultAdvertisement()
+    must(adv.Configure(bluetooth.AdvertisementOptions{
+        LocalName:    "MEC Lab",
+        ServiceUUIDs: []bluetooth.UUID{serviceUUID},
+    }))
+    must(adv.Start())
+    addService()
+}
+\end{golang}
+  \note{Point out that the local name and the service UUID are the only two things a scanner sees before connecting, and that both are what the Flutter filter matches on. Everything else in the program lives behind a connection.}
+\end{frame}
+
+\begin{frame}[embedded,fragile,eyebrow=Peripheral]{One service, one notifying characteristic}
+\begin{golang}
+must(adapter.AddService(&bluetooth.Service{
+    UUID: serviceUUID,
+    Characteristics: []bluetooth.CharacteristicConfig{{
+        Handle: &value,
+        UUID:   charUUID,
+        Flags:  bluetooth.CharacteristicNotifyPermission,
+    }},
+}))
+// Writing the handle pushes a notification to every subscriber.
+for i := uint8(0); ; i++ {
+    value.Write([]byte{i})
+    time.Sleep(time.Second)
+}
+\end{golang}
+  \note{Handle is filled in by AddService, and flags combine for a characteristic that is both readable and notifying. The counter is deliberate: it makes a dropped notification obvious in the Flutter list. Swap in a real sensor only once the path works.}
+\end{frame}
+
+\begin{frame}[embedded,eyebrow=Lab 3]{Two set-ups for Lab 3}
+  \vskip 2mm
+  \begin{columns}[T]
+    \begin{column}{0.48\textwidth}
+      \lead{A board}{An nRF52840 development board, flashed with \code{tinygo flash}. Runs on its own power and behaves like a real sensor.}
+      \vskip 2mm
+      \muted{An ESP32-C3 or ESP32-S3 also works, through espradio. The original ESP32 does not.}
+    \end{column}
+    \begin{column}{0.48\textwidth}
+      \lead{A laptop}{The same program under \code{go run}, on Linux or Windows. No hardware, no flashing, and a peripheral you can restart.}
+      \vskip 2mm
+      \muted{macOS is central only. Use a Linux virtual machine with the adapter passed through, or a board.}
+    \end{column}
+  \end{columns}
+  \begin{takeaway}{Both set-ups are graded the same.}
+    The Flutter side is identical either way. Pick whichever reaches a working notification fastest, and pick it before the lab.
+  \end{takeaway}
+  \note{Say plainly that a project device streaming over BLE needs one of these two paths, and that a team already committed to an ESP32 over MQTT does not have to switch. Lab 3 is about the protocol, not about the board.}
+\end{frame}
+
+\begin{frame}[embedded,eyebrow=Design]{Design the service, not just the code}
+  \vskip 2mm
+  \begin{grid}[3]
+    \cell[\faLayerGroup]{Keep the value small}{Fit one reading in twenty bytes. Scaled integers beat a JSON string every time.}
+    \cell[\faClock]{Batch on the device}{Ten readings in one notification cost one connection event. Ten notifications cost ten.}
+    \cell[\faIcon{compress-alt}]{Summarize, do not stream}{Send a minimum, a maximum and a mean instead of a hundred raw samples.}
+    \cell[\faToggleOn]{One concern each}{A reading, a setting and a command are three characteristics, not one blob.}
+    \cell[\faDatabase]{Document the encoding}{Byte order, scale and unit go in the repository next to the UUID.}
+    \cell[\faBatteryHalf]{Let the device sleep}{A long interval with peripheral latency saves more than any code you write.}
+  \end{grid}
+  \note{Close the technical part here. The recurring mistake is treating BLE like an HTTP endpoint and sending text. Ask each project team which single value their device must send, and how many bytes it really needs.}
+\end{frame}
+
+% =====================================================================
+\colorlet{upbAccent}{upbBlue}
+
+\begin{frame}[eyebrow=Recap]{Three things to remember}
+  \vskip 2mm
+  \begin{enumerate}
+    \item The central owns the timing. \muted{Connection interval, peripheral latency and MTU decide latency and battery life.}
+    \item GATT is discovered, never assumed. \muted{Rediscover services after every reconnection and never reuse an old characteristic object.}
+    \item Declare before you request. \muted{BLUETOOTH\_SCAN with neverForLocation and BLUETOOTH\_CONNECT on Android, NSBluetoothAlwaysUsageDescription on iOS.}
+  \end{enumerate}
+  \vskip 3mm
+  \kv{Further reading}{\link{https://pub.dev/packages/flutter_blue_plus}{pub.dev/packages/flutter\_blue\_plus} · \link{https://github.com/tinygo-org/bluetooth}{github.com/tinygo-org/bluetooth} · \link{https://developer.android.com/develop/connectivity/bluetooth/bt-permissions}{Android Bluetooth permissions}}
+  \note{Lab 3 is in week six and builds exactly this: a Go peripheral, a Flutter central, and a reconnect that survives walking out of the room. Tell teams to decide between the board and the laptop before they arrive.}
+\end{frame}
+
+\closingframe{Questions?}{dinu\_stefan.rusu@upb.ro · Microsoft Teams: course channel}
+
+\end{document}

@@ -1,0 +1,290 @@
+% Lab 5: BLoC
+% Application Development for Mobile Devices
+\documentclass[10pt,aspectratio=169,t]{beamer}
+\usetheme[lab]{upbminimal}
+
+\course{Application Development for Mobile Devices}
+\decklabel{Lab 5}
+\title{BLoC}
+\subtitle{Cubit, events, and one test that proves the state}
+\author{Dinu-Ștefan Rusu}
+\institute{FILS, Universitatea Politehnica București}
+\date{Week 10}
+
+\begin{document}
+
+\titleframe
+
+\begin{frame}[eyebrow=Today]{What this lab is for}
+  \vskip 2mm
+  \begin{grid}[2]
+    \cell[\faLayerGroup]{Separate logic from UI}{Move the todo list out of setState and into a Cubit, then a Bloc, while the screen only reacts to state.}
+    \cell[\faVial]{Prove it with a test}{Write one bloc\_test that drives events through the bloc and checks the exact states it emits, in order.}
+  \end{grid}
+  \vskip 6mm
+  \taskmeta{Time}{2 hours}{Submit}{Push to your admd-labs repo, branch \code{lab-5}, before next lab}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=Setup]{Where your code goes}
+  \begin{steps}
+    \item Open the project from Lab 4 and create a branch: \code{git checkout -b lab-5}
+    \item Keep \code{lib/models/todo.dart} from Lab 4. Create a new \code{lib/todos/} folder for everything else.
+    \item Run the app once before changing anything. If it does not build, fix that first.
+  \end{steps}
+  \begin{hint}
+    Hot restart after wrapping the app in \code{BlocProvider}: a hot reload can leave a stale provider in the tree.
+  \end{hint}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=Setup]{The feature's folder structure}
+  \begin{codeblock}
+lib/
+  models/todo.dart
+  todos/
+    todo_repository.dart
+    cubit/todo_cubit.dart
+    cubit/todo_state.dart
+    bloc/todo_bloc.dart
+    bloc/todo_event.dart
+    bloc/todo_state.dart
+  screens/todo_screen.dart
+  main.dart
+test/todos/todo_bloc_test.dart
+  \end{codeblock}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=Setup]{Packages to add}
+\begin{shell}
+flutter pub add flutter_bloc equatable
+flutter pub add --dev bloc_test mocktail
+\end{shell}
+  \begin{steps}
+    \item \code{flutter\_bloc}: Cubit, Bloc, and the widgets that read them.
+    \item \code{equatable}: value equality for state classes.
+    \item \code{bloc\_test}: drives a bloc and asserts what it emits.
+    \item \code{mocktail}: fakes the repository in the test.
+  \end{steps}
+  \begin{hint}
+    \code{flutter pub add} writes the resolved version into \code{pubspec.yaml}. Commit that change together with your code.
+  \end{hint}
+\end{frame}
+
+\begin{frame}[eyebrow=Task I]{TodoCubit: state without events}
+  \begin{columns}[T]
+    \begin{column}{0.55\textwidth}
+      \begin{steps}
+        \item Create \code{TodoState extends Equatable} holding the todo list and a loading flag.
+        \item Create \code{TodoCubit extends Cubit<TodoState>} with \code{load}, \code{add}, \code{toggle}, \code{remove}.
+        \item Wrap the app in \code{BlocProvider} whose \code{create} returns \code{TodoCubit()..load()}.
+        \item Replace every \code{setState} in \code{TodoScreen} with a \code{BlocBuilder}.
+      \end{steps}
+    \end{column}
+    \begin{column}{0.41\textwidth}
+      \kv{Done when}{}
+      \begin{checklist}
+        \item No \code{setState} remains in \code{TodoScreen}.
+        \item Toggling calls \code{TodoCubit}'s \code{toggle(id)} via \code{context.read}.
+        \item Two states with the same todos compare equal.
+      \end{checklist}
+    \end{column}
+  \end{columns}
+  \begin{takeaway}{A cubit method and a bloc event both end in emit.}
+    Task II only changes how the call arrives, not what happens after it.
+  \end{takeaway}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=Task I]{The cubit's state}
+\begin{dart}
+class TodoState extends Equatable {
+  final List<Todo> todos;
+  final bool loading;
+  const TodoState({this.todos = const [], this.loading = false});
+  TodoState copyWith({List<Todo>? todos, bool? loading}) => TodoState(
+        todos: todos ?? this.todos,
+        loading: loading ?? this.loading,
+      );
+  @override
+  List<Object?> get props => [todos, loading];
+}
+\end{dart}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=Task I]{TodoCubit: four methods, one shape}
+\begin{dart}
+class TodoCubit extends Cubit<TodoState> {
+  TodoCubit() : super(const TodoState());
+  Future<void> load() async {
+    emit(state.copyWith(loading: true));
+    emit(TodoState(todos: await fetchTodos()));
+  }
+  void toggle(int id) => emit(state.copyWith(todos: [
+        for (final t in state.todos)
+          if (t.id == id) t.copyWith(completed: !t.completed) else t,
+      ]));
+}
+\end{dart}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=Task I]{Wiring: BlocProvider and BlocBuilder}
+\begin{dart}
+void main() => runApp(BlocProvider(
+      create: (_) => TodoCubit()..load(),
+      child: const TodoApp(),
+    ));
+// inside TodoScreen.build
+BlocBuilder<TodoCubit, TodoState>(
+  builder: (context, state) => state.loading
+      ? const CircularProgressIndicator()
+      : TodoList(
+          todos: state.todos,
+          onToggle: context.read<TodoCubit>().toggle,
+        ),
+)
+\end{dart}
+\end{frame}
+
+\begin{frame}[eyebrow=Reference]{From Cubit to Bloc: why promote}
+  \vskip 2mm
+  \begin{center}
+  \begin{tabular}{lll}
+    \toprule
+    & \thead{Cubit} & \thead{Bloc} \\
+    \midrule
+    Trigger & a direct method call & an event, via \code{add()} \\
+    Multiple sources & harder to compose & one \code{on<Event>} per source \\
+    Test grain & one call per case & one event per case \\
+    Talks to the API & directly, or not at all & through a \code{TodoRepository} \\
+    This lab & Task I & Task II onward \\
+    \bottomrule
+  \end{tabular}
+  \end{center}
+  \begin{takeaway}{Promote when one state can change for more than one reason.}
+    Naming each reason as an event keeps the bloc's history readable and testable.
+  \end{takeaway}
+\end{frame}
+
+\begin{frame}[eyebrow=Task II]{TodoBloc: events and a repository}
+  \begin{columns}[T]
+    \begin{column}{0.55\textwidth}
+      \begin{steps}
+        \item Define \code{TodoEvent} subclasses: \code{LoadTodos}, \code{AddTodo}, \code{ToggleTodo}, \code{RemoveTodo}.
+        \item Wrap Lab 4's \code{fetchTodos()} inside a \code{TodoRepository} class.
+        \item Create \code{TodoBloc}, a \code{Bloc<TodoEvent, TodoState>}, with one \code{on<Event>} handler per event.
+        \item Swap \code{TodoCubit} for \code{TodoBloc} in \code{BlocProvider} and dispatch with \code{.add(...)}.
+      \end{steps}
+    \end{column}
+    \begin{column}{0.41\textwidth}
+      \kv{Done when}{}
+      \begin{checklist}
+        \item Every action calls \code{.add(...)}, never a cubit method.
+        \item Only \code{TodoRepository} calls \code{dio}.
+        \item Toggling and removing update the visible list.
+      \end{checklist}
+    \end{column}
+  \end{columns}
+  \begin{takeaway}{The repository is the only class that talks to the network.}
+    TodoBloc receives todos; it never builds a Dio client itself.
+  \end{takeaway}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=Task II]{The event hierarchy}
+\begin{dart}
+sealed class TodoEvent {}
+
+class LoadTodos extends TodoEvent {}
+
+class AddTodo extends TodoEvent {
+  AddTodo(this.title);
+  final String title;
+}
+
+// ToggleTodo(id) and RemoveTodo(id) carry the
+// same single int id field as AddTodo carries title.
+\end{dart}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=Task II]{TodoRepository: the only class that calls dio}
+\begin{dart}
+class TodoRepository {
+  TodoRepository(this._dio);
+  final Dio _dio;
+  static const _url = 'https://jsonplaceholder.typicode.com/todos';
+
+  Future<List<Todo>> fetchTodos() async {
+    final res = await _dio.get(_url);
+    return (res.data as List)
+        .map((json) => Todo.fromJson(json))
+        .toList();
+  }
+}
+\end{dart}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=Task II]{TodoBloc: one handler per event}
+\begin{dart}
+class TodoBloc extends Bloc<TodoEvent, TodoState> {
+  TodoBloc(this._repo) : super(const TodoState()) {
+    on<LoadTodos>(_onLoad);
+  }
+  final TodoRepository _repo;
+  Future<void> _onLoad(LoadTodos e, Emitter<TodoState> emit) async {
+    emit(TodoState(todos: await _repo.fetchTodos()));
+  }
+}
+\end{dart}
+  \begin{hint}
+    \code{on<ToggleTodo>}, \code{on<AddTodo>} and \code{on<RemoveTodo>} register the same way.
+  \end{hint}
+\end{frame}
+
+\begin{frame}[eyebrow=Task III]{Proving it with bloc\_test}
+  \begin{columns}[T]
+    \begin{column}{0.55\textwidth}
+      \begin{steps}
+        \item Add \code{test/todos/todo\_bloc\_test.dart}.
+        \item Fake the repository: extend \code{Mock} and implement \code{TodoRepository}.
+        \item Use \code{blocTest} to add a todo, then toggle it, and list both states in \code{expect}.
+        \item Run \code{flutter test} and confirm it is green.
+      \end{steps}
+    \end{column}
+    \begin{column}{0.41\textwidth}
+      \kv{Done when}{}
+      \begin{checklist}
+        \item The test builds \code{TodoBloc} with the fake, never the real repository.
+        \item \code{act} fires \code{AddTodo} then \code{ToggleTodo}, in that order.
+        \item \code{expect} lists both intermediate states, not just the last.
+      \end{checklist}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=Task III]{One test, two emitted states}
+\begin{dart}
+void main() {
+  final repo = FakeTodoRepository();
+  blocTest<TodoBloc, TodoState>(
+    'add then toggle emits two states in order',
+    build: () => TodoBloc(repo),
+    act: (bloc) => bloc
+      ..add(AddTodo('Milk'))
+      ..add(ToggleTodo(1)),
+    expect: () => [
+      TodoState(todos: [Todo(id: 1, title: 'Milk')]),
+      TodoState(todos: [Todo(id: 1, title: 'Milk', completed: true)]),
+    ],
+  );
+}
+\end{dart}
+\end{frame}
+
+\begin{frame}[eyebrow=Troubleshooting]{Errors you will see, and the fix}
+  \vskip 2mm
+  \trouble{Bad state: Cannot emit new states after calling close}{An async call finished after the bloc closed. Guard it, or cancel it in \code{close()}.}
+  \trouble{BlocProvider.of() called with a context that does not contain a TodoBloc}{The reading widget sits above the BlocProvider. Move BlocProvider up the tree.}
+  \trouble{MissingStubError: 'fetchTodos'}{The mocktail fake was never stubbed with \code{when(...)} before the test called it.}
+  \trouble{Toggling a todo does nothing on screen}{The new state is \code{==} to the old one. Check that \code{copyWith} swaps the toggled item.}
+\end{frame}
+
+\closingframe{Push before you leave.}{Branch lab-5 · TodoBloc replaces TodoCubit · one passing bloc\_test in the PR}
+
+\end{document}

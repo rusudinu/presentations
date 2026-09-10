@@ -1,0 +1,564 @@
+% ADMD Lecture 9. Compile: latexmk -xelatex lecture09.tex
+\documentclass[10pt,aspectratio=169,t]{beamer}
+\usetheme{upbminimal}
+
+\course{Application Development for Mobile Devices}
+\decklabel{Lecture 9}
+\title{Observability and local storage}
+\subtitle{Seeing what a phone you do not own is doing, and where its data lives}
+\author{Dinu-Ștefan Rusu}
+\institute{FILS, Universitatea Politehnica București}
+\date{Autumn 2026}
+
+\begin{document}
+
+\titleframe
+
+\objectivesframe{
+  \cell[\faChartLine]{See the app in production}{Log the events, traces and crash reports that describe a device you will never touch.}
+  \cell[\faBell]{Alert on the right number}{Crash-free users per version, p95 instead of the average, and alerts that have an owner.}
+  \cell[\faDatabase]{Store data on the device}{Preferences, secure storage, a SQL database, files, and a cache with a time to live.}
+  \cell[\faLock]{Keep secrets out of plain text}{What belongs in the keychain, what belongs on the server, and what to clear on sign-out.}
+}
+
+\divider{Part 1 · Observability}{You cannot debug a phone you do not own}[Events, metrics, crashes, alerts]
+
+\begin{frame}[eyebrow=Observability]{Why this is harder on a phone}
+  \vskip 2mm
+  \begin{itemize}
+    \item The code runs on hardware you have never seen: thousands of Android models, several OS versions, networks that drop mid-request, devices throttled in a pocket.
+    \item You cannot attach a debugger to a user's phone. There is no server log to grep, because the log is on the device and you have no access to it.
+    \item Releases are staged and users update slowly, so several versions of your app are live at the same time and one of them is months old.
+  \end{itemize}
+  \begin{takeaway}{Monitoring tells you that something is wrong.}
+    Observability is having enough signal to work out why, without shipping a build to find out.
+  \end{takeaway}
+  \note{Ask the room how they would find a bug that only happens on one Android model in one country. Every answer they give needs data the app has to send on its own. That is the whole argument for this section.}
+\end{frame}
+
+\begin{frame}[eyebrow=Observability]{Four layers of signal}
+  \vskip 2mm
+  \begin{grid}[2]
+    \cell[\faChartBar]{Events}{What users did. Named actions read as a funnel, delayed by hours.}
+    \cell[\faClock]{Metrics}{How slow and how often. Traces and percentiles for the paths that matter.}
+    \cell[\faBug]{Crashes}{What broke, with a stack trace.}
+    \cell[\faBell]{Alerts}{Who finds out, and when.}
+  \end{grid}
+  \begin{takeaway}{Each layer answers a different question.}
+    All four are a day of work now, and a week of guessing after an incident.
+  \end{takeaway}
+  \note{Walk the four boxes left to right and say which question each one answers. Point out that the first three are cheap to add on day one and impossible to add retroactively for a bug that already happened.}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=Observability]{Logging an analytics event}
+  \begin{columns}[T]
+    \begin{column}{0.56\textwidth}
+\begin{dart}
+final analytics = FirebaseAnalytics.instance;
+
+// snake_case, at most 40 characters.
+await analytics.logEvent(
+  name: 'checkout_started',
+  parameters: {
+    'cart_value_ron': 249.90,
+    'item_count': 3,
+    'payment_method': 'card',
+  },
+);
+\end{dart}
+    \end{column}
+    \begin{column}{0.40\textwidth}
+      \lead{Some events are free.}{\code{first\_open}, \code{session\_start}, \code{screen\_view} and \code{app\_remove} are collected for you. Everything else is a deliberate decision.}
+      \vskip 2mm
+      \muted{Parameter values are strings or numbers. Wire \code{FirebaseAnalyticsObserver} into \code{MaterialApp} once and every route change becomes a screen view.}
+    \end{column}
+  \end{columns}
+  \note{Say that in Flutter this is a plain Dart API with a Map of parameters. Students who saw the Android version of this will expect a Bundle and a context, and there is neither.}
+\end{frame}
+
+\begin{frame}[eyebrow=Observability]{Naming events, and what never goes in one}
+  \vskip 2mm
+  \begin{itemize}
+    \item Name events for the funnel you want to read later. \code{checkout\_started}, then \code{payment\_submitted}, then \code{purchase\_complete} is a chart. Three unrelated names are not.
+    \item Never put personal data in a parameter: no emails, no names, no free text a user typed. That is a legal question about personal data, not a style preference.
+    \item Events are aggregated and delayed by hours. They answer how many users, never what happened to this one user.
+  \end{itemize}
+  \begin{takeaway}{Analytics is not a log.}
+    When you need one user's story you need a crash report with breadcrumbs, and that is the next slide.
+  \end{takeaway}
+  \note{Give the room one bad event name and one good one and let them explain the difference. Stress the personal data rule: a free-text search term in a parameter is the classic way an app leaks user content into an analytics console.}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=Observability]{Catching crashes in Flutter}
+\begin{dart}
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp();
+  final crash = FirebaseCrashlytics.instance;
+  FlutterError.onError = crash.recordFlutterFatalError;
+  PlatformDispatcher.instance.onError = (error, stack) {
+    crash.recordError(error, stack, fatal: true);
+    return true;
+  };
+  runApp(const App());
+}
+\end{dart}
+  \vskip 1mm
+  \muted{The first handler takes framework errors with the widget stack. The second takes async errors from outside it. Reports upload on the next launch.}
+  \note{Point out that the two handlers cover two different worlds: the framework catches build and layout errors, and everything in a Future or a Zone outside it lands in the platform dispatcher. Missing the second one is why teams believe their app never crashes.}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=Observability]{Errors you already caught}
+  \begin{columns}[T]
+    \begin{column}{0.54\textwidth}
+\begin{dart}
+try {
+  await api.pay(cart);
+} catch (e, s) {
+  await crash.recordError(
+      e, s, reason: 'checkout');
+}
+crash.log('card selected');
+crash.setCustomKey('cart_items', 3);
+crash.setUserIdentifier(hashedId);
+\end{dart}
+    \end{column}
+    \begin{column}{0.42\textwidth}
+      \lead{A handled failure is still a report.}{Use it for the paths you catch on purpose: a payment the server refused, a response that failed to parse, a retry that gave up.}
+      \vskip 2mm
+      \muted{\code{log} adds breadcrumbs to the next report. Custom keys add state. Set a hashed identifier, never an email.}
+    \end{column}
+  \end{columns}
+  \begin{takeaway}{Report the errors you catch.}
+    A caught exception that quietly returns null is the hardest class of bug to find months later.
+  \end{takeaway}
+  \note{Ask who has written an empty catch block this semester. Everyone has. Show that one recordError line turns that silence into a searchable issue with a stack trace.}
+\end{frame}
+
+\begin{frame}[eyebrow=Observability]{Crash-free users: the number to watch}
+  \vskip 3mm
+  \begin{grid}[3]
+    \bignum{99.9\%}{crash-free sessions, the number vendors like to quote}
+    \bignum{99.5\%}{crash-free users, a common floor for a consumer app}
+    \bignum{1 in 200}{users hit a crash at that floor}
+  \end{grid}
+  \vskip 4mm
+  \begin{itemize}
+    \item It counts people, not events: one user crashing fifty times still costs you one user. Sessions are always the higher number, because most sessions are short and uneventful.
+    \item Read it per app version, never in aggregate. A bad release hides inside a healthy overall number for days.
+  \end{itemize}
+  \begin{takeaway}{Act on crash-free users for the version you are rolling out.}
+    If it drops, halt the rollout or flip the feature flag from Lecture 8.
+  \end{takeaway}
+  \note{Do the arithmetic out loud on the room's own numbers: at 99.5 percent and 400 thousand installs, two thousand people hit a crash. Sorting issues by users affected rather than crash count follows from that.}
+\end{frame}
+
+\begin{frame}[eyebrow=Observability]{Latency: read p95, not the average}
+  \vskip 1mm
+  {\usebeamerfont{small}\begin{tabular}{@{}lp{95mm}@{}}
+    \toprule
+    \thead{Number} & \thead{What it tells you} \\
+    \midrule
+    p50, the median & The typical request. The last number to move. \\
+    p95             & One request in twenty. Where users start to notice. \\
+    p99             & The tail: cold starts, retries, weak networks. \\
+    the average     & One 30-second timeout skews it. No user experiences it. \\
+    \bottomrule
+  \end{tabular}}
+  \vskip 2mm
+  \muted{Write the budget down in words: feed load p95 under 1.5 s. Below roughly a thousand samples, p99 is noise.}
+  \begin{takeaway}{A percentile describes a defined share of your users.}
+    An average describes no particular user.
+  \end{takeaway}
+  \note{Invent a small data set on the board: nine fast requests and one that timed out. Show the average moving and the median not moving, then ask which one they would put in an alert.}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=Observability]{Measuring latency in the app}
+  \begin{columns}[T]
+    \begin{column}{0.50\textwidth}
+\begin{dart}
+final t = FirebasePerformance.instance
+    .newTrace('feed_load');
+await t.start();
+await loadFeed();
+t.putMetric('items', items.length);
+await t.stop();
+\end{dart}
+    \end{column}
+    \begin{column}{0.46\textwidth}
+      \lead{Some traces cost you nothing.}{App start, cold, warm and hot, and screen rendering are captured as soon as the package is added.}
+      \vskip 2mm
+      \muted{Dart HTTP calls are not. \code{dart:io} opens its own sockets and bypasses the instrumented platform stack, so wrap your client or trace the call yourself.}
+    \end{column}
+  \end{columns}
+  \begin{takeaway}{Give every trace a budget before you read it.}
+    A number with no threshold is a chart nobody looks at twice.
+  \end{takeaway}
+  \note{Ask which two paths in the lab app deserve a trace. Usually it is the first screen load and the one network call. That is enough: instrumenting everything produces noise nobody reads.}
+\end{frame}
+
+\begin{frame}[eyebrow=Observability]{Which alerts are worth firing}
+  \vskip 1mm
+  {\usebeamerfont{small}\begin{tabular}{@{}lp{46mm}p{54mm}@{}}
+    \toprule
+    \thead{Signal} & \thead{Fire when} & \thead{Why that threshold} \\
+    \midrule
+    Crash-free users   & it drops on the new version   & one user in 200 is an outage \\
+    New fatal issue    & new in the build you shipped  & regressions, not the old backlog \\
+    p95 latency        & it doubles week over week     & relative change survives growth \\
+    Funnel conversion  & purchases drop, starts hold   & a feature breaks without crashing \\
+    Everything else    & never: use a dashboard        & an alert nobody acts on is ignored \\
+    \bottomrule
+  \end{tabular}}
+  \begin{takeaway}{Every alert needs an owner and an action.}
+    If the answer to ``what would I do at 3 a.m.'' is ``nothing'', it belongs on a dashboard.
+  \end{takeaway}
+  \note{The last row is the important one. Teams fail at alerting by adding alerts, not by missing them. Ask the room what they currently ignore in their own inbox and why.}
+\end{frame}
+
+\begin{frame}[eyebrow=Observability]{One incident, end to end}
+  \vskip 1mm
+  \muted{Four minutes after a ten percent rollout of a new checkout.}
+  \vskip 3mm
+  \begin{grid}[2]
+    \cell{14:02 Analytics}{Checkout starts look normal, but purchases are down 40\% on the new version.}
+    \cell{14:05 Performance}{p95 on the payment trace jumps from 0.4 to 5.2 seconds.}
+    \cell{14:07 Crashlytics}{A new fatal issue: null check operator used on a null value in PaymentResponse.}
+    \cell{14:09 Remote Config}{The flag goes back to false. Fix, ship, then ramp again from one percent.}
+  \end{grid}
+  \begin{takeaway}{Events show that something is wrong, metrics show where, crashes show why.}
+    The feature flag is what limits the damage without waiting for a store review.
+  \end{takeaway}
+  \note{Walk this backwards as well. Without the event nobody would have looked, without the trace they would have blamed the client, without the crash report there would be no stack. Each layer alone is not enough.}
+\end{frame}
+
+\divider{Part 2 · Local storage}{Where the data lives when the network does not}[Preferences, secrets, a database, files, a cache]
+
+\begin{frame}[eyebrow=Storage]{What to store where}
+  \vskip 1mm
+  {\usebeamerfont{small}\begin{tabular}{@{}lp{44mm}p{52mm}@{}}
+    \toprule
+    \thead{Store} & \thead{Good for} & \thead{Not for} \\
+    \midrule
+    shared\_preferences     & key and value settings   & secrets, queries, anything large \\
+    flutter\_secure\_storage & tokens and keys         & bulk data of any kind \\
+    sqflite or Drift        & rows you query and watch & binary blobs, one-off flags \\
+    Files via path\_provider & images, exports, downloads & anything you search or filter \\
+    In-memory cache         & objects for this session  & anything that must survive exit \\
+    \bottomrule
+  \end{tabular}}
+  \begin{takeaway}{Size and shape pick the store, not habit.}
+    A list you filter belongs in a database. A single boolean does not.
+  \end{takeaway}
+  \note{This table is the map for the rest of the lecture. Ask where the lab todo list belongs and why the theme choice does not belong in the same place.}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=Storage]{Small settings with shared\_preferences}
+  \begin{columns}[T]
+    \begin{column}{0.54\textwidth}
+\begin{dart}
+final prefs = await SharedPreferences
+    .getInstance();
+
+await prefs.setBool('dark_mode', true);
+await prefs.setString('tab', 'feed');
+await prefs.setStringList('recent', ids);
+
+final dark = prefs.getBool('dark_mode')
+    ?? false;
+await prefs.remove('tab');
+\end{dart}
+    \end{column}
+    \begin{column}{0.42\textwidth}
+      \lead{A key and a value, nothing else.}{It wraps NSUserDefaults on iOS and SharedPreferences on Android. Values are bool, int, double, String or a list of strings.}
+      \vskip 2mm
+      \muted{Reads are synchronous once the file is loaded, so keep it small. Nothing here is encrypted.}
+    \end{column}
+  \end{columns}
+  \begin{takeaway}{Settings, not application state.}
+    The user's preferences belong here. The data your screens are made of belongs in a database.
+  \end{takeaway}
+  \note{Warn about the common misuse: serializing a whole list to JSON and putting it in a preference. It works until the list grows and every start-up parses it on the UI thread.}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=Storage]{Secrets with flutter\_secure\_storage}
+  \begin{columns}[T]
+    \begin{column}{0.54\textwidth}
+\begin{dart}
+const storage = FlutterSecureStorage();
+
+await storage.write(
+    key: 'refresh', value: token);
+
+final token = await storage.read(
+    key: 'refresh');
+
+await storage.delete(key: 'refresh');
+await storage.deleteAll();  // sign out
+\end{dart}
+    \end{column}
+    \begin{column}{0.42\textwidth}
+      \lead{The platform holds the key.}{iOS and macOS use the Keychain. Android uses the Keystore, with an encrypted preferences file on top of it.}
+      \vskip 2mm
+      \muted{Every call is asynchronous and crosses a platform channel. Read the token once at start-up, keep it in memory, write it only when it changes.}
+    \end{column}
+  \end{columns}
+  \begin{takeaway}{Clear it on sign-out.}
+    A token left behind means the next person holding the device is still signed in as your user.
+  \end{takeaway}
+  \note{Mention that secure storage is slower than preferences and that calling it on every request is a real performance bug. Also mention that the Android behavior on a device backup differs, so treat it as best effort, not as a vault.}
+\end{frame}
+
+\begin{frame}[eyebrow=Storage]{What must never be stored in plain text}
+  \begin{columns}[T]
+    \begin{column}{0.54\textwidth}
+      \vskip 1mm
+      \begin{itemize}
+        \item Passwords. Do not store one at all: keep the token the server issued.
+        \item Access tokens, refresh tokens and API keys. Anything that grants access to something.
+        \item Personal data you do not need on the device: an address, a phone number, a document scan.
+        \item Card details. The payment provider holds those, and your app never sees them.
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.42\textwidth}
+      \vskip 1mm
+      \begin{warning}[Assume the file is readable]
+        On a rooted or jailbroken device, and inside a device backup, the app sandbox is not a boundary.
+      \end{warning}
+      \vskip 2mm
+      \muted{Log lines count as storage. A token printed once ends up in a bug report attached by a user.}
+    \end{column}
+  \end{columns}
+  \begin{takeaway}{Encrypted storage is not a place to put more data.}
+    It is a place to put the few values you cannot avoid keeping on the device.
+  \end{takeaway}
+  \note{Tie this back to Lecture 7: the API key never ships in the binary either. The rule is the same rule seen from the storage side.}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=Storage]{Structured data with sqflite}
+\begin{dart}
+final db = await openDatabase(
+  join(await getDatabasesPath(), 'todos.db'),
+  version: 1,
+  onCreate: (db, v) => db.execute(
+    'CREATE TABLE todos(id TEXT PRIMARY KEY, title TEXT, done INTEGER)'),
+);
+await db.insert('todos', {'id': id, 'title': title, 'done': 0});
+final rows = await db.query('todos',
+    where: 'done = ?', whereArgs: [0], orderBy: 'title');
+final todos = rows.map(Todo.fromMap).toList();
+\end{dart}
+  \vskip 2mm
+  \muted{SQLite on both platforms, driven with SQL strings. There is no boolean column, so a flag is an integer. Always pass values through \code{whereArgs}.}
+  \note{Point at the two weaknesses before showing Drift: the SQL is unchecked until it runs, and every row comes back as an untyped map you have to convert by hand.}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=Storage]{The same table in Drift}
+\begin{dart}
+class Todos extends Table {
+  TextColumn get id => text()();
+  TextColumn get title => text().withLength(min: 1)();
+  BoolColumn get done => boolean().withDefault(const Constant(false))();
+  @override Set<Column> get primaryKey => {id};
+}
+@DriftDatabase(tables: [Todos])
+class AppDb extends _$AppDb {
+  @override int get schemaVersion => 1;
+}
+\end{dart}
+  \vskip 1mm
+  \muted{Drift sits on the same SQLite file and generates a typed query API from these declarations. The generator is \code{build\_runner}, as for JSON in Lecture 7.}
+  \note{Say plainly which one to pick: sqflite when the app has two tables and no queries worth naming, Drift as soon as the schema has relations or the queries repeat.}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=Storage]{A query you can watch}
+  \begin{columns}[T]
+    \begin{column}{0.54\textwidth}
+\begin{dart}
+Stream<List<Todo>> watchOpen() =>
+    (select(todos)
+      ..where((t) => t.done.equals(false)))
+    .watch();
+
+Future<void> toggle(Todo t) =>
+    update(todos).replace(
+        t.copyWith(done: !t.done));
+\end{dart}
+    \end{column}
+    \begin{column}{0.42\textwidth}
+      \lead{A query that emits again.}{\code{watch()} returns a Stream that re-runs whenever a write touches the tables it reads. Hand it to a StreamBuilder or to the bloc from Lecture 6.}
+      \vskip 2mm
+      \muted{A schema change means a new version number and a migration step, tested against a database file from the previous release.}
+    \end{column}
+  \end{columns}
+  \begin{takeaway}{The database is the source of truth and the screen is a view of it.}
+    Write to the database, and let the stream update the widget for you.
+  \end{takeaway}
+  \note{This is the shape the lab app should end up with. Contrast it with calling setState after every write, which is how the same screen goes stale in two places at once.}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=Storage]{Files with path\_provider}
+\begin{dart}
+final dir = await getApplicationDocumentsDirectory();
+final file = File('${dir.path}/export.json');
+
+await file.writeAsString(jsonEncode(data));
+final text = await file.readAsString();
+if (await file.exists()) await file.delete();
+
+final tmp = await getTemporaryDirectory();
+\end{dart}
+  \vskip 2mm
+  \muted{\code{dart:io} does not exist on the web, so guard the import if the app targets a browser.}
+  \begin{takeaway}{Store the file name, not the absolute path.}
+    Ask path\_provider again on every launch: the container directory can change when the app is updated.
+  \end{takeaway}
+  \note{The stored-path bug is worth naming out loud. It passes every test on a simulator and breaks for real users after the first update, which makes it very hard to reproduce.}
+\end{frame}
+
+\begin{frame}[eyebrow=Storage]{Which directory, and what may be deleted}
+  \vskip 1mm
+  {\usebeamerfont{small}\begin{tabular}{@{}lp{22mm}p{54mm}@{}}
+    \toprule
+    \thead{Call} & \thead{Holds} & \thead{Lifetime} \\
+    \midrule
+    getApplicationDocumentsDirectory & user files    & survives updates, kept in backups \\
+    getApplicationSupportDirectory   & app data      & survives updates, not user visible \\
+    getTemporaryDirectory            & caches        & the system may delete it any time \\
+    getExternalStorageDirectory      & shared files  & Android only, outside the sandbox \\
+    \bottomrule
+  \end{tabular}}
+  \begin{takeaway}{Anything in the temporary directory can vanish between launches.}
+    If losing it breaks the app, it was never a cache.
+  \end{takeaway}
+  \note{Ask where a downloaded invoice PDF goes and where a thumbnail goes. The answers are different, and the reason is who owns the file rather than how big it is.}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=Storage]{An in-memory cache with a time to live}
+\begin{dart}
+class Cached<T> {
+  Cached(this.value) : at = DateTime.now();
+  final T value;
+  final DateTime at;
+  bool fresh(Duration ttl) => DateTime.now().difference(at) < ttl;
+}
+final _cache = <String, Cached<Feed>>{};
+Feed? readFeed(String key, Duration ttl) {
+  final e = _cache[key];
+  return (e != null && e.fresh(ttl)) ? e.value : null;
+}
+\end{dart}
+  \vskip 1mm
+  \muted{A cache with no expiry is a memory leak: give every entry a time to live and a maximum size.}
+  \note{Ask what a sensible time to live is for a news feed, for a user profile and for a currency rate. The three answers differ by orders of magnitude, which is why the duration is a parameter and not a constant.}
+\end{frame}
+
+\begin{frame}[eyebrow=Storage]{The repository decides where to read}
+  \vskip 2mm
+  \begin{enumerate}
+    \item Return the cached value if it is still fresh. \muted{No await, no disk, no network, no spinner.}
+    \item Otherwise read the database and return that immediately. \muted{The screen shows real content even with the network off.}
+    \item Then fetch from the network, write the result to the database, and let the watched query push the update to the screen.
+  \end{enumerate}
+  \vskip 3mm
+  \muted{The bloc from Lecture 6 sees none of this. It asks the repository for todos and receives a stream.}
+  \begin{takeaway}{One class owns the storage decision.}
+    If a widget opens a database or reads a preference, the layering has already failed.
+  \end{takeaway}
+  \note{This is the slide that connects Lectures 6, 7 and 9. Draw the three arrows on the board and ask where an error from the network is allowed to surface.}
+\end{frame}
+
+\divider{Part 3 · Lifecycle}{The app is not always in front}[Save at the last moment you can still count on]
+
+\begin{frame}[eyebrow=Lifecycle]{The lifecycle states}
+  \vskip 2mm
+  \begin{grid}[2]
+    \cell[\faPlay]{resumed}{Visible and taking input. The only state in which animations and camera work belong.}
+    \cell[\faPause]{inactive}{Visible but not focused: an incoming call, the app switcher, a system dialog.}
+    \cell[\faMoon]{paused}{Not visible. The process may be killed after this.}
+    \cell[\faPowerOff]{detached}{The engine is alive with no view attached.}
+  \end{grid}
+  \begin{takeaway}{The paused state is your last reliable save point.}
+    Anything the user would be annoyed to lose must be on disk by then.
+  \end{takeaway}
+  \note{On Android the process can be killed after paused without another callback, and in detached you cannot count on the network or the UI. Ask what happens to a half-typed message when the user takes a call and the system reclaims memory. Nothing in the framework saves it for you.}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=Lifecycle]{Saving when the app is paused}
+\begin{dart}
+class _HomeState extends State<Home> with WidgetsBindingObserver {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState s) {
+    if (s == AppLifecycleState.paused) _saveDraft();
+  }
+}
+\end{dart}
+  \vskip 2mm
+  \muted{Remove the observer in \code{dispose} too, or the State object outlives its widget.}
+  \note{Keep the save short: the app is being backgrounded and a long write may not finish. Point out that this callback is not a place for a network call. Write to the database, and let the sync happen the next time the app is in front.}
+\end{frame}
+
+\begin{frame}[eyebrow=Lifecycle]{A storage checklist before you ship}
+  \vskip 2mm
+  \begin{checklist}
+    \item No password, token or key in preferences, in a file, or in a log line.
+    \item Sign-out clears secure storage, the database and every in-memory cache.
+    \item Every schema change has a migration, tested against a database from the previous release.
+    \item Every cache entry has a time to live, and the cache has a maximum size.
+    \item Draft state is written when the app is paused, not only when the user leaves the screen.
+    \item The app opens and shows real content with the network turned off.
+  \end{checklist}
+  \vskip 2mm
+  \muted{Offline-first sync and conflict resolution are MEC Lectures 8 and 9. This lecture stops at one device.}
+  \note{Give the room two minutes to check the lab app against this list. The last item is the one that fails most often, because the app was only ever run on a fast connection.}
+\end{frame}
+
+\begin{frame}[eyebrow=Recap]{Three things to remember}
+  \vskip 2mm
+  \begin{enumerate}
+    \item The app has to report on itself. \muted{Events, metrics, crashes and alerts, because you own none of the devices it runs on.}
+    \item Act on crash-free users for the version you are rolling out. \muted{Read p95 for speed, and never the average.}
+    \item Size and shape pick the store. \muted{Preferences for settings, secure storage for secrets, a database for anything you query.}
+  \end{enumerate}
+  \begin{takeaway}{Both halves of this lecture answer the same question.}
+    What is true on a device you cannot reach, and what is still true after it goes offline.
+  \end{takeaway}
+  \note{Close the loop with the incident slide: the flag limited the damage, but the crash report was what named the line to fix. Then hand over to the reading list.}
+\end{frame}
+
+\begin{frame}[eyebrow=Next]{What to do this week}
+  \begin{columns}[T]
+    \begin{column}{0.52\textwidth}
+      \kv{This week}{}
+      \begin{itemize}
+        \item Wire both crash handlers into the lab app, force one crash, and find the report.
+        \item Log one analytics event that matters to your app, with no personal data in it.
+        \item Move the todo list into a database and drive the screen from a watched query.
+        \item Turn the network off, open the app, and write down every screen that shows nothing.
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.44\textwidth}
+      \kv{Further reading}{}
+      \vskip 1mm
+      \link{https://firebase.google.com/docs/crashlytics/get-started?platform=flutter}{Crashlytics for Flutter}\par
+      \link{https://docs.flutter.dev/cookbook/persistence/sqlite}{docs.flutter.dev, persistence cookbook}\par
+      \link{https://drift.simonbinder.eu}{drift.simonbinder.eu}\par
+      \link{https://pub.dev/packages/flutter_secure_storage}{pub.dev, flutter\_secure\_storage}
+      \vskip 3mm
+      \muted{The Drift site carries the migration guide. Read it before you change a table for the second time.}
+    \end{column}
+  \end{columns}
+  \begin{takeaway}{Lab 5 starts from the third item.}
+    Open the pull request even if the database half is unfinished, so the review catches the schema early.
+  \end{takeaway}
+  \note{Lab 5 builds on the first and third items. Tell students to open a pull request even if the database half is incomplete, so the review can catch the schema early.}
+\end{frame}
+
+\closingframe{Questions?}{dinu\_stefan.rusu@upb.ro · Microsoft Teams: course channel}
+
+\end{document}

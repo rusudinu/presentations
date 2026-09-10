@@ -1,0 +1,599 @@
+% ADMD Lecture 14. Compile: latexmk -xelatex lecture14.tex
+\documentclass[10pt,aspectratio=169,t]{beamer}
+\usetheme{upbminimal}
+
+\course{Application Development for Mobile Devices}
+\decklabel{Lecture 14}
+\title{Release, distribution, and push notifications}
+\subtitle{Build modes, signing, the stores, CI/CD, and FCM}
+\author{Dinu-Ștefan Rusu}
+\institute{FILS, Universitatea Politehnica București}
+\date{Autumn 2026}
+
+\begin{document}
+
+\titleframe
+
+\objectivesframe{
+  \cell[\faBoxOpen]{Produce a real build}{Debug, profile and release, flavors, icons, and a version number the stores accept.}
+  \cell[\faKey]{Sign it correctly}{Android keystores and Play App Signing, iOS certificates and provisioning profiles.}
+  \cell[\faRocket]{Deliver it}{Play Console and App Store Connect, internal testing and TestFlight, GitHub Actions and fastlane.}
+  \cell[\faBell]{Push to a device}{FCM tokens, the three app states, and what a notification payload may carry.}
+}
+
+\divider{Part 1 · Building}{Making an installable build}[Build modes, flavors, icons, and version numbers]
+
+\begin{frame}[eyebrow=Building]{Three build modes, three purposes}
+  \vskip 2mm
+  \begin{grid}[3]
+    \cell[\faBug]{Debug}{JIT compiled, assertions on, hot reload, service extensions, a debug banner. Large and slow on purpose. Never measure performance here.}
+    \cell[\faClock]{Profile}{AOT compiled with tracing kept, so DevTools can still see frames and CPU. Runs on a real device only, never on an emulator.}
+    \cell[\faRocket]{Release}{AOT compiled, assertions stripped, no debugging hooks, tree shaken icons. This is the only mode a user ever runs.}
+  \end{grid}
+  \vskip 4mm
+  \muted{The mode is a compile-time decision. It changes the Dart compiler, the asserts, and the size of the binary.}
+  \begin{takeaway}{A bug that only appears in release is usually an assert or a debug-only code path.}
+    Reproduce with \code{flutter run --release} before you blame the store build.
+  \end{takeaway}
+  \note{Ask which mode they have been running all semester. Then say that everything they measured in DevTools in Lecture 5 was measured in profile mode for exactly this reason.}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=Building]{The artifacts each store wants}
+  \begin{columns}[T]
+    \begin{column}{0.52\textwidth}
+\begin{shell}
+# Android: the format Play expects
+flutter build appbundle --release
+# Sideloading and CI smoke tests only
+flutter build apk --split-per-abi
+# iOS: an archive, then upload it
+flutter build ipa --release
+\end{shell}
+    \end{column}
+    \begin{column}{0.44\textwidth}
+      \lead{An app bundle is not an installable app.}{You upload one \code{.aab}, and Play generates the APK for each device: its ABI, screen density and language only.}
+      \muted{\code{flutter build ipa} writes an Xcode archive plus an \code{.ipa}. You upload it with Transporter or from Xcode Organizer.}
+    \end{column}
+  \end{columns}
+  \begin{takeaway}{Ship the bundle, keep the debug symbols.}
+    Archive the mapping and symbol files from every release build, or your crash reports stay unreadable.
+  \end{takeaway}
+  \note{Ask who has ever installed an APK by hand. Then point out that Play has not accepted a plain APK for a new app in years. The split APKs are for the lab and for testing on a device you hold.}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=Building]{Flavors: one codebase, several apps}
+  \begin{columns}[T]
+    \begin{column}{0.54\textwidth}
+\begin{shell}
+flutter run --flavor dev \
+  -t lib/main_dev.dart
+
+flutter build appbundle --flavor prod \
+  -t lib/main_prod.dart \
+  --dart-define=API_URL=https://api.dev
+\end{shell}
+      \muted{Each flavor gets its own application id, its own icon and its own name, so development and production can sit side by side on the same phone.}
+    \end{column}
+    \begin{column}{0.42\textwidth}
+      \begin{hint}[Where it is configured]
+        Android: product flavors in the Gradle build file. iOS: one scheme and one build configuration per flavor, in Xcode.
+      \end{hint}
+      \muted{Read the values back with \code{String.fromEnvironment}. A \code{--dart-define} is baked in at compile time, so it is not a secret.}
+    \end{column}
+  \end{columns}
+  \note{The point to make: a flavor changes identity, not code. The staging build must be the same binary logic as production, or staging proves nothing.}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=Building]{Icons, names, and the splash screen}
+  \begin{columns}[T]
+    \begin{column}{0.5\textwidth}
+\begin{yaml}
+flutter_launcher_icons:
+  image_path: "assets/icon.png"
+  android: true
+  ios: true
+  adaptive_icon_background: "#101010"
+  adaptive_icon_foreground: "fg.png"
+\end{yaml}
+    \end{column}
+    \begin{column}{0.46\textwidth}
+      \lead{Generate, do not hand-place.}{One square source image, one command, and every density and every iOS size is written for you.}
+      \muted{Adaptive icons need a foreground and a background layer, because the launcher masks them into its own shape.}
+      \muted{\code{flutter\_native\_splash} writes the native launch screen. Flutter cannot paint before the engine starts.}
+    \end{column}
+  \end{columns}
+  \begin{takeaway}{The app icon may not have a transparent background.}
+    iOS rejects the upload for it. Export the source image on a solid color.
+  \end{takeaway}
+  \note{Warn about the transparent-background icon: iOS does not allow alpha in the app icon and the upload is rejected. Mention that the splash screen is native by necessity, and that a long one is a symptom of slow startup, not a feature.}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=Building]{Version name and build number}
+  \begin{columns}[T]
+    \begin{column}{0.44\textwidth}
+\begin{yaml}
+# pubspec.yaml
+version: 1.4.0+27
+\end{yaml}
+\begin{shell}
+flutter build appbundle \
+  --build-name=1.4.0 --build-number=28
+\end{shell}
+    \end{column}
+    \begin{column}{0.52\textwidth}
+      {\usebeamerfont{small}\begin{tabular}{@{}lll@{}}
+        \toprule
+        \thead{Part} & \thead{Android} & \thead{iOS} \\
+        \midrule
+        1.4.0 & versionName & CFBundleShortVersionString \\
+        27 & versionCode & CFBundleVersion \\
+        \bottomrule
+      \end{tabular}}
+      \vskip 3mm
+      \muted{The name is for humans and may repeat. The number is for the store, must be an integer, and must increase with every upload.}
+    \end{column}
+  \end{columns}
+  \begin{takeaway}{A build number is spent the moment you upload it.}
+    Both stores refuse a second upload with a number they already have, even if you deleted the first one. Let CI set it from the run number.
+  \end{takeaway}
+  \note{This is the single most common wasted hour in a first release. Show the pubspec line and say the plus sign separates the two values. Ask what happens when two engineers release from their laptops on the same day.}
+\end{frame}
+
+\divider{Part 2 · Signing}{Proving the update is yours}[Keystores, Play App Signing, certificates and profiles]
+
+\begin{frame}[fragile,eyebrow=Signing]{The Android keystore}
+  \begin{columns}[T]
+    \begin{column}{0.56\textwidth}
+\begin{shell}
+keytool -genkey -v -keystore upload.jks \
+  -keyalg RSA -keysize 2048 -validity 10000 \
+  -alias upload
+\end{shell}
+\begin{yaml}
+# android/key.properties  (never committed)
+storeFile=/Users/you/keys/upload.jks
+storePassword=...
+keyAlias=upload
+keyPassword=...
+\end{yaml}
+    \end{column}
+    \begin{column}{0.40\textwidth}
+      \lead{Every Android app is signed.}{The signature is the identity. Android installs an update only when it is signed by the same key as the installed app.}
+      \muted{Gradle reads \code{key.properties} and applies the release signing config. Without it, \code{flutter build} silently falls back to the debug key.}
+    \end{column}
+  \end{columns}
+  \note{Say plainly that a debug-signed bundle is rejected by Play. Point at the gitignore line for key.properties. Ask what a lost key costs: on Android it used to mean a new listing and zero installs.}
+\end{frame}
+
+\begin{frame}[eyebrow=Signing]{Play App Signing}
+  \vskip 1mm
+  \begin{grid}[3]
+    \cell[\faUpload]{You hold the upload key}{You sign the bundle with it. Play verifies the signature, then strips it. It only proves the upload came from you.}
+    \cell[\faLock]{Google holds the app signing key}{Play re-signs the generated APKs with it. That key is what devices check, and it never leaves Google.}
+    \cell[\faIcon{sync-alt}]{The upload key is replaceable}{Lose it and you register a new one through support. Lose a self-managed app signing key and the app can never be updated.}
+  \end{grid}
+  \vskip 1mm
+  \muted{Play App Signing is required for new apps, and it is what makes per-device APK splitting possible.}
+  \begin{takeaway}{Back up the keystore and its passwords the day you create them.}
+    A password manager entry and an encrypted copy off your laptop. Not the repository.
+  \end{takeaway}
+  \note{Draw the two keys on the board: upload key at the door, app signing key on the package. Students confuse them constantly.}
+\end{frame}
+
+\begin{frame}[eyebrow=Signing]{iOS: four things that must agree}
+  {\usebeamerfont{small}\begin{tabular}{@{}lp{56mm}p{30mm}@{}}
+    \toprule
+    \thead{Piece} & \thead{What it is} & \thead{Where it lives} \\
+    \midrule
+    Certificate & Apple's signature on your public key & Keychain, exported as \code{.p12} \\
+    App ID & The bundle identifier and its capabilities & Developer portal \\
+    Devices & UDIDs allowed to run a test build & Developer portal \\
+    Profile & Certificate, App ID and devices, in one file & \code{.mobileprovision} \\
+    \bottomrule
+  \end{tabular}}
+  \vskip 2mm
+  \muted{Xcode manages all four for one developer. A team shares them deliberately: \code{fastlane match} keeps them in a private encrypted repository.}
+  \begin{takeaway}{Certificates expire.}
+    A build that worked last year fails today for no other reason.
+  \end{takeaway}
+  \note{This table is the answer to almost every iOS signing error message. Tell students to read the error and ask which of the four rows disagrees with the others.}
+\end{frame}
+
+\begin{frame}[eyebrow=Signing]{What never goes into the repository}
+  \vskip 2mm
+  \begin{columns}[T]
+    \begin{column}{0.48\textwidth}
+      \begin{warning}[Keep these out of Git]
+        Keystores and \code{key.properties}. Signing certificates and \code{.p12} exports. Provisioning profiles. App Store Connect API keys. Play service account JSON. Any \code{.env} with a real secret.
+      \end{warning}
+    \end{column}
+    \begin{column}{0.48\textwidth}
+      \lead{A secret in Git is public.}{Deleting the file does not help: the object stays in history, and on a public repository it is scraped within minutes.}
+      \muted{If it happens: rotate the credential first, then clean the history. In that order. Rotation is what actually stops the damage.}
+      \muted{Store the real values in the CI provider's encrypted secrets and in a password manager for humans.}
+    \end{column}
+  \end{columns}
+  \begin{takeaway}{Write the ignore rules before you create the keys.}
+    That is the only moment when the repository is still guaranteed clean.
+  \end{takeaway}
+  \note{Mention that a bot scanning new public commits is faster than any of us. Ask the room to check their own lab repository for a stray key before the lab test.}
+\end{frame}
+
+\divider{Part 3 · Stores}{Getting past review}[Play Console, App Store Connect, test tracks, and privacy]
+
+\begin{frame}[eyebrow=Stores]{Google Play Console: the first release}
+  \vskip 1mm
+  \begin{enumerate}
+    \item Create the app and fix the package name. \muted{It is permanent.}
+    \item Complete the store listing. \muted{Descriptions, icon, feature graphic, screenshots.}
+    \item Answer the questionnaires. \muted{Content rating, target audience, ads, Data safety.}
+    \item Upload the signed bundle to a track, with release notes.
+    \item Roll out in stages, and watch the crash rate as it climbs.
+  \end{enumerate}
+  \vskip 3mm
+  \muted{Review takes days, not minutes, and a new developer account waits longest.}
+  \note{The realistic message: the binary is the easy half. Budget an afternoon for the forms and screenshots, and do it before the deadline, not on it.}
+\end{frame}
+
+\begin{frame}[eyebrow=Stores]{App Store Connect: the first release}
+  \vskip 1mm
+  \begin{enumerate}
+    \item Register the App ID and create the app record. \muted{Bundle identifier and SKU, both permanent.}
+    \item Upload a build. \muted{From Xcode Organizer or Transporter. It appears after processing.}
+    \item Fill in the metadata. \muted{Screenshots per device size, description, support and privacy URLs.}
+    \item Answer App Privacy and export compliance, attach the build, submit.
+    \item Release manually or in phases once it is approved.
+  \end{enumerate}
+  \vskip 3mm
+  \muted{Give the reviewer a demo account and notes for anything behind a login. A reviewer who cannot get in rejects the app.}
+  \note{Say that Apple's review is a human reading your notes and tapping through the app. Everything you would tell a new tester belongs in the review notes field.}
+\end{frame}
+
+\begin{frame}[eyebrow=Stores]{Test tracks before anyone real sees it}
+  \vskip 1mm
+  {\usebeamerfont{small}\begin{tabular}{@{}llp{40mm}p{40mm}@{}}
+    \toprule
+    \thead{Track} & \thead{Store} & \thead{Who gets it} & \thead{Review} \\
+    \midrule
+    Internal testing & Play & a small list of accounts you name & minimal, available quickly \\
+    Closed testing & Play & testers on a list or in a group & yes \\
+    Open testing & Play & anyone with the opt-in link & yes \\
+    TestFlight internal & App Store & members of your team & none \\
+    TestFlight external & App Store & invited testers or a public link & Beta App Review \\
+    \bottomrule
+  \end{tabular}}
+  \vskip 3mm
+  \begin{takeaway}{Every release goes through a test track first.}
+    A build that installs and launches on ten real devices has already caught the failures an emulator hides.
+  \end{takeaway}
+  \note{Point out that TestFlight builds expire after a while, so a beta is not a distribution channel. Internal testing on Play is the fastest loop you have.}
+\end{frame}
+
+\begin{frame}[eyebrow=Stores]{Why apps get rejected}
+  \vskip 1mm
+  \begin{grid}[3]
+    \cell[\faBug]{It crashed for the reviewer}{The most common reason. Test the exact build you submitted.}
+    \cell[\faLock]{The reviewer could not sign in}{No demo account, a dead link, or a phone code they cannot receive.}
+    \cell[\faFile]{Placeholder content}{Lorem ipsum, dead links, or a support URL that does not resolve.}
+    \cell[\faIcon{user-shield}]{Permissions without a reason}{A permission you request but never use.}
+    \cell[\faSearch]{Misleading metadata}{Screenshots of features that do not exist.}
+    \cell[\faMobile]{Too little to be an app}{A thin wrapper around a website.}
+  \end{grid}
+  \note{Tell them a rejection is a message, not a verdict: you fix it and resubmit the same day. The expensive mistake is submitting untested on the last day.}
+\end{frame}
+
+\begin{frame}[eyebrow=Stores]{Privacy declarations and permissions}
+  \begin{columns}[T]
+    \begin{column}{0.48\textwidth}
+      \lead{You declare data before you collect it.}{Play calls it the Data safety form, Apple calls them privacy labels. Both ask what you collect, why, and whether you share it.}
+      \muted{The declaration must match the app, including whatever your analytics and crash SDKs send. An SDK that collects an advertising identifier is your collection, not theirs.}
+    \end{column}
+    \begin{column}{0.48\textwidth}
+      \begin{hint}[On the device]
+        iOS needs a purpose string in \code{Info.plist} for every sensitive API, shown verbatim in the prompt. Android declares permissions in the manifest and asks at runtime.
+      \end{hint}
+      \muted{Ask at the moment the permission is needed, with the reason on screen first. A cold prompt at launch is denied, and a denial is hard to reverse.}
+    \end{column}
+  \end{columns}
+  \note{Connect this back to Lecture 11 on permissions. The new part here is that the store now asks you to write down, in public, what Lecture 9 and Lecture 12 actually send off the device.}
+\end{frame}
+
+\divider{Part 4 · Automation}{Nobody releases from a laptop}[GitHub Actions, fastlane, Codemagic, and code push]
+
+\begin{frame}[eyebrow=Automation]{What a release pipeline does}
+  \vskip 2mm
+  \begin{grid}[3]
+    \cell[\faCheckCircle]{On every pull request}{Format check, \code{flutter analyze}, unit and widget tests. Merging is blocked while any of them is red.}
+    \cell[\faBoxOpen]{On every merge to main}{Build the release artifacts for both platforms so a broken build is found in minutes, not at release time.}
+    \cell[\faRocket]{On a version tag}{Sign, set the build number, upload to internal testing and TestFlight, and post the link to the team channel.}
+  \end{grid}
+  \vskip 4mm
+  \muted{The pipeline is also the honest answer to "it works on my machine". It builds from a clean checkout every time, with no local caches and no local keys.}
+  \begin{takeaway}{Automate the boring half first.}
+    Tests and analysis on pull requests pay for themselves in a week. Automated store upload can wait until you release often enough to care.
+  \end{takeaway}
+  \note{Callback to Lecture 13: the tests written there are what this pipeline runs. A test suite nobody runs automatically decays within a month.}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=Automation]{A GitHub Actions workflow}
+\begin{yaml}
+name: ci
+on: [pull_request]
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+      - run: flutter pub get
+      - run: dart format --set-exit-if-changed .
+      - run: flutter analyze
+      - run: flutter test
+\end{yaml}
+  \muted{Format, analyze and test are what you run locally: a red pipeline is never a surprise.}
+  \note{Show that the whole file is about ten meaningful lines. Say that an iOS build needs a macOS runner, which is slower, so that job belongs on a tag and not on every pull request.}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=Automation]{Secrets in the pipeline}
+  \begin{columns}[T]
+    \begin{column}{0.54\textwidth}
+\begin{yaml}
+- name: Restore the keystore
+  env:
+    KEYSTORE: ${{ secrets.KEYSTORE_B64 }}
+  run: |
+    echo "$KEYSTORE" | base64 -d \
+      > android/upload.jks
+\end{yaml}
+    \end{column}
+    \begin{column}{0.42\textwidth}
+      \lead{Binary secrets travel as base64.}{Store them in the provider's encrypted secrets, decode them into the workspace, and let the job delete the workspace afterwards.}
+      \muted{Never echo a secret, never print it in a failing step, and never expose secrets to a workflow triggered by a fork's pull request.}
+    \end{column}
+  \end{columns}
+  \begin{takeaway}{A secret printed once in a build log is a burned secret.}
+    Rotate it. Deleting the log does not help.
+  \end{takeaway}
+  \note{Point at the pipe into base64 minus d and note there is no echo of the value itself. A secret printed once in a public build log is a rotated secret.}
+\end{frame}
+
+\begin{frame}[eyebrow=Automation]{fastlane and Codemagic}
+  {\usebeamerfont{small}\begin{tabular}{@{}lp{48mm}p{48mm}@{}}
+    \toprule
+    \thead{} & \thead{fastlane} & \thead{Codemagic} \\
+    \midrule
+    What it is & Ruby lanes you run anywhere & Hosted CI built around Flutter \\
+    Signing & \code{match} shares certificates through a private repo & Managed in the UI, on a machine with Xcode \\
+    Upload & \code{supply} for Play, \code{pilot} and \code{deliver} for Apple & Publishing to both stores is a built-in step \\
+    Fits & teams that want the pipeline in their repo & teams that do not want to run macOS runners \\
+    \bottomrule
+  \end{tabular}}
+  \vskip 2mm
+  \muted{They are not exclusive: a common setup is GitHub Actions for tests and fastlane for everything that talks to a store.}
+  \note{Say that both save the same thing: the twenty manual clicks between a green build and a build in testers' hands. Pick one, write it once, forget it.}
+\end{frame}
+
+\begin{frame}[eyebrow=Automation]{Code push, in one slide}
+  \begin{columns}[T]
+    \begin{column}{0.5\textwidth}
+      \lead{Shorebird patches Dart code on installed apps.}{You publish a patch, the app downloads it, and the fix is live on the next launch without a store review.}
+      \muted{It covers Dart code and assets. Anything native, a new plugin, a new permission, or a version bump still needs a real store release.}
+    \end{column}
+    \begin{column}{0.46\textwidth}
+      \begin{warning}[Use it narrowly]
+        A patch must stay inside what the stores allow: a fix to the app you shipped, not a new product. Treat it as a hotfix channel, and keep every patch in Git.
+      \end{warning}
+      \muted{It also splits your users across two code paths. Know which patch a crash report came from before you debug it.}
+    \end{column}
+  \end{columns}
+  \note{Frame the trade-off honestly: hours instead of days for a critical fix, at the price of another moving part. Most teams never need it.}
+\end{frame}
+
+\divider{Part 5 · Push}{Waking an app that is closed}[FCM, APNs, tokens, and the three app states]
+
+\begin{frame}[eyebrow=Push]{How a push actually arrives}
+  \vskip 2mm
+  \begin{grid}[3]
+    \cell[\faServer]{Your backend decides}{It calls the FCM HTTP v1 API with a service account credential. The app never sends a push, because the app cannot hold that key.}
+    \cell[\faCloud]{FCM routes it}{Firebase Cloud Messaging picks the transport: Google Play services on Android, APNs on iOS. One API, two networks.}
+    \cell[\faMobile]{The device delivers it}{The system wakes your app or draws the notification itself, depending on the payload and on what the app is doing.}
+  \end{grid}
+  \vskip 4mm
+  \muted{Delivery is best effort. Messages can be delayed by battery saving, collapsed with a newer one, or dropped while the device is offline.}
+  \begin{takeaway}{A push is a hint, not a transport.}
+    Send an identifier and let the app fetch the real data over HTTP. Never treat a push as your only copy of a state change.
+  \end{takeaway}
+  \note{Ask why the app cannot send its own pushes. The answer is the same as the API key trap in Lecture 12: anything in the binary belongs to the attacker too.}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=Push]{Setup and the registration token}
+  \begin{columns}[T]
+    \begin{column}{0.54\textwidth}
+\begin{dart}
+final fm = FirebaseMessaging.instance;
+await fm.requestPermission();
+
+final token = await fm.getToken();
+await api.registerDevice(token);
+
+fm.onTokenRefresh.listen(api.register);
+\end{dart}
+    \end{column}
+    \begin{column}{0.42\textwidth}
+      \lead{The token is the address.}{One token per app install. It changes on reinstall, on a data clear, and sometimes on its own.}
+      \muted{Store it against the user and the device, delete it on sign-out, and drop it when the send API reports it unregistered.}
+      \muted{iOS also needs the APNs auth key in the Firebase project, plus push and background modes enabled in Xcode.}
+    \end{column}
+  \end{columns}
+  \note{Stress the refresh stream: the classic bug is registering the token once at first launch and never again, so a fraction of users silently stops receiving anything.}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=Push]{Notification messages and data messages}
+  \begin{columns}[T]
+    \begin{column}{0.46\textwidth}
+\begin{yaml}
+message:
+  token: "..."
+  notification:
+    title: "New comment"
+    body: "Ana replied to your task"
+  data:
+    taskId: "8412"
+\end{yaml}
+    \end{column}
+    \begin{column}{0.5\textwidth}
+      \muted{A \code{notification} block is drawn by the operating system when your app is not in the foreground. Your code does not run until the user taps it.}
+      \muted{A \code{data} block is never drawn. It is handed to your app, so you decide what to show. On iOS it needs the background flag and is delivered at the system's convenience.}
+      \lead{Sending both is the usual choice.}{The system shows something reliable, and the data payload tells you which screen to open on tap.}
+    \end{column}
+  \end{columns}
+  \note{The pitfall to name: data values are strings only. Anything structured has to be encoded, and the whole payload is capped at a few kilobytes.}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=Push]{Handling the three app states}
+  \begin{columns}[T]
+    \begin{column}{0.56\textwidth}
+\begin{dart}
+@pragma('vm:entry-point')
+Future<void> bg(RemoteMessage m) async {
+  await Firebase.initializeApp();
+}
+FirebaseMessaging.onBackgroundMessage(bg);
+
+fm.onMessage.listen(showLocal);
+fm.onMessageOpenedApp.listen(openScreen);
+final m = await fm.getInitialMessage();
+\end{dart}
+    \end{column}
+    \begin{column}{0.40\textwidth}
+      \muted{Foreground: nothing is drawn for you. Show a local notification, or update the screen.}
+      \muted{Background: the system draws it, and \code{onMessageOpenedApp} fires on tap.}
+      \muted{Terminated: the app starts cold, so \code{getInitialMessage} is the only place the tapped message appears.}
+      \begin{hint}[Background handler]
+        Top level or static, annotated, and it initializes Firebase itself.
+      \end{hint}
+    \end{column}
+  \end{columns}
+  \note{Make them test all three by hand: app open, app backgrounded, app force stopped. Almost every push bug reported in the labs is one of the three cases never being tried.}
+\end{frame}
+
+\begin{frame}[eyebrow=Push]{Asking for permission, and what to send}
+  \begin{columns}[T]
+    \begin{column}{0.48\textwidth}
+      \lead{You get one prompt.}{iOS has always required permission. Recent Android versions require it too. A denial is final until the user walks into system settings.}
+      \muted{Ask after the user has done something that a notification would follow: created a task with a due date, joined a conversation. Explain the value on your own screen first.}
+      \muted{Group related messages, collapse duplicates, and respect quiet hours. An app that pushes daily noise gets its notifications switched off, then deleted.}
+    \end{column}
+    \begin{column}{0.48\textwidth}
+      \begin{warning}[Not in a payload]
+        Passwords, tokens, one-time codes, health or financial details, anything private enough to matter on a lock screen. The payload passes through Google and Apple, and is stored on the device.
+      \end{warning}
+      \muted{Send an identifier and a neutral title. Fetch the sensitive content after the user opens the app and is authenticated.}
+    \end{column}
+  \end{columns}
+  \note{Ask the room how many have disabled notifications for an app this month, and why. That answer is the design brief for this slide.}
+\end{frame}
+
+\begin{frame}[eyebrow=Checklist]{Before you ship}
+  \vskip 2mm
+  \begin{columns}[T]
+    \begin{column}{0.48\textwidth}
+      \begin{checklist}
+        \item Release build tested on a physical device, not only an emulator
+        \item Build number increased, release notes written
+        \item Signing keys backed up outside the repository
+        \item Crash reporting and analytics live in the release build
+      \end{checklist}
+    \end{column}
+    \begin{column}{0.48\textwidth}
+      \begin{checklist}
+        \item Privacy declarations match what the app actually sends
+        \item Every permission has a purpose string and a reason on screen
+        \item A demo account and review notes are attached
+        \item A staged rollout, and someone watching the crash rate
+      \end{checklist}
+    \end{column}
+  \end{columns}
+  \vskip 3mm
+  \muted{Run this list from a written checklist, not from memory. The one you skip is the one that fails.}
+  \note{Suggest they copy this into the pull request template of their own project. A release checklist is the cheapest quality tool that exists.}
+\end{frame}
+
+\begin{frame}[eyebrow=Course recap]{Fourteen weeks in one table}
+  \vskip 1mm
+  \begin{columns}[T]
+    \begin{column}{0.48\textwidth}
+      {\usebeamerfont{small}\begin{tabular}{@{}ll@{}}
+        \toprule
+        \thead{Wk} & \thead{Topic} \\
+        \midrule
+        1 & Orientation, Git, build strategies \\
+        2 & Dart, null safety, toolchain \\
+        3 & Widgets and layout \\
+        4 & Async Dart, coding agents \\
+        5 & Debugging, state part 1 \\
+        6 & BLoC and Riverpod \\
+        7 & HTTP, JSON, code generation \\
+        \bottomrule
+      \end{tabular}}
+    \end{column}
+    \begin{column}{0.48\textwidth}
+      {\usebeamerfont{small}\begin{tabular}{@{}ll@{}}
+        \toprule
+        \thead{Wk} & \thead{Topic} \\
+        \midrule
+        8 & Firebase, flags, GraphQL \\
+        9 & Observability, local storage \\
+        10 & Auth, OAuth, App Check \\
+        11 & Routing, permissions, sockets \\
+        12 & AI in the app \\
+        13 & UI polish and testing \\
+        14 & Release, distribution, push \\
+        \bottomrule
+      \end{tabular}}
+    \end{column}
+  \end{columns}
+  \note{Walk the table quickly and name the lab that used each week. The point is that the todo app in their repository touched every row.}
+\end{frame}
+
+\begin{frame}[eyebrow=Lab test]{The lab test and your grade}
+  \begin{columns}[T]
+    \begin{column}{0.5\textwidth}
+      \lead{Lab 7 is the practical test.}{Individual, 90 minutes, your own laptop, internet allowed. Agents are allowed, and you must be able to explain every line you submit.}
+      \muted{A one-page spec of a small app with four requirements: a screen built from the layout widgets, state in a Cubit, one network call with a model class, one navigation with \code{go\_router}.}
+      \muted{One point per requirement, partial credit for a requirement that is present but incomplete. Submit on branch \code{lab-7} before the end.}
+    \end{column}
+    \begin{column}{0.46\textwidth}
+      {\usebeamerfont{small}\begin{tabular}{@{}lc@{}}
+        \toprule
+        \thead{Component} & \thead{Points} \\
+        \midrule
+        Lab assignments, from the repo & 5 \\
+        Practical lab test, Lab 7 & 4 \\
+        Participation & 1 \\
+        \midrule
+        Pass & 5 of 10 \\
+        \bottomrule
+      \end{tabular}}
+      \vskip 3mm
+      \muted{Every requirement maps to a lab you already did. Nothing in the test is new material.}
+    \end{column}
+  \end{columns}
+  \note{Read the four requirements out loud and name the lab that taught each one. Then say the honest preparation advice: rebuild Lab 5 from an empty project in an hour, and the test is straightforward.}
+\end{frame}
+
+\begin{frame}[eyebrow=Recap]{Three things to remember}
+  \vskip 2mm
+  \begin{enumerate}
+    \item Release is a process, not a build command. \muted{Signing, versioning, forms and review take longer than the compile.}
+    \item Guard the keys, automate the rest. \muted{A lost signing key is unrecoverable. Everything else can be scripted.}
+    \item A push is a hint. \muted{Send an identifier, fetch the content, and never put a secret in a payload.}
+  \end{enumerate}
+  \vskip 5mm
+  \kv{Further reading}{\link{https://docs.flutter.dev/deployment/android}{docs.flutter.dev/deployment/android} · \link{https://docs.flutter.dev/deployment/ios}{deployment/ios} · \link{https://firebase.google.com/docs/cloud-messaging}{Firebase Cloud Messaging} · \link{https://docs.fastlane.tools}{docs.fastlane.tools}}
+  \note{Close by pointing at the two Flutter deployment pages: they are short, current, and they are the checklist for their first real release.}
+\end{frame}
+
+\closingframe{Questions?}{dinu\_stefan.rusu@upb.ro · Microsoft Teams: course channel}
+
+\end{document}

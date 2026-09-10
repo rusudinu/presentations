@@ -1,0 +1,353 @@
+% ============================================================================
+% beamerthemeupbminimal.sty
+% A minimal, keynote-style Beamer theme for the UPB mobile courses
+% (Application Development for Mobile Devices, Mobile and Embedded Computing).
+%
+% Design system (mirrors slides/assets/template.js in the course repo):
+%   ink 1D1D1F · gray 86868B · hairline D2D2D7 · panel F5F5F7
+%   blue 0071E3 = the one accent · orange F56300 = embedded topics only
+%   Helvetica Neue for text, Menlo for code. Black title, divider, closing.
+%   Whitespace and hairlines separate; no cards, stripes, gradients, shadows.
+%
+% Usage:  \usetheme{upbminimal}            lectures
+%         \usetheme[lab]{upbminimal}       labs (adds task/hint/checklist tools)
+%         \usetheme[noprogress]{upbminimal} hides the bottom progress line
+% Compile with xelatex or lualatex (pdflatex works with substitute fonts).
+% ============================================================================
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{beamerthemeupbminimal}[2026/09/10 v1.0 UPB minimal beamer theme]
+
+\RequirePackage{iftex}
+\RequirePackage{etoolbox}
+\RequirePackage{xcolor}
+\RequirePackage{tikz}
+\RequirePackage{booktabs}
+\RequirePackage{colortbl}
+\RequirePackage{array}
+\RequirePackage{listings}
+\RequirePackage{fontawesome5}
+\RequirePackage{tcolorbox}
+\tcbuselibrary{skins}
+
+% ------------------------------------------------------------ options -------
+\newif\ifupb@lab
+\newif\ifupb@progress \upb@progresstrue
+\newif\ifupb@dark
+\DeclareOption{lab}{\upb@labtrue}
+\DeclareOption{noprogress}{\upb@progressfalse}
+\ProcessOptions\relax
+
+% ------------------------------------------------------------- colors -------
+\definecolor{upbInk}{HTML}{1D1D1F}
+\definecolor{upbGray}{HTML}{86868B}
+\definecolor{upbHairline}{HTML}{D2D2D7}
+\definecolor{upbPanel}{HTML}{F5F5F7}
+\definecolor{upbBlue}{HTML}{0071E3}
+\definecolor{upbOrange}{HTML}{F56300}
+\definecolor{upbBlack}{HTML}{000000}
+\definecolor{upbWhite}{HTML}{FFFFFF}
+\definecolor{upbString}{HTML}{5A5A60}
+\colorlet{upbAccent}{upbBlue}
+
+% -------------------------------------------------------------- fonts -------
+\ifpdftex
+  \RequirePackage[T1]{fontenc}
+  \RequirePackage{helvet}
+  \RequirePackage[scaled=0.88]{beramono}
+  \RequirePackage[letterspace=160]{microtype}
+  \newcommand\upb@spaced[1]{\textls{#1}}
+\else
+  \RequirePackage{fontspec}
+  \IfFontExistsTF{Helvetica Neue}
+    {\setsansfont{Helvetica Neue}}
+    {\IfFontExistsTF{Arial}{\setsansfont{Arial}}{\setsansfont{Liberation Sans}}}
+  \IfFontExistsTF{Menlo}
+    {\setmonofont{Menlo}[Scale=MatchLowercase]}
+    {\IfFontExistsTF{Courier New}{\setmonofont{Courier New}[Scale=MatchLowercase]}
+                                 {\setmonofont{Liberation Mono}[Scale=MatchLowercase]}}
+  \newcommand\upb@spaced[1]{{\addfontfeature{LetterSpace=16}#1}}
+\fi
+\renewcommand\familydefault{\sfdefault}
+
+\setbeamerfont{normal text}{size=\fontsize{10}{13.5}}
+\setbeamerfont{eyebrow}{size=\fontsize{6.5}{8},series=\bfseries}
+\setbeamerfont{frametitle}{size=\fontsize{17}{20},series=\bfseries}
+\setbeamerfont{framesubtitle}{size=\fontsize{10}{12},series=\mdseries}
+\setbeamerfont{title}{size=\fontsize{28}{32},series=\bfseries}
+\setbeamerfont{subtitle}{size=\fontsize{12}{15},series=\mdseries}
+\setbeamerfont{divider}{size=\fontsize{26}{30},series=\bfseries}
+\setbeamerfont{author}{size=\fontsize{10}{12},series=\bfseries}
+\setbeamerfont{date}{size=\fontsize{9}{11}}
+\setbeamerfont{footline}{size=\fontsize{6.5}{8}}
+\setbeamerfont{caption}{size=\fontsize{8}{10}}
+\setbeamerfont{small}{size=\fontsize{8.5}{11}}
+\setbeamerfont{enumerate item}{series=\bfseries}
+
+% ------------------------------------------------------ course metadata -----
+\def\upb@course{}
+\def\upb@decklabel{}
+\newcommand\course[1]{\def\upb@course{#1}}
+\newcommand\decklabel[1]{\def\upb@decklabel{#1}}
+
+% --------------------------------------------------------- base colors ------
+\setbeamercolor{normal text}{fg=upbInk,bg=upbWhite}
+\setbeamercolor{background canvas}{bg=upbWhite}
+\setbeamercolor{structure}{fg=upbAccent}
+\setbeamercolor{frametitle}{fg=upbInk,bg=}
+\setbeamercolor{framesubtitle}{fg=upbGray}
+\setbeamercolor{footline}{fg=upbGray,bg=}
+\setbeamercolor{alerted text}{fg=upbAccent}
+\setbeamercolor{item}{fg=upbAccent}
+\setbeamercolor{enumerate item}{fg=upbAccent}
+\setbeamercolor{caption name}{fg=upbGray}
+\setbeamercolor{caption}{fg=upbGray}
+\setbeamercolor{block title}{fg=upbInk,bg=upbPanel}
+\setbeamercolor{block body}{fg=upbInk,bg=upbPanel}
+
+% ------------------------------------------------------------ layout --------
+\setbeamertemplate{navigation symbols}{}
+\setbeamersize{text margin left=10mm,text margin right=10mm}
+\setbeamertemplate{headline}{}
+\setbeamertemplate{caption}[numbered]
+\setlength{\parskip}{4pt}
+
+% frame options: [eyebrow=Debugging] and [embedded]
+\def\upb@eyebrow{}
+\define@key{beamerframe}{eyebrow}{\def\upb@eyebrow{#1}}
+\define@key{beamerframe}{embedded}[true]{\colorlet{upbAccent}{upbOrange}}
+% Beamer applies frame options outside the frame group, so a per-frame reset is
+% needed. Beamer sets the internal "environment" key on every frame before the
+% user's options; hook the reset there.
+\AtBeginDocument{\pretocmd{\KV@beamerframe@environment}{\def\upb@eyebrow{}\colorlet{upbAccent}{upbBlue}}{}{%
+  \PackageWarning{beamerthemeupbminimal}{Could not hook frame option reset}}}
+
+\newcommand\upb@nohyph{\hyphenpenalty=10000 \exhyphenpenalty=10000 \raggedright}
+\newcommand\upb@hairline{{\color{upbHairline}\rule{\textwidth}{0.3pt}}}
+\newcommand\upb@vhairline{\par\nointerlineskip{\color{upbHairline}\hrule height 0.3pt}}
+
+\setbeamertemplate{frametitle}{%
+  \vskip 4.5mm
+  \ifdefempty{\upb@eyebrow}{}{%
+    {\usebeamerfont{eyebrow}\color{upbAccent}\upb@spaced{\MakeUppercase{\upb@eyebrow}}\par}\vskip 1.4mm}%
+  {\usebeamerfont{frametitle}\usebeamercolor[fg]{frametitle}\upb@nohyph\insertframetitle\par}%
+  \ifx\insertframesubtitle\@empty\else
+    \vskip 1mm{\usebeamerfont{framesubtitle}\color{upbGray}\insertframesubtitle\par}\fi
+  \vskip 2.2mm\upb@vhairline\vskip 1.5mm
+}
+
+\setbeamertemplate{footline}{%
+  \begin{beamercolorbox}[wd=\paperwidth,ht=5mm,dp=2.5mm,leftskip=10mm,rightskip=10mm]{footline}%
+    \usebeamerfont{footline}\color{upbGray}%
+    \upb@course\ifdefempty{\upb@decklabel}{}{\ \textperiodcentered\ \upb@decklabel}%
+    \hfill\insertframenumber\,/\,\inserttotalframenumber
+  \end{beamercolorbox}}
+
+% progress line, bottom edge, hidden on dark slides
+\setbeamertemplate{background}{%
+  \ifupb@progress\ifupb@dark\else
+  \begin{tikzpicture}[remember picture,overlay]
+    \fill[upbHairline] (current page.south west) rectangle ([yshift=0.6pt]current page.south east);
+    \fill[upbAccent] (current page.south west) rectangle
+      ([yshift=0.6pt,xshift=\dimexpr\paperwidth*\insertframenumber/\inserttotalframenumber\relax]current page.south west);
+  \end{tikzpicture}\fi\fi}
+
+% ------------------------------------------------------ lists ---------------
+% Body copy carries no bullet glyphs; items are spaced paragraphs.
+\setbeamertemplate{itemize items}{}
+\setlength{\leftmargini}{0pt}
+\setlength{\leftmarginii}{4mm}
+\setbeamertemplate{itemize item}{}
+\setbeamertemplate{itemize subitem}{}
+\setbeamertemplate{enumerate item}{\color{upbAccent}\bfseries\insertenumlabel.}
+\AtBeginEnvironment{itemize}{\setlength\itemsep{5pt}\setlength\labelsep{0pt}}
+\AtBeginEnvironment{enumerate}{\setlength\itemsep{4pt}\setlength\leftmargini{6mm}\setlength\labelsep{1.5mm}}
+
+% a gray secondary line under a lead
+\newcommand\lead[2]{{\bfseries #1}\par{\color{upbGray}#2}\par}
+% small gray text
+\newcommand\muted[1]{{\color{upbGray}#1}}
+% inline code
+\setlength{\fboxsep}{1.2pt}
+\newcommand\code[1]{\colorbox{upbPanel}{\ttfamily\fontsize{8.5}{10}\selectfont\color{upbInk}#1}}
+% key/value: gray label above ink value
+\newcommand\kv[2]{{\usebeamerfont{eyebrow}\color{upbGray}\upb@spaced{\MakeUppercase{#1}}}\par{#2}\par}
+
+% ------------------------------------------------------ dark slides ---------
+\newcommand\upb@cornerlabel{%
+  \begin{tikzpicture}[remember picture,overlay]
+    \node[anchor=north west,inner sep=0pt] at ([xshift=10mm,yshift=-8mm]current page.north west)
+      {\usebeamerfont{eyebrow}\color{upbGray}\upb@spaced{\MakeUppercase{\upb@course}}};
+    \node[anchor=north east,inner sep=0pt] at ([xshift=-10mm,yshift=-8mm]current page.north east)
+      {\usebeamerfont{eyebrow}\color{upbGray}\upb@spaced{\MakeUppercase{\upb@decklabel}}};
+  \end{tikzpicture}}
+
+\setbeamertemplate{title page}{%
+  \upb@cornerlabel
+  \begin{tikzpicture}[remember picture,overlay]
+    \node[anchor=west,inner sep=0pt,text width=130mm,align=left,execute at begin node=\upb@nohyph]
+      at ([xshift=10mm,yshift=4mm]current page.west) {%
+        {\usebeamerfont{title}\color{upbWhite}\inserttitle\par}%
+        \ifx\insertsubtitle\@empty\else\vskip 4mm{\usebeamerfont{subtitle}\color{upbGray}\insertsubtitle\par}\fi};
+    \node[anchor=south west,inner sep=0pt,text width=90mm,align=left]
+      at ([xshift=10mm,yshift=9mm]current page.south west) {%
+        {\usebeamerfont{author}\color{upbWhite}\insertauthor\par}%
+        \vskip 1mm{\usebeamerfont{date}\color{upbGray}\insertinstitute\ifx\insertdate\@empty\else\ \textperiodcentered\ \insertdate\fi\par}};
+  \end{tikzpicture}}
+
+% \titleframe : black title slide
+\newcommand\titleframe{{\upb@darktrue\setbeamercolor{background canvas}{bg=upbBlack}%
+  \begin{frame}[plain,noframenumbering]\titlepage\end{frame}}}
+
+% \divider{Eyebrow}{Title}[Subtitle] : black section slide; also a PDF bookmark
+\NewDocumentCommand\divider{m m O{}}{{\upb@darktrue\setbeamercolor{background canvas}{bg=upbBlack}%
+  \section{#2}%
+  \begin{frame}[plain]\upb@cornerlabel
+    \begin{tikzpicture}[remember picture,overlay]
+      \node[anchor=west,inner sep=0pt,text width=130mm,align=left,execute at begin node=\upb@nohyph] at ([xshift=10mm]current page.west) {%
+        {\usebeamerfont{eyebrow}\color{upbAccent}\upb@spaced{\MakeUppercase{#1}}\par}\vskip 3mm
+        {\usebeamerfont{divider}\color{upbWhite}#2\par}%
+        \ifblank{#3}{}{\vskip 3mm{\usebeamerfont{subtitle}\color{upbGray}#3\par}}};
+    \end{tikzpicture}
+  \end{frame}}}
+
+% \closingframe{Title}{gray line}
+\NewDocumentCommand\closingframe{m m}{{\upb@darktrue\setbeamercolor{background canvas}{bg=upbBlack}%
+  \begin{frame}[plain,noframenumbering]\upb@cornerlabel
+    \begin{tikzpicture}[remember picture,overlay]
+      \node[anchor=west,inner sep=0pt,text width=130mm,align=left,execute at begin node=\upb@nohyph] at ([xshift=10mm]current page.west) {%
+        {\usebeamerfont{divider}\color{upbWhite}#1\par}\vskip 3mm
+        {\usebeamerfont{subtitle}\color{upbGray}#2\par}};
+    \end{tikzpicture}
+  \end{frame}}}
+
+% ------------------------------------------------------ objectives grid -----
+% \begin{grid}[2]  \cell[\faBug]{Title}{Text} ... \end{grid}
+\newlength\upb@cellw
+\newenvironment{grid}[1][2]{%
+  \par\setlength\upb@cellw{\dimexpr(\textwidth-5mm*\numexpr#1-1\relax)/#1-0.2pt\relax}%
+  \setlength\lineskip{6mm}\setlength\lineskiplimit{0pt}\setlength\parskip{0pt}%
+  \nointerlineskip\noindent\raggedright\ignorespaces}{\par}
+\NewDocumentCommand\cell{O{} m m}{%
+  \begin{minipage}[t]{\upb@cellw}\raggedright\setlength\parskip{0pt}%
+    \ifblank{#1}{}{{\color{upbAccent}\fontsize{13}{13}\selectfont #1\par}\vskip 2mm}%
+    {\bfseries #2\par}\vskip 0.8mm
+    {\color{upbGray}\usebeamerfont{small}#3\par}%
+  \end{minipage}\hspace{5mm}\ignorespaces}
+% \bignum{45+}{Flutter apps shipped}
+\NewDocumentCommand\bignum{m m}{%
+  \begin{minipage}[t]{\upb@cellw}\raggedright\setlength\parskip{0pt}%
+    {\fontsize{30}{32}\selectfont\bfseries\color{upbAccent}#1\par}\vskip 1.5mm
+    {\color{upbGray}\usebeamerfont{small}#2\par}%
+  \end{minipage}\hspace{5mm}\ignorespaces}
+
+% \objectives{...cells...} : the "what you should leave with" slide body
+\newcommand\objectivesframe[1]{%
+  \begin{frame}[eyebrow=Today]{What you should leave with}
+    \vskip 3mm\begin{grid}[2]#1\end{grid}
+  \end{frame}}
+
+% ------------------------------------------------------ takeaway ------------
+% \begin{takeaway}{Bold lead.} gray explanation \end{takeaway}  (sits at the bottom)
+\newenvironment{takeaway}[1]{%
+  \par\vskip 0pt plus 1filll
+  {\color{upbAccent}\hrule width 9mm height 1.2pt}\vskip 1.8mm\noindent
+  \begin{minipage}{\textwidth}\raggedright\setlength\parskip{0pt}%
+  {\bfseries #1}\ \color{upbGray}\ignorespaces
+}{\end{minipage}\par\vskip 1mm}
+
+% ------------------------------------------------------ hint / note box -----
+\newtcolorbox{panel}[1][]{enhanced,colback=upbPanel,colframe=upbPanel,boxrule=0pt,
+  arc=1.2mm,left=3mm,right=3mm,top=2mm,bottom=2mm,boxsep=0pt,fontupper=\usebeamerfont{normal text},#1}
+\newenvironment{hint}[1][Hint]{\begin{panel}{\color{upbAccent}\faLightbulb}\ {\bfseries #1}\par\vskip 1mm}{\end{panel}}
+\newenvironment{warning}[1][Watch out]{\begin{panel}{\color{upbAccent}\faExclamationTriangle}\ {\bfseries #1}\par\vskip 1mm}{\end{panel}}
+
+% ------------------------------------------------------ tables --------------
+\arrayrulecolor{upbHairline}
+\setlength\heavyrulewidth{0.3pt}
+\setlength\lightrulewidth{0.3pt}
+\setlength\cmidrulewidth{0.3pt}
+\setlength\aboverulesep{0.5ex}
+\setlength\belowrulesep{0.7ex}
+\renewcommand\arraystretch{1.25}
+\newcommand\thead[1]{{\usebeamerfont{eyebrow}\color{upbGray}\upb@spaced{\MakeUppercase{#1}}}}
+
+% ------------------------------------------------------ code ----------------
+\lstdefinelanguage{Dart}{
+  morekeywords={abstract,as,assert,async,await,base,break,case,catch,class,const,continue,covariant,
+    default,deferred,do,dynamic,else,enum,export,extends,extension,external,factory,false,final,
+    finally,for,Function,get,hide,if,implements,import,in,interface,is,late,library,mixin,new,null,
+    on,operator,part,required,rethrow,return,sealed,set,show,static,super,switch,sync,this,throw,
+    true,try,typedef,var,void,when,while,with,yield},
+  morekeywords=[2]{int,double,num,String,bool,List,Map,Set,Future,Stream,Object,Widget,
+    BuildContext,State,StatelessWidget,StatefulWidget,Iterable,Duration},
+  sensitive=true,morecomment=[l]{//},morecomment=[s]{/*}{*/},
+  morestring=[b]",morestring=[b]'}
+\lstdefinelanguage{Kotlin}{
+  morekeywords={abstract,actual,annotation,as,break,by,catch,class,companion,const,constructor,
+    continue,crossinline,data,do,else,enum,expect,external,false,final,finally,for,fun,get,if,
+    import,in,infix,init,inline,inner,interface,internal,is,lateinit,noinline,null,object,open,
+    operator,out,override,package,private,protected,public,reified,return,sealed,set,super,
+    suspend,tailrec,this,throw,true,try,typealias,val,var,vararg,when,where,while},
+  morekeywords=[2]{Int,Long,Double,String,Boolean,List,Map,Set,Unit,Any,Nothing},
+  sensitive=true,morecomment=[l]{//},morecomment=[s]{/*}{*/},morestring=[b]"}
+\lstdefinelanguage{Go}{
+  morekeywords={break,case,chan,const,continue,default,defer,else,fallthrough,for,func,go,goto,
+    if,import,interface,map,package,range,return,select,struct,switch,type,var,nil,true,false},
+  morekeywords=[2]{int,int32,int64,uint8,uint16,uint32,float32,float64,string,bool,byte,error,
+    context,time},
+  sensitive=true,morecomment=[l]{//},morecomment=[s]{/*}{*/},morestring=[b]",morestring=[b]`}
+\lstdefinelanguage{YAML}{
+  sensitive=false,morecomment=[l]{\#},morestring=[b]',morestring=[b]",
+  keywords={true,false,null},moredelim=[l][\color{upbBlue}]{:}}
+
+\lstset{
+  basicstyle=\ttfamily\fontsize{8}{10.2}\selectfont\color{upbInk},
+  keywordstyle=\color{upbBlue},
+  keywordstyle=[2]\color{upbInk}\bfseries,
+  commentstyle=\color{upbGray},
+  stringstyle=\color{upbString},
+  backgroundcolor=\color{upbPanel},
+  frame=single,framerule=0pt,
+  framexleftmargin=3mm,framexrightmargin=3mm,framextopmargin=1.2mm,framexbottommargin=1.2mm,
+  xleftmargin=3mm,xrightmargin=3mm,
+  aboveskip=2mm,belowskip=2mm,
+  columns=fullflexible,keepspaces=true,showstringspaces=false,upquote=true,
+  tabsize=2,breaklines=true,breakatwhitespace=true,
+  numbers=none,numberstyle=\color{upbGray}\fontsize{6.5}{8}\selectfont,numbersep=2mm,
+  escapeinside={(*@}{@*)},
+  literate={→}{{$\rightarrow$}}1 {←}{{$\leftarrow$}}1 {≥}{{$\geq$}}1 {≤}{{$\leq$}}1
+           {·}{{$\cdot$}}1 {…}{{\dots}}1 {ș}{{\c{s}}}1 {ț}{{\c{t}}}1 {ă}{{\u{a}}}1 {â}{{\^{a}}}1 {î}{{\^{\i}}}1
+}
+% \begin{codeblock}[language=Dart,numbers=left] ... \end{codeblock}   (frame must be [fragile])
+\lstnewenvironment{codeblock}[1][]{\lstset{#1}}{}
+\lstnewenvironment{dart}[1][]{\lstset{language=Dart,#1}}{}
+\lstnewenvironment{kotlin}[1][]{\lstset{language=Kotlin,#1}}{}
+\lstnewenvironment{golang}[1][]{\lstset{language=Go,#1}}{}
+\lstnewenvironment{shell}[1][]{\lstset{language=bash,keywordstyle=\color{upbInk},#1}}{}
+\lstnewenvironment{yaml}[1][]{\lstset{language=YAML,#1}}{}
+% highlight a line inside code:  (*@\hl{text}@*)
+\newcommand\hl[1]{\colorbox{upbWhite}{\color{upbBlue}#1}}
+
+% ------------------------------------------------------ lab tools -----------
+% \begin{steps} \item ... \end{steps}       numbered, one requirement per step
+\newenvironment{steps}{\begin{enumerate}}{\end{enumerate}}
+% \begin{checklist} \item ... \end{checklist}   acceptance criteria
+\newenvironment{checklist}{%
+  \begin{list}{\color{upbAccent}\faSquare[regular]}{%
+    \setlength\leftmargin{6mm}\setlength\labelwidth{4.5mm}\setlength\labelsep{1.5mm}%
+    \setlength\itemsep{3pt}\setlength\parsep{0pt}\setlength\topsep{2pt}}}{\end{list}}
+% \trouble{error text}{what to do}   one row of a troubleshooting table
+\NewDocumentCommand\trouble{m m}{%
+  \noindent\begin{minipage}[t]{0.40\textwidth}\raggedright\ttfamily\fontsize{8}{10}\selectfont #1\end{minipage}\hfill
+  \begin{minipage}[t]{0.56\textwidth}\raggedright\color{upbGray}\usebeamerfont{small}#2\end{minipage}%
+  {\setlength\parskip{0pt}\par\vskip 1.4mm\upb@vhairline\vskip 1.4mm}}
+% \taskmeta{Time}{25 min}{Deliverable}{screenshot in the repo}  small meta row
+\NewDocumentCommand\taskmeta{m m m m}{%
+  \noindent\begin{minipage}[t]{0.47\textwidth}\kv{#1}{#2}\end{minipage}\hfill
+  \begin{minipage}[t]{0.47\textwidth}\kv{#3}{#4}\end{minipage}\par\vskip 3mm}
+
+% ------------------------------------------------------ misc ----------------
+\hypersetup{colorlinks=true,linkcolor=upbInk,urlcolor=upbBlue,citecolor=upbInk}
+\newcommand\link[2]{\href{#1}{\color{upbBlue}#2}}
+\newcommand\accenttext[1]{{\color{upbAccent}#1}}
+\endinput

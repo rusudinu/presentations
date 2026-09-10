@@ -1,0 +1,599 @@
+% Mobile and Embedded Computing, Lecture 14. Compile: latexmk -xelatex lecture14.tex
+\documentclass[10pt,aspectratio=169,t]{beamer}
+\usetheme{upbminimal}
+
+\course{Mobile and Embedded Computing}
+\decklabel{Lecture 14}
+\title{Compilation, energy, and exam preparation}
+\subtitle{Where machine code comes from, what it costs in battery, and how the semester is graded}
+\author{Dinu-Ștefan Rusu}
+\institute{FILS, Universitatea Politehnica București}
+\date{Spring 2027}
+
+\begin{document}
+
+\titleframe
+
+\objectivesframe{
+  \cell[\faCode]{Read the spectrum}{Interpretation, just-in-time and ahead-of-time compilation, and what each one trades away.}
+  \cell[\faToggleOn]{Explain the build modes}{Why Dart ships two compilers, what Android's runtime does, and why iOS allows no choice.}
+  \cell[\faBolt]{Spend energy on purpose}{Race to idle, thermal throttling, and the duty cycle that decides a device's battery life.}
+  \cell[\faGraduationCap]{Be ready}{The exam format, what to revise per lecture, the project defense, and the concept presentation.}
+}
+
+% =====================================================================
+\divider{Part 1 · Compilation}{From source to instructions}[Interpretation, JIT, AOT, and the phone in between]
+
+\begin{frame}[eyebrow=Compilation]{Three ways to turn code into instructions}
+  \vskip 2mm
+  {\usebeamerfont{small}
+  \begin{tabular}{@{}lp{36mm}p{36mm}p{36mm}@{}}
+    \toprule
+     & \thead{Interpretation} & \thead{JIT} & \thead{AOT} \\
+    \midrule
+    Mechanism  & run bytecode, one instruction at a time & compile hot paths while the program runs & compile everything before the program runs \\
+    Start-up   & instant & slow: a compiler runs & instant: already native \\
+    Peak speed & lowest & highest: real types & high: no run-time data \\
+    Memory     & small & largest at run time & smallest at run time \\
+    \bottomrule
+  \end{tabular}}
+  \begin{takeaway}{Start-up, peak speed and memory trade against each other.}
+    A phone needs all three at once, on a battery, so no shipping runtime is pure.
+  \end{takeaway}
+  \note{Lecture 1 introduced this table. Here the point is the trade-off, not the definitions. Ask which column a game engine would pick, then which one a bank app that is opened twice a day would pick.}
+\end{frame}
+
+\begin{frame}[eyebrow=Compilation]{From source text to machine code}
+  \vskip 2mm
+  \begin{columns}[T]
+    \begin{column}{0.47\textwidth}
+      \lead{Dart}{The front end parses your code into kernel, an intermediate representation with no syntax left in it.}
+      \vskip 2mm
+      \muted{In debug, the VM compiles kernel to machine code as functions are first called. In release, the ahead-of-time compiler turns kernel into ARM machine code and packs it into a snapshot inside the app.}
+    \end{column}
+    \begin{column}{0.47\textwidth}
+      \lead{TinyGo}{The ordinary Go front end, then LLVM intermediate representation, then LLVM emits code for the target.}
+      \vskip 2mm
+      \muted{Cortex-M, RISC-V, AVR and WebAssembly are all just back ends. TinyGo is a different compiler for the same language, not a different language.}
+    \end{column}
+  \end{columns}
+  \begin{takeaway}{Every toolchain has the same three stages.}
+    Front end, intermediate representation, back end. What differs between them is only when the back end runs.
+  \end{takeaway}
+  \note{Draw the three boxes on the board and put both toolchains through them. Students who have seen LLVM in Computer Architecture will recognize the middle box. The useful idea is that the intermediate representation is where optimization happens in both cases.}
+\end{frame}
+
+\begin{frame}[fragile,eyebrow=Compilation]{Dart uses both: build modes, not camps}
+  \vskip 2mm
+  \begin{columns}[T]
+    \begin{column}{0.55\textwidth}
+\begin{shell}
+flutter run                # debug
+#  JIT in the Dart VM, hot reload on
+flutter run --profile      # profile
+#  AOT plus tracing hooks: measure here
+flutter build appbundle --release
+#  AOT to ARM, nothing left to reload
+\end{shell}
+      \vskip 2mm
+      \muted{Every performance claim names the build mode it came from.}
+    \end{column}
+    \begin{column}{0.41\textwidth}
+      \lead{Read this carefully}{"Dart is a JIT language" and "Dart is an AOT language" are both half true. It is one language with two compilers, and the build mode picks one.}
+      \vskip 2mm
+      \muted{Hot reload exists because the debug VM can compile new functions into a running isolate.}
+    \end{column}
+  \end{columns}
+  \begin{takeaway}{JIT for the developer loop, AOT for the user.}
+    Profile mode is the compromise: release code plus the hooks DevTools needs, so the numbers you read are real.
+  \end{takeaway}
+  \note{Run the three commands live if the room has a device attached. The habit to build is that any performance claim must name the build mode it was measured in.}
+\end{frame}
+
+\begin{frame}[eyebrow=Compilation]{Why a JIT can beat an ahead-of-time compiler}
+  \vskip 2mm
+  \begin{columns}[T]
+    \begin{column}{0.54\textwidth}
+      \begin{itemize}
+        \item It sees the types that actually arrive. A call site that could take ten classes but only ever takes one is compiled as if it took one.
+        \item It inlines across that assumption, then guards it. If the assumption breaks, the code is thrown away and recompiled.
+        \item It can recompile a hot loop with better information after the program has been running for a while.
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.42\textwidth}
+      \begin{warning}[What it costs]
+        The compiler runs inside your process: its CPU time, its memory and its pauses are charged to the user. Every cold start pays the warm-up again.
+      \end{warning}
+    \end{column}
+  \end{columns}
+  \begin{takeaway}{Phones are launched cold, often, on a battery.}
+    That is why the platforms kept moving compilation earlier instead of making the run-time compiler better.
+  \end{takeaway}
+  \note{This slide answers the question students always ask after the previous one: if ahead-of-time is so good, why does anything still use a JIT. Speculation on observed types is the honest answer, and the guard-and-deoptimize mechanism is worth two minutes.}
+\end{frame}
+
+\begin{frame}[eyebrow=Compilation]{Android: a hybrid, arrived at slowly}
+  \vskip 2mm
+  {\usebeamerfont{small}
+  \begin{tabular}{@{}lp{24mm}p{78mm}@{}}
+    \toprule
+    \thead{Runtime} & \thead{When} & \thead{What it did} \\
+    \midrule
+    Dalvik            & early Android        & a trace JIT: it compiled while you scrolled, and janked \\
+    ART, first release & Android 5 and 6     & ahead of time at install: fast, but large binaries \\
+    ART today          & Android 7 and later & an interpreter, a JIT, and background compilation when idle \\
+    Baseline profiles  & Android 9 and later & hot paths compiled before the first launch, from a profile \\
+    \bottomrule
+  \end{tabular}}
+  \begin{takeaway}{Every step moved work earlier.}
+    Run time became install time, and install time became build time.
+  \end{takeaway}
+  \note{Baseline profiles are the part worth remembering, because they are something an app author controls. Note that a Flutter release build is already native code, so the profile question mostly concerns the Kotlin and Java side of the app.}
+\end{frame}
+
+\begin{frame}[eyebrow=Compilation]{iOS: write XOR execute leaves no choice}
+  \vskip 2mm
+  \begin{columns}[T]
+    \begin{column}{0.52\textwidth}
+      \lead{The rule}{A memory page may be writable or executable, never both at the same time.}
+      \vskip 2mm
+      \muted{It is the defense that stops an attacker who can write bytes into a process from also running them. A JIT needs exactly that forbidden combination: write machine code into a page, then jump into it.}
+    \end{column}
+    \begin{column}{0.44\textwidth}
+      \lead{The consequences}{Third-party apps do not get the entitlement, so everything you ship to iOS is native code compiled ahead of time.}
+      \vskip 2mm
+      \muted{WebKit's JavaScript engine is the privileged exception. Bitcode is not a workaround: Apple removed it in Xcode 14, and a guide that tells you to enable it is out of date.}
+    \end{column}
+  \end{columns}
+  \begin{takeaway}{This one constraint explains a lot of mobile history.}
+    No Dalvik-style runtime on iOS, no hot reload in a release build, and JavaScript that only runs fast inside Safari.
+  \end{takeaway}
+  \note{Write XOR execute deserves a whiteboard sketch: a page with a W bit and an X bit, and the two states the kernel will allow. Ask the room why a browser is allowed to break the rule and an app store app is not.}
+\end{frame}
+
+\begin{frame}[eyebrow=Compilation]{Where cross-platform runtimes stand in 2026}
+  \vskip 2mm
+  \begin{columns}[T]
+    \begin{column}{0.47\textwidth}
+      \lead{Flutter}{Dart compiles ahead of time to native ARM for release, so there is no interpreter in production.}
+      \vskip 2mm
+      \muted{Impeller compiles its shaders at build time as well, so the GPU work is decided before you ship. Debug keeps the JIT, which is exactly what hot reload is.}
+    \end{column}
+    \begin{column}{0.47\textwidth}
+      \lead{React Native}{Hermes precompiles JavaScript to bytecode at build time, which removes the parse cost at launch.}
+      \vskip 2mm
+      \muted{The bridgeless architecture, with JSI and Fabric, has been the default since React Native 0.76 in late 2024. The serialized-JSON bridge is gone: JavaScript calls C++ directly.}
+    \end{column}
+  \end{columns}
+  \begin{takeaway}{Both ecosystems moved the same work from run time to build time.}
+    Kotlin Multiplatform starts from the other end: shared Kotlin compiled natively, native UI on top.
+  \end{takeaway}
+  \note{Correct two claims students bring from older material: React Native no longer serializes JSON over a bridge, and Flutter no longer draws with Skia on current devices. Both were true and are not any more.}
+\end{frame}
+
+\begin{frame}[eyebrow=Compilation]{Moving work from run time to build time}
+  \vskip 2mm
+  \begin{grid}[3]
+    \cell[\faIcon{paint-brush}]{Shaders}{Impeller compiles every shader at build time, so the first frame with an effect costs what the thousandth costs.}
+    \cell[\faCode]{Bytecode}{Hermes precompiles JavaScript, so launch does not include a parser reading the bundle.}
+    \cell[\faRocket]{Profiles}{A baseline profile compiles the hot paths before the first launch, not during it.}
+    \cell[\faIcon{cut}]{Tree shaking}{Unused code and icons are removed by the release build, not skipped at run time.}
+    \cell[\faDatabase]{Code generation}{Generated protobuf and JSON code replaces reflection, which a small runtime may lack.}
+    \cell[\faLock]{Constants}{A const constructor is canonicalized at compile time, so one instance is reused.}
+  \end{grid}
+  \note{Ask the room for the common thread before revealing it: every item spends the developer's machine once so that every user's device does not spend it on every launch. That is the whole design principle of this part of the lecture.}
+\end{frame}
+
+\begin{frame}[eyebrow=Compilation]{Cold start: from the tap to the first frame}
+  \vskip 2mm
+  \begin{columns}[T]
+    \begin{column}{0.50\textwidth}
+      \begin{enumerate}
+        \item The OS creates the process and maps the binary.
+        \item The runtime loads the compiled snapshot.
+        \item \code{main()} runs and the first widget tree is built.
+        \item The first frame is laid out and rasterized.
+      \end{enumerate}
+    \end{column}
+    \begin{column}{0.46\textwidth}
+      \begin{hint}[What actually makes it slow]
+        Work placed before \code{runApp}, plugins initialized synchronously, a large image decoded on the first frame, a database opened on the UI isolate.
+      \end{hint}
+    \end{column}
+  \end{columns}
+  \begin{takeaway}{With an ahead-of-time build, cold start is mostly your code.}
+    The compiler already did its part. Move everything that is not needed for the first screen off the startup path.
+  \end{takeaway}
+  \note{Tie this back to Lecture 13: the first frame has the same budget as every other frame, but far more work competing for it. Ask students to name one thing their own project does before the first screen appears.}
+\end{frame}
+
+% =====================================================================
+\divider{Part 2 · Energy}{Energy at the platform level}[Race to idle, heat, and the duty cycle that decides battery life]
+
+\begin{frame}[eyebrow=Energy]{Race to idle: finish fast, then sleep}
+  \vskip 2mm
+  \begin{grid}[3]
+    \cell[\faIcon{bed}]{Idle is a real state}{A modern SoC has deep low-power states, but only when nothing keeps a core awake. Idle is where the savings live.}
+    \cell[\faIcon{tachometer-alt}]{Frequency scales}{The governor raises the clock under load and drops it again. A short burst at a high clock usually beats a long dribble at a low one.}
+    \cell[\faClock]{Wake-ups are expensive}{A timer that fires every second, a poll loop, a busy animation: each costs more than the work it performs.}
+  \end{grid}
+  \vskip 3mm
+  \kv{The practical rule}{Do the work, then let the hardware sleep.}
+  \begin{takeaway}{Anything that prevents idle costs more than the work it does.}
+    That includes a run-time compiler warming up, which is where Part 1 meets this part.
+  \end{takeaway}
+  \note{Give the concrete example of an animation left running behind a modal: it is invisible, it produces nothing, and it keeps the GPU and one core awake for as long as the screen is on.}
+\end{frame}
+
+\begin{frame}[eyebrow=Energy]{Energy problems come back as speed problems}
+  \vskip 2mm
+  \begin{columns}[T]
+    \begin{column}{0.54\textwidth}
+      \begin{itemize}
+        \item Inefficient code raises load, load raises temperature, and the OS throttles the SoC to cool it down.
+        \item So the same code is measurably slower a minute later, on the same device, with nothing else changed.
+        \item Peak performance is what a benchmark reports. Sustained performance is what your user gets.
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.42\textwidth}
+      \begin{hint}[Test on a warm phone]
+        Run the scenario for several minutes before you record a number, and say in your report how long the device had been working.
+      \end{hint}
+    \end{column}
+  \end{columns}
+  \begin{takeaway}{Heat is the feedback loop between energy and speed.}
+    A phone in a case, in a pocket, on a summer day is the device your measurement should represent.
+  \end{takeaway}
+  \note{Students who measure only the first ten seconds of a scenario report numbers nobody can reproduce. Ask each project team how warm their device was when they took their measured claim.}
+\end{frame}
+
+\begin{frame}[eyebrow=Energy]{What compilation costs in battery}
+  \vskip 2mm
+  \begin{grid}[3]
+    \cell[\faBolt]{A run-time compiler}{Every cycle it spends is a cycle the user's battery pays for, and it spends them again on every cold start.}
+    \cell[\faIcon{paint-brush}]{A run-time shader}{Compiling an effect the first time it appears costs a frame the user sees and energy nobody planned for.}
+    \cell[\faCheck]{A build-time decision}{Paid once, on your machine, by you. It costs the user nothing at all, on any launch.}
+  \end{grid}
+  \vskip 3mm
+  \kv{The same question, twice}{How much of this program's behavior can be decided before the user's device is involved.}
+  \begin{takeaway}{Build time is free to the user. Run time is not.}
+    That is the single sentence that connects the compilation half of this lecture to the energy half.
+  \end{takeaway}
+  \note{This is the hinge of the lecture. Say plainly that the industry trend is not JIT versus AOT as camps, but a steady migration of work toward build time, and that the reason is energy rather than elegance.}
+\end{frame}
+
+\begin{frame}[embedded,eyebrow=Energy]{Wake, send, sleep: energy at the device level}
+  \vskip 1mm
+  \begin{columns}[T]
+    \begin{column}{0.52\textwidth}
+      \muted{On an ESP32-class part the spread between deep sleep and radio transmit is roughly four orders of magnitude. The question is not how fast the code is, but what fraction of the time the radio is on.}
+      \vskip 2mm
+      \begin{hint}[The only formula you need]
+        Average current: active current times the active fraction, plus sleep current times the rest.
+      \end{hint}
+    \end{column}
+    \begin{column}{0.44\textwidth}
+      \begin{steps}
+        \item Wake, on a timer or a sensor interrupt.
+        \item Sample and batch several readings.
+        \item Connect, publish, close. Keep it short.
+        \item Deep sleep, radio off, RAM retained.
+      \end{steps}
+    \end{column}
+  \end{columns}
+  \begin{takeaway}{"Stay connected" loses to "wake, send, sleep".}
+    Sleep between publishes.
+  \end{takeaway}
+  \note{Shorten the active window or lengthen the period: everything else is noise. Ask the teams whose device is battery powered what their period is, and whether they chose it or inherited it from an example.}
+\end{frame}
+
+\begin{frame}[eyebrow=Energy]{Measuring a number you can defend}
+  \vskip 3mm
+  \begin{grid}[3]
+    \cell[\faIcon{ruler}]{What}{Average current on the board, energy per sync, frame build time, payload size, or publish-to-display latency.}
+    \cell[\faIcon{stopwatch}]{How}{A USB power meter on the board. Profile mode on a real phone, never debug. Many repetitions, never a single shot.}
+    \cell[\faIcon{file-alt}]{Report}{The value with its unit, the method, the device, the build mode, and the conditions.}
+  \end{grid}
+  \vskip 3mm
+  \kv{Project requirement five}{One number your team measured, with the method written down. Energy, latency, payload size and frame time all qualify.}
+  \begin{takeaway}{A number without a method is not a measurement.}
+    You will be asked how, before you are asked what.
+  \end{takeaway}
+  \note{Insist on repetitions and on the build mode. A frame time from a debug build and a single-shot latency reading are the two failures that show up every year in the defense.}
+\end{frame}
+
+% =====================================================================
+\divider{Part 3 · Exam preparation}{What the exam asks}[The format, a revision plan per lecture, and worked examples]
+
+\begin{frame}[eyebrow=Exam]{The exam format}
+  \vskip 2mm
+  \begin{columns}[T]
+    \begin{column}{0.55\textwidth}
+      \begin{itemize}
+        \item Fifteen multiple-choice questions, 2 points each, 30 points on the paper. The exam is worth 3 of the 10 course points.
+        \item Every question has zero or more correct answers. You score only when all correct options are marked and no incorrect option is.
+        \item There is no partial credit. Two variants, one per row. A non-programmable calculator is allowed.
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.41\textwidth}
+      \kv{Only the grid is graded}{}
+      \vskip 2mm
+      {\usebeamerfont{small}
+      \begin{tabular}{@{}lccccc@{}}
+        \toprule
+          & \thead{1} & \thead{2} & \thead{3} & \thead{4} & \thead{5} \\
+        \midrule
+        A & X &   & X &   & X \\
+        B &   & X & X &   &   \\
+        C & X &   &   & X & X \\
+        D &   & X &   & X &   \\
+        E &   &   & X &   & X \\
+        \bottomrule
+      \end{tabular}}
+    \end{column}
+  \end{columns}
+  \begin{takeaway}{Columns are questions, rows are options.}
+    Marks made next to the questions themselves are ignored. To change an answer, fill the wrong box completely and mark the intended one.
+  \end{takeaway}
+  \note{Show the grid on the projector while you explain it. The all-or-nothing rule surprises students every year, so state it twice and give the example of a question where four of five options are correct.}
+\end{frame}
+
+\begin{frame}[eyebrow=Exam]{What to revise, Lectures 1 to 7}
+  \vskip 2mm
+  {\usebeamerfont{small}
+  \begin{tabular}{@{}llp{92mm}@{}}
+    \toprule
+    \thead{L} & \thead{Topic} & \thead{Revise} \\
+    \midrule
+    1 & Orientation  & the device spectrum, JIT and AOT, generational collection \\
+    2 & Concurrency  & the event loop, isolates against async, goroutines, channels \\
+    3 & Embedded     & MCU anatomy, bare metal or an RTOS, TinyGo targets, I2C \\
+    4 & Networking   & MQTT topics, the three QoS levels, retained, the last will \\
+    5 & BLE          & GAP roles, GATT, notify or indicate, the permission flows \\
+    6 & Sensors      & what each sensor measures, rates, location accuracy modes \\
+    7 & Background   & Doze, standby buckets, WorkManager, iOS background modes \\
+    \bottomrule
+  \end{tabular}}
+  \begin{takeaway}{Revise rules and numbers.}
+    A phrase repeated without its condition scores zero.
+  \end{takeaway}
+  \note{Tell students to work through this table with the decks open, one row per sitting. The rightmost column is deliberately phrased as the things a question can be built from.}
+\end{frame}
+
+\begin{frame}[eyebrow=Exam]{What to revise, Lectures 8 to 14}
+  \vskip 2mm
+  {\usebeamerfont{small}
+  \begin{tabular}{@{}llp{92mm}@{}}
+    \toprule
+    \thead{L} & \thead{Topic} & \thead{Revise} \\
+    \midrule
+    8  & Offline, part 1 & the local database, the outbox, delta sync with a cursor \\
+    9  & Offline, part 2 & logical clocks, the four conflict strategies, CRDTs \\
+    10 & Backends        & serverless or a VPS, API design, deploying a Go binary \\
+    11 & gRPC            & the proto contract, stubs, the four call shapes, deadlines \\
+    12 & Boundaries      & channels, dart:ffi, what a call costs, Multiplatform \\
+    13 & Rendering       & the frame budget, the three trees, keys, const, lazy lists \\
+    14 & Today           & the spectrum, build modes, race to idle, the duty cycle \\
+    \bottomrule
+  \end{tabular}}
+  \begin{takeaway}{Every lecture can appear.}
+    The paper is spread across the whole semester.
+  \end{takeaway}
+  \note{Point out that Lectures 8 and 9 carry the most calculation-style questions, and Lectures 4 and 5 the most rule-recall questions. Both kinds are on the paper.}
+\end{frame}
+
+\begin{frame}[eyebrow=Exam]{Numbers worth carrying into the exam}
+  \vskip 2mm
+  \begin{grid}[3]
+    \bignum{1/rate}{the frame budget: 8.3 ms at 120 Hz, 16.7 ms at 60 Hz}
+    \bignum{8--16 GB}{RAM on a flagship phone, against 520 KB on an ESP32}
+    \bignum{2 bytes}{the fixed MQTT header, against hundreds for HTTP}
+    \bignum{0, 1, 2}{the MQTT QoS levels: at most, at least, exactly once}
+    \bignum{4 orders}{of magnitude from deep sleep to radio transmit}
+    \bignum{3 stages}{in a toolchain: front end, IR, back end}
+  \end{grid}
+  \note{Read these out and have the room say what each one is for. Any number on this slide can appear inside a calculation question, so the units matter as much as the values.}
+\end{frame}
+
+\begin{frame}[eyebrow=Exam]{Rules that are easy to get wrong}
+  \vskip 2mm
+  \begin{grid}[3]
+    \cell[\faServer]{Safe is not idempotent}{GET is both. PUT and DELETE are idempotent but not safe, because they change state.}
+    \cell[\faLayerGroup]{Isolates}{No shared mutable memory, so no data races. Ordering races are still possible.}
+    \cell[\faIcon{sitemap}]{Rebuilds}{Only dirty subtrees rebuild. Element reuse is decided by runtimeType, then key.}
+    \cell[\faToggleOn]{StatelessWidget}{It does not build once. It rebuilds whenever its parent rebuilds.}
+    \cell[\faWifi]{QoS 1}{At least once means duplicates arrive. Every handler must tolerate them.}
+    \cell[\faClock]{Device clocks}{They cannot order events across two phones. Use a logical clock or a server version.}
+  \end{grid}
+  \note{These six are the most common wrong answers in past papers. Ask for the counterexample to each one instead of reading the cell out loud.}
+\end{frame}
+
+\begin{frame}[eyebrow=Exam]{Statements that used to be true}
+  \vskip 2mm
+  \begin{grid}[3]
+    \cell[\faIcon{paint-brush}]{"Skia draws Flutter"}{Impeller is the renderer on current iOS and Android. Skia is only a fallback for old devices.}
+    \cell[\faClock]{"The budget is 16 ms"}{Only at 60 Hz. Most current phones run at 90 or 120 Hz, so state it as one over the refresh rate.}
+    \cell[\faIcon{exchange-alt}]{"The JSON bridge"}{The bridgeless architecture replaced it. JavaScript calls C++ directly in React Native.}
+    \cell[\faCloud]{"CodePush for updates"}{It was retired in March 2025. The mainstream successor is Expo EAS Update.}
+    \cell[\faLock]{"Enable bitcode"}{Apple removed bitcode in Xcode 14. A guide that requires it is out of date.}
+    \cell[\faBug]{"Isolates cannot race"}{They cannot race on memory. Messages can still interleave in an order you did not expect.}
+  \end{grid}
+  \note{Say clearly that all six were correct at some point, which is why they are still repeated online. The exam tests the current answer, and so does an interview.}
+\end{frame}
+
+\begin{frame}[eyebrow=Exam]{Example question 1: build modes}
+  \vskip 1mm
+  \muted{A Flutter app is built for the store. Select every statement that is true.}
+  \vskip 2mm
+  \begin{itemize}
+    \item \textbf{A.} A debug build runs the Dart VM with a JIT, which is what makes hot reload possible.
+    \item \textbf{B.} A release build ships an interpreter next to the compiled machine code.
+    \item \textbf{C.} An iOS release build is compiled ahead of time because a third-party app may not make a writable page executable.
+    \item \textbf{D.} Profile mode is the right build in which to measure frame times.
+  \end{itemize}
+  \begin{takeaway}{Answer: A, C and D.}
+    Only B is false: a release build contains neither an interpreter nor a JIT, which is why hot reload is unavailable in it.
+  \end{takeaway}
+  \note{Work this one on the projector. Point out that three of four options are correct, which is exactly the shape that costs students points when they stop at the first true statement.}
+\end{frame}
+
+\begin{frame}[eyebrow=Exam]{Example question 2: the frame budget}
+  \vskip 1mm
+  \muted{A phone's display refreshes at 120 Hz. Select every statement that is true.}
+  \vskip 2mm
+  \begin{itemize}
+    \item \textbf{A.} The budget for one frame is about 8.3 ms.
+    \item \textbf{B.} A task that occupies the UI isolate for 25 ms overruns the budget of about three frames.
+    \item \textbf{C.} The frame budget is 16 ms on every phone.
+    \item \textbf{D.} A single missed frame is visible to the user as jank.
+  \end{itemize}
+  \begin{takeaway}{Answer: A, B and D.}
+    C is false because the budget is one divided by the refresh rate, and 16 ms is only the value at 60 Hz.
+  \end{takeaway}
+  \note{Do the division out loud: 1000 divided by 120 is 8.3, and 25 divided by 8.3 is about three. Calculation questions on the paper look exactly like this.}
+\end{frame}
+
+\begin{frame}[eyebrow=Exam]{Example question 3: MQTT}
+  \vskip 1mm
+  \muted{A sensor publishes to a broker over MQTT. Select every statement that is true.}
+  \vskip 2mm
+  \begin{itemize}
+    \item \textbf{A.} QoS 1 can deliver the same message more than once, so a handler must be idempotent.
+    \item \textbf{B.} A retained message is delivered to a client that subscribes after it was published.
+    \item \textbf{C.} The last will is published by the broker when a client disconnects unexpectedly.
+    \item \textbf{D.} A shorter keep-alive always saves energy on a battery-powered device.
+  \end{itemize}
+  \begin{takeaway}{Answer: A, B and C.}
+    D is false: a shorter keep-alive means more traffic and a radio that is held awake more often, not less.
+  \end{takeaway}
+  \note{Option D is the trap, and it connects Part 2 of this lecture to Lecture 4. Ask what a longer keep-alive costs in exchange, so the trade-off is stated rather than memorized.}
+\end{frame}
+
+\begin{frame}[eyebrow=Exam]{Example question 4: offline-first}
+  \vskip 1mm
+  \muted{Two phones edit the same row while offline. Select every statement that is true.}
+  \vskip 2mm
+  \begin{itemize}
+    \item \textbf{A.} Writing the row and its outbox entry in one transaction keeps the local state and the queue consistent.
+    \item \textbf{B.} The device wall clock is a safe way to order edits made on two different phones.
+    \item \textbf{C.} A grow-only counter converges without coordination, because merging takes the maximum per replica.
+    \item \textbf{D.} Last writer wins can silently discard a concurrent edit.
+  \end{itemize}
+  \begin{takeaway}{Answer: A, C and D.}
+    B is false: unsynchronized clocks can disagree by minutes, so ordering needs a logical clock or a server version.
+  \end{takeaway}
+  \note{Ask why D is a true statement about a strategy the course still recommends. The answer is that it is acceptable when the discarded edit is visible to the user, which is what the marker in Lab 5 was for.}
+\end{frame}
+
+\begin{frame}[eyebrow=Exam]{Example question 5: energy}
+  \vskip 1mm
+  \muted{A phone app syncs, and a sensor node reports over Wi-Fi. Select every true statement.}
+  \vskip 2mm
+  \begin{itemize}
+    \item \textbf{A.} Ten small transfers spread over a minute usually cost more energy than one batched transfer of the same bytes.
+    \item \textbf{B.} On an OLED panel dark mode is a genuine saving, while on an LCD the backlight is on regardless.
+    \item \textbf{C.} Keeping a core busy at a low clock is more efficient than finishing quickly and returning to idle.
+    \item \textbf{D.} On an ESP32-class device the radio, not the processor core, dominates the power budget.
+  \end{itemize}
+  \begin{takeaway}{Answer: A, B and D.}
+    C inverts race to idle: the deep low-power states are only reachable once nothing is keeping a core awake.
+  \end{takeaway}
+  \note{This question spans Lecture 7 and today. If the room hesitates on A, restate that the fixed cost is waking the radio rather than the bytes that travel over it.}
+\end{frame}
+
+% =====================================================================
+\divider{Part 4 · Defense}{Defense and presentation}[Project milestones, the defense rubric, and the concept presentation]
+
+\begin{frame}[eyebrow=Project]{Milestones: where you should already be}
+  \vskip 1mm
+  {\usebeamerfont{small}
+  \begin{tabular}{@{}lp{96mm}@{}}
+    \toprule
+    \thead{Session} & \thead{Milestone} \\
+    \midrule
+    1  & team formed and the idea approved against the five requirements \\
+    3  & the device streams a reading to a serial console \\
+    5  & the app receives that reading over MQTT or BLE \\
+    7  & offline mode with sync \\
+    9  & gRPC, FFI or a platform channel integrated \\
+    11 & the measurement done, and the polish pass \\
+    13 & demo and defense \\
+    \bottomrule
+  \end{tabular}}
+  \begin{takeaway}{The defense is in week 13.}
+    The last session shows what already works.
+  \end{takeaway}
+  \note{Ask each team which milestone they are actually on, out loud, in front of the others. Teams that are two milestones behind at this point need the plan for the remaining sessions written down today.}
+\end{frame}
+
+\begin{frame}[eyebrow=Project]{What the defense checks}
+  \vskip 1mm
+  {\usebeamerfont{small}
+  \begin{tabular}{@{}lp{88mm}@{}}
+    \toprule
+    \thead{Requirement} & \thead{What proves it in the room} \\
+    \midrule
+    A device component  & a TinyGo program on a real board or in Wokwi, reading at least one sensor \\
+    Device to phone     & the app shows the live reading arriving over MQTT or BLE \\
+    Offline-first       & airplane mode on, an edit, airplane mode off, the edit reaches the server \\
+    One boundary        & gRPC with a generated Dart client, or FFI, or a platform channel \\
+    A measured claim    & one number you measured, with the method and the conditions \\
+    \bottomrule
+  \end{tabular}}
+  \begin{takeaway}{All five are needed for approval.}
+    The 1.5 points reflect how well each is shown and explained.
+  \end{takeaway}
+  \note{Say explicitly that every member answers questions about the part they wrote. A team where one person can explain everything and the others cannot is the case the rubric is designed to catch.}
+\end{frame}
+
+\begin{frame}[eyebrow=Project]{What a good demo shows}
+  \vskip 2mm
+  \begin{grid}[3]
+    \cell[\faMobile]{Start cold}{Launch the app in front of the room, not a screen that has been open for an hour.}
+    \cell[\faBug]{Break it on purpose}{Pull the cable, turn on airplane mode, kill the broker. Recovery is the interesting part.}
+    \cell[\faBolt]{Show the number}{State the measured claim, then say how it was measured before anyone has to ask.}
+    \cell[\faLayerGroup]{Everyone speaks}{Each member presents the part they wrote and answers questions about it.}
+    \cell[\faIcon{video}]{Bring a fallback}{A short recording of the demo, in case the room's network or the hardware fails you.}
+    \cell[\faIcon{road}]{Say what is next}{One honest sentence about a known limitation beats pretending there is none.}
+  \end{grid}
+  \note{The fallback recording is not a substitute for a live demo, and teams should be told that plainly. It exists so that a failed network does not erase six sessions of work.}
+\end{frame}
+
+\begin{frame}[eyebrow=Project]{Concept presentations}
+  \vskip 2mm
+  \begin{columns}[T]
+    \begin{column}{0.50\textwidth}
+      \begin{itemize}
+        \item Teams of at most three. One topic, claimed from the shared sheet, and no two teams take the same one.
+        \item About 20 minutes of slides, plus an optional demo. Every member presents a part of it.
+        \item Materials go to Moodle. The presentation is worth 1 of the 10 course points.
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.46\textwidth}
+      \begin{hint}[What earns the point]
+        A topic you can explain from something you built or ran, sources named on the slides, and a clear statement of what the technology is not good for.
+      \end{hint}
+    \end{column}
+  \end{columns}
+  \begin{takeaway}{Choose a topic you can show, not only describe.}
+    Twenty minutes of summary from a vendor page is the weakest presentation you can give.
+  \end{takeaway}
+  \note{Remind teams that the concept presentation and the project are graded separately, so a strong project does not carry a thin presentation. Confirm the remaining free topics on the sheet before the session ends.}
+\end{frame}
+
+% =====================================================================
+\begin{frame}[eyebrow=Recap]{Three things to remember}
+  \vskip 2mm
+  \begin{enumerate}
+    \item Compilation is a schedule, not a camp. \muted{Every runtime decides when to translate, and every platform kept moving that moment earlier.}
+    \item Energy follows one rule at both scales. \muted{Do the work, then let the hardware sleep. A phone loses an afternoon; a coin cell loses a year.}
+    \item The exam rewards precision. \muted{Learn the rules with their conditions and the numbers with their units.}
+  \end{enumerate}
+  \vskip 5mm
+  \kv{Further reading}{\link{https://docs.flutter.dev/perf}{docs.flutter.dev/perf} · \link{https://developer.android.com/topic/performance/baselineprofiles/overview}{Baseline profiles} · \link{https://dart.dev/overview}{dart.dev} · \link{https://tinygo.org/}{tinygo.org}}
+  \note{Ask for the three points back from the room. Then close the semester by naming the two deadlines that remain: the defense in the last project session and the exam in the session.}
+\end{frame}
+
+\closingframe{Questions?}{dinu\_stefan.rusu@upb.ro · Microsoft Teams: course channel}
+
+\end{document}
