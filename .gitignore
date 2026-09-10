@@ -37,3 +37,8 @@ node_modules/
 .vscode/
 *.swp
 *~
+
+# Dart and Flutter
+.dart_tool/
+.flutter-plugins-dependencies
+build/
