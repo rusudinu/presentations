@@ -1,6 +1,6 @@
 # Authoring rules for lecture and lab decks
 
-Every deck in `admd/` and `mec/` is written against these rules. Read this file fully before
+Every deck under `src/admd/` and `src/mec/` is written against these rules. Each deck lives in its own folder, `src/<course>/lectures/lectureNN/lectureNN.tex` or `src/<course>/labs/labNN/labNN.tex`, so its build files stay next to it. Students never look there: `make` in `src/<course>/` publishes the PDFs to `<course>/` at the top of the repository. Read this file fully before
 writing a slide. The macro reference is in `README.md` in this folder; the two decks in
 `examples/` show every building block in use.
 
@@ -106,7 +106,7 @@ The slide is 160 × 90 mm. The theme leaves roughly 60 mm of height under the ti
 Run, from anywhere:
 
 ```bash
-python3 /Users/dinu/dev/upb/presentations/template/qa.py path/to/deck.tex
+python3 /Users/dinu/dev/upb/presentations/template/qa.py src/<course>/lectures/lectureNN/lectureNN.tex
 ```
 
 It compiles the deck, reports every problem, and writes `preview/<deck>-sheetN.png` next to the

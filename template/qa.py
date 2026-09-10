@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """QA one Beamer deck built on the upbminimal theme.
 
-    python3 template/qa.py path/to/deck.tex [--no-render]
+    python3 template/qa.py src/<course>/lectures/lectureNN/lectureNN.tex [--no-render]
 
 Compiles with xelatex (template on TEXINPUTS), then reports:
   * compile errors

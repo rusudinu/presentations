@@ -1,3 +1,4 @@
+# LaTeX build artifacts
 *.aux
 *.log
 *.nav
@@ -9,4 +10,30 @@
 *.fls
 *.fdb_latexmk
 *.synctex.gz
+*.synctex(busy)
+*.bbl
+*.blg
+*.run.xml
+*.pdfsync
 preview/
+
+# Built PDFs live only in pdf/ (published copies). Ignore the ones next to the sources.
+src/**/*.pdf
+template/examples/*.pdf
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Node (old pptx generators)
+node_modules/
+
+# Editors and OS
+.DS_Store
+._*
+.idea/
+.vscode/
+*.swp
+*~
