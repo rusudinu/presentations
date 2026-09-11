@@ -185,9 +185,9 @@ await t.stop();
 \end{dart}
     \end{column}
     \begin{column}{0.46\textwidth}
-      \lead{Some traces cost you nothing.}{App start, cold, warm and hot, and screen rendering are captured as soon as the package is added.}
+      \lead{Some traces cost you nothing.}{App start, app in foreground and app in background are captured as soon as the package is added. Per-screen rendering is not: Flutter draws into one native view.}
       \vskip 2mm
-      \muted{Dart HTTP calls are not. \code{dart:io} opens its own sockets and bypasses the instrumented platform stack, so wrap your client or trace the call yourself.}
+      \muted{Dart HTTP calls are not traced either. \code{dart:io} bypasses the instrumented native stack, so time the call yourself.}
     \end{column}
   \end{columns}
   \begin{takeaway}{Give every trace a budget before you read it.}
@@ -271,7 +271,7 @@ await prefs.remove('tab');
     \begin{column}{0.42\textwidth}
       \lead{A key and a value, nothing else.}{It wraps NSUserDefaults on iOS and SharedPreferences on Android. Values are bool, int, double, String or a list of strings.}
       \vskip 2mm
-      \muted{Reads are synchronous once the file is loaded, so keep it small. Nothing here is encrypted.}
+      \muted{Reads are synchronous once the file is loaded, so keep it small. Nothing here is encrypted. This API is legacy: new code should use SharedPreferencesAsync.}
     \end{column}
   \end{columns}
   \begin{takeaway}{Settings, not application state.}
@@ -297,7 +297,7 @@ await storage.deleteAll();  // sign out
 \end{dart}
     \end{column}
     \begin{column}{0.42\textwidth}
-      \lead{The platform holds the key.}{iOS and macOS use the Keychain. Android uses the Keystore, with an encrypted preferences file on top of it.}
+      \lead{The platform holds the key.}{iOS and macOS use the Keychain. On Android the key lives in the Keystore and the values are stored as AES-GCM ciphertext.}
       \vskip 2mm
       \muted{Every call is asynchronous and crosses a platform channel. Read the token once at start-up, keep it in memory, write it only when it changes.}
     \end{column}
@@ -480,7 +480,7 @@ Feed? readFeed(String key, Duration ttl) {
   \begin{takeaway}{The paused state is your last reliable save point.}
     Anything the user would be annoyed to lose must be on disk by then.
   \end{takeaway}
-  \note{On Android the process can be killed after paused without another callback, and in detached you cannot count on the network or the UI. Ask what happens to a half-typed message when the user takes a call and the system reclaims memory. Nothing in the framework saves it for you.}
+  \note{There is a fifth state, hidden, which fires just before paused on every platform; treat the two together. On Android the process can be killed after paused without another callback, and in detached you cannot count on the network or the UI. Ask what happens to a half-typed message when the user takes a call and the system reclaims memory. Nothing in the framework saves it for you.}
 \end{frame}
 
 \begin{frame}[fragile,eyebrow=Lifecycle]{Saving when the app is paused}
@@ -552,10 +552,10 @@ class _HomeState extends State<Home> with WidgetsBindingObserver {
       \muted{The Drift site carries the migration guide. Read it before you change a table for the second time.}
     \end{column}
   \end{columns}
-  \begin{takeaway}{Lab 5 starts from the third item.}
+  \begin{takeaway}{The lab app carries the third item forward.}
     Open the pull request even if the database half is unfinished, so the review catches the schema early.
   \end{takeaway}
-  \note{Lab 5 builds on the first and third items. Tell students to open a pull request even if the database half is incomplete, so the review can catch the schema early.}
+  \note{The cumulative lab app builds on the first and third items. Tell students to open a pull request even if the database half is incomplete, so the review can catch the schema early.}
 \end{frame}
 
 \closingframe{Questions?}{dinu\_stefan.rusu@upb.ro · Microsoft Teams: course channel}

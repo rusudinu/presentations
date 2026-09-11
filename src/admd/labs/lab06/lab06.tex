@@ -27,13 +27,14 @@
 \begin{frame}[fragile,eyebrow=Setup]{Before you write a line}
   \begin{steps}
     \item Branch from the Lab 5 state: \code{git checkout -b lab-6}
-    \item Add packages: \code{firebase\_auth}, \code{google\_sign\_in}, \code{go\_router}, \code{web\_socket\_channel}.
-    \item Run \code{flutterfire configure} again to regenerate \code{firebase\_options.dart}.
-    \item Register your Android debug \emph{and} release SHA-1 fingerprints in the Firebase console. Google sign-in fails silently without them.
+    \item Add \code{firebase\_core}, \code{firebase\_auth}, \code{google\_sign\_in}, \code{go\_router} and \code{web\_socket\_channel}.
+    \item Create a Firebase project, run \code{flutterfire configure}, initialize Firebase in \code{main}.
+    \item Register the debug \emph{and} release SHA-1 fingerprints in Firebase, or Google sign-in fails silently.
   \end{steps}
   \begin{hint}
 \begin{shell}
-keytool -list -v -keystore ~/.android/debug.keystore -alias androiddebugkey
+keytool -list -v -keystore ~/.android/debug.keystore \
+  -alias androiddebugkey -storepass android
 \end{shell}
   \end{hint}
 \end{frame}
@@ -132,6 +133,7 @@ final router = GoRouter(
         \item Add \code{/login}, \code{/}, \code{/live} routes.
         \item Wire \code{refreshListenable} to \code{authStateChanges}.
         \item Sign-out button on Home calls \code{signOut()}.
+        \item Copy \code{GoRouterRefreshStream} from the go\_router example. It is not exported.
       \end{steps}
     \end{column}
   \end{columns}
@@ -146,7 +148,7 @@ final router = GoRouter(
   \kv{Done when}{}
   \begin{checklist}
     \item Signing out from Home returns to \code{/login} without a manual navigation call.
-    \item Opening \code{admd://live} while signed out lands on \code{/login}, not on \code{LiveScreen}.
+    \item Opening \code{admd://app/live} while signed out lands on \code{/login}, not on \code{LiveScreen}.
     \item Signing in from \code{/login} lands back on \code{/}, never on \code{/login} itself.
   \end{checklist}
 \end{frame}

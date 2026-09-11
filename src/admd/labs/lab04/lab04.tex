@@ -31,7 +31,7 @@
     \item Continue in \code{admd-labs}. Branch: \code{git checkout -b lab-4}.
     \item Two new files: \code{lib/models/todo.dart} and \code{lib/api/todo\_api.dart}.
     \item Add the packages with the two commands below.
-    \item After each model change: \code{dart run build\_runner build --delete-conflicting-outputs}
+    \item After each model change: \code{dart run build\_runner build}
   \end{steps}
 \begin{shell}
 flutter pub add json_annotation equatable dio
@@ -160,15 +160,15 @@ Future<List<Todo>> fetchTodos() async {
 \begin{frame}[fragile,eyebrow=Reference]{Backoff and jitter}
 \begin{dart}
 Future<T> withRetry<T>(Future<T> Function() op) async {
-  for (var i = 0; i < 5; i++) {
+  for (var i = 0; ; i++) {
     try {
       return await op();
     } catch (_) {
+      if (i == 4) rethrow;          // five attempts, then give up
       final b = 400 * (1 << i);
       await Future.delayed(Duration(milliseconds: b + Random().nextInt(b)));
     }
   }
-  rethrow;
 }
 \end{dart}
   \begin{takeaway}{Retry what can succeed later.}
@@ -178,10 +178,10 @@ Future<T> withRetry<T>(Future<T> Function() op) async {
 
 \begin{frame}[eyebrow=Troubleshooting]{Errors and fixes}
   \vskip 1mm
-  \trouble{Target of URI hasn't been generated}{Run \code{build\_runner} from Setup. Confirm \code{todo.g.dart} exists.}
-  \trouble{Conflicting outputs were detected}{Add \code{--delete-conflicting-outputs} to the command.}
-  \trouble{Undefined name \_\$TodoFromJson}{The \code{part} directive must name the file exactly: \code{todo.g.dart}.}
+  \trouble{JsonSerializable is undefined}{Put \code{json\_annotation} in dependencies, not dev\_dependencies.}
+  \trouble{Undefined name \_\$TodoFromJson, or target of URI not generated}{Run \code{build\_runner} from Setup; the \code{part} directive must name \code{todo.g.dart}.}
   \trouble{a == b is still false}{props is missing a field, or Todo does not extend Equatable.}
+  \trouble{Undefined name Random}{Add \code{import 'dart:math';} to the file.}
 \end{frame}
 
 \closingframe{Push before you leave.}{Branch lab-4 · one commit per task · retry log saved under /screenshots}

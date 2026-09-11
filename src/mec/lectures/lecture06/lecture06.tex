@@ -456,19 +456,18 @@ await _c.startImageStream((CameraImage frame) async {
 
 \begin{frame}[fragile,eyebrow=NFC]{One session, one tag, in Dart}
 \begin{dart}
-if (!await NfcManager.instance.isAvailable()) return;  // no reader, or off
-
-NfcManager.instance.startSession(onDiscovered: (NfcTag tag) async {
-  final ndef = Ndef.from(tag);
-  if (ndef == null) {
-    await NfcManager.instance.stopSession(errorMessage: 'Not an NDEF tag');
-    return;
-  }
-  _show(ndef.cachedMessage);
-  await NfcManager.instance.stopSession();
-});
+final a = await NfcManager.instance.checkAvailability();
+if (a != NfcAvailability.enabled) return;  // no reader, or switched off
+NfcManager.instance.startSession(
+  pollingOptions: {NfcPollingOption.iso14443},
+  onDiscovered: (NfcTag tag) async {
+    final ndef = Ndef.from(tag);   // from nfc_manager_ndef
+    if (ndef == null) return NfcManager.instance.stopSession();
+    _show(ndef.cachedMessage);
+    await NfcManager.instance.stopSession();
+  });
 \end{dart}
-  \muted{Check availability, start a session, inspect the tag, always stop it. Signatures in nfc\_manager have moved across major releases, so read the README.}
+  \muted{Check availability, start a session with a polling option, inspect the tag, always stop it. The NDEF classes live in a companion package, and signatures have moved across major releases, so read the README.}
   \note{A session left open on iOS keeps the system sheet on screen and blocks every other scan, so the stop call belongs on every path out. Writing a tag is the same shape with an ndef.write call instead of a read.}
 \end{frame}
 

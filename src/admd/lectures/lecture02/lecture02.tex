@@ -263,7 +263,7 @@ final l = Lecture(2, 'Languages');
       \muted{Mark a field \code{final} and it must be set once, either at declaration or in the constructor, never after.}
     \end{column}
   \end{columns}
-  \note{This is the shape every model class in the labs will follow: a handful of final fields, one constructor. Point out room's ? makes it genuinely optional to omit.}
+  \note{This is the shape every model class in the labs will follow: a handful of final fields, one constructor. Point out room's ? makes it genuinely optional to omit. Current Dart also has primary constructors, which declare the fields in the class header, but the form on this slide is what you will read in every package.}
 \end{frame}
 
 \begin{frame}[fragile,eyebrow=Dart]{Getters, equality, and named constructors}
@@ -464,7 +464,7 @@ val u = User("Ada", 36)
       \kv{Your Dart code}{widgets, state, logic}
       \kv{Flutter framework}{layout, animation, gestures}
       \kv{Impeller}{the renderer}
-      \kv{GPU}{Metal on iOS, Vulkan on Android}
+      \kv{GPU}{Metal on iOS, Vulkan or OpenGL on Android}
     \end{column}
   \end{columns}
   \begin{takeaway}{A release build is Dart, compiled ahead of time to native code.}

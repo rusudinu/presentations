@@ -169,13 +169,13 @@ void didChangeAppLifecycleState(
   \vskip 2mm
   \begin{grid}[3]
     \cell[\faIcon{bell}]{A visible notification}{The user can see the service and stop it. That visibility is the price of the CPU time.}
-    \cell[\faIcon{tags}]{A declared type}{Recent Android versions want a type in the manifest with a matching permission: location, data sync, connected device, media.}
+    \cell[\faIcon{tags}]{A declared type}{Since Android 14 every one needs a type in the manifest with a matching permission: location, data sync, connected device, media.}
     \cell[\faIcon{lock}]{Limited entry}{You generally cannot start one while the app is in the background. Start it from a screen the user is on.}
   \end{grid}
   \begin{takeaway}{A foreground service is not a way to avoid the scheduler.}
     Use one for work that is ongoing, user-initiated and user-visible: a recorded track, a live sensor session, an upload the user just asked for.
   \end{takeaway}
-  \note{For the project this is the right tool for a live MQTT or BLE session that must survive the screen turning off. Make clear it is not the right tool for periodic sync, which is what the next slide is for.}
+  \note{For the project this is the right tool for a live MQTT or BLE session that must survive the screen turning off. Make clear it is not the right tool for periodic sync, which is what the next slide is for. Since Android 15 the data sync and media processing types are also capped at about six hours in any 24-hour period, so a permanent connection cannot be parked there either.}
 \end{frame}
 
 \begin{frame}[eyebrow=Android]{WorkManager: the default answer}
@@ -287,7 +287,7 @@ void didChangeAppLifecycleState(
     \bottomrule
   \end{tabular}}
   \vskip 2mm
-  \muted{Register an identifier before launch finishes, submit a request, set an expiration handler, mark the task complete, and submit the next request yourself.}
+  \muted{Since iOS 26 there is a third kind, a continued processing task: work the user starts in the foreground keeps running with visible progress they can cancel.}
   \begin{takeaway}{Nothing here is guaranteed.}
     The system schedules you from how often the user opens the app. A rarely used app may not run for days.
   \end{takeaway}
@@ -396,7 +396,7 @@ Workmanager().registerPeriodicTask('sync',
   \begin{takeaway}{Pick by the shape of the work, not by convenience.}
     Periodic and deferrable goes to workmanager. Continuous and visible goes to a foreground service.
   \end{takeaway}
-  \note{For the project, a team streaming MQTT while the screen is off needs this on Android and needs a different story on iOS. Tell them to decide that story early rather than discovering it during the demo.}
+  \note{For the project, a team streaming MQTT while the screen is off needs this on Android and needs a different story on iOS. Tell them to decide that story early rather than discovering it during the demo. Check the package first: it has had no release since late 2024, so it may need a pinned Gradle or Android SDK version to build.}
 \end{frame}
 
 \begin{frame}[fragile,eyebrow=Flutter]{Waking the app with a data message}
@@ -517,7 +517,7 @@ FirebaseMessaging
   \begin{takeaway}{If you are writing wakelock code, check the scheduler first.}
     Almost every case that seems to need one is a job that should have been handed to the system.
   \end{takeaway}
-  \note{Battery Historian draws held wakelocks as bars on a timeline, which makes a leak obvious. Mention that a wakelock does not defeat Doze: the system ignores it once the device is idle, which surprises people.}
+  \note{A power timeline draws held wakelocks as bars, which makes a leak obvious. Mention that a wakelock does not defeat Doze: the system ignores it once the device is idle, which surprises people.}
 \end{frame}
 
 \begin{frame}[fragile,eyebrow=Energy]{Measuring instead of guessing}
@@ -537,7 +537,7 @@ adb bugreport report.zip
 \end{shell}
     \end{column}
     \begin{column}{0.44\textwidth}
-      \lead{Android: Battery Historian}{Feed it the bug report and it draws a timeline: wakelocks, jobs, alarms, radio state and screen state, per app.}
+      \lead{Android: read the bug report}{Battery Historian draws a timeline from it: wakelocks, jobs, alarms, radio and screen state. It is unmaintained now, so prefer the Power Profiler or Perfetto.}
       \vskip 2mm
       \lead{iOS: the energy gauge}{The debug navigator rates energy impact live, and Instruments has an energy template. MetricKit reports the same categories from real users.}
     \end{column}

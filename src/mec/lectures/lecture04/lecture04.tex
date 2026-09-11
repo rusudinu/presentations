@@ -234,29 +234,29 @@ mosquitto_pub -h localhost -u dev -P pass -t mec/lab/r1/temp -m '{"c":21.4}'
   \begin{columns}[T]
     \begin{column}{0.57\textwidth}
 \begin{golang}
-// netlink and net/mqtt, tinygo.org/x
-link, _ := netlink.New()
-link.NetConnect(&netlink.ConnectParams{
-  Ssid: ssid, Passphrase: pass,
-})
-
-opts := mqtt.NewClientOptions().
-  AddBroker("tcp://192.168.1.10:1883").
-  SetClientID("mec-sensor-01")
-c := mqtt.NewClient(opts)
-t := c.Connect(); t.Wait()
-p := fmt.Sprintf(`{"c":%.1f}`, tempC)
-c.Publish(topic, 1, false, p)
+radio := link.Esplink{}   // espradio
+netdev.UseNetdev(&radio)
+radio.NetConnect(&nl.ConnectParams{
+  Ssid: ssid, Passphrase: pass})
+conn, _ := net.Dial("tcp", broker)
+c := mqtt.NewClient(mqtt.ClientConfig{})
+var v mqtt.VariablesConnect
+v.SetDefaultMQTT([]byte("mec-sensor-01"))
+c.Connect(ctx, conn, &v)
+fl, _ := mqtt.NewPublishFlags(
+  mqtt.QoS0, false, false)   // natiu-mqtt
+pv := mqtt.VariablesPublish{TopicName: t}
+c.PublishPayload(fl, pv, payload)
 \end{golang}
     \end{column}
     \begin{column}{0.39\textwidth}
-      \lead{Wi-Fi is a driver, not a given.}{On the RISC-V ESP32 parts the radio comes from the espradio package. Check your target first.}
+      \lead{Wi-Fi is a driver, not a given.}{On the ESP32-C3 and the ESP32-S3 the radio comes from the espradio package. Check your target first.}
       \begin{hint}[Order of failure]
         Network first, broker second, sensor third. Print at every step: a silent board says nothing.
       \end{hint}
     \end{column}
   \end{columns}
-  \note{Keep this snippet as a shape rather than a recipe: the package paths move faster than the protocol does. What does not move is the sequence: join, connect, publish, and check the error at each stage.}
+  \note{Keep this snippet as a shape rather than a recipe: the package paths move faster than the protocol does. It follows the mqtt example in the espradio repository, with natiu-mqtt as the client, and Lab 2 uses the same shape. What does not move is the sequence: join, dial, connect, publish, and check the error at each stage.}
 \end{frame}
 
 \begin{frame}[fragile,eyebrow=Both ends]{Flutter: connect, subscribe, decode}

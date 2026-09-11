@@ -258,7 +258,7 @@ await FirebaseAuth.instance.currentUser!
 \begin{frame}[eyebrow=OAuth]{The credential handoff, client-side}
   \vskip 1mm
   \begin{enumerate}
-    \item \textbf{The app asks Google to sign the user in.} \muted{\code{GoogleSignIn.authenticate()}}
+    \item \textbf{The app asks Google to sign the user in.} \muted{\code{GoogleSignIn.instance.authenticate()}}
     \item \textbf{Google returns an OAuth ID token.} \muted{a JSON Web Token (JWT) signed by Google, naming this user}
     \item \textbf{The app wraps it as an AuthCredential.} \muted{\code{GoogleAuthProvider.credential(...)}}
     \item \textbf{Firebase verifies it and opens a session.} \muted{\code{signInWithCredential(cred)}}
@@ -469,7 +469,7 @@ Future<void> main() async {
   \begin{takeaway}{Until you press Enforce, App Check only measures.}
     A debug token is a permanent bypass of everything you just enabled: never commit one, never paste one in chat.
   \end{takeaway}
-  \note{Enforcing before old app versions have drained is the classic outage: every user still on a build without activate() is locked out at once. The metrics page exists precisely so you can time this safely.}
+  \note{Enforcing before old app versions have drained is the classic outage: every user still on a build without activate() is locked out at once. The metrics page exists precisely so you can time this safely. One product does not wait for you: from November 2026 App Check is enforced automatically for Firebase AI Logic, the path Lecture 12 uses.}
 \end{frame}
 
 \begin{frame}[eyebrow=Recap]{Three things to remember}

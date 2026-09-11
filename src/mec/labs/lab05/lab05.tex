@@ -29,10 +29,9 @@
     \item Branch the repository, add Drift, and generate the boilerplate:
 \begin{shell}
 git checkout -b lab-5
-flutter pub add drift sqlite3_flutter_libs
+flutter pub add drift sqlite3_flutter_libs path_provider http
 flutter pub add -d drift_dev build_runner
-dart run build_runner build \
-    --delete-conflicting-outputs
+dart run build_runner build
 \end{shell}
     \item Local code lives in \code{lib/lab5/}. Server code lives in \code{server/lab5/main.go}.
   \end{steps}
@@ -45,7 +44,7 @@ dart run build_runner build \
   \begin{columns}[T]
     \begin{column}{0.55\textwidth}
       \begin{steps}
-        \item Model \code{Notes}: id, title, body, updatedAt, version, isDirty, deletedAt.
+        \item Model \code{Notes}: id, title, body, updatedAt, version, isDirty, elsewhere, deletedAt.
         \item Model \code{Outbox}: id, entityId, op, payload, queuedAt.
         \item Write \code{saveNote} so both tables commit inside one \code{db.transaction}.
         \item Make delete a write: set \code{deletedAt}, never issue a SQL DELETE.
@@ -70,14 +69,15 @@ dart run build_runner build \
     \begin{column}{0.48\textwidth}
 \begin{dart}
 class Notes extends Table {
-  TextColumn get id => text()();
-  TextColumn get title => text()();
-  TextColumn get body => text()();
-  DateTimeColumn get updatedAt =>
+  late final id = text()();
+  late final title = text()();
+  late final body = text()();
+  late final updatedAt =
       dateTime()();
-  IntColumn get version => integer()();
-  BoolColumn get isDirty => boolean()();
-  DateTimeColumn get deletedAt =>
+  late final version = integer()();
+  late final isDirty = boolean()();
+  late final elsewhere = boolean()();
+  late final deletedAt =
       dateTime().nullable()();
 }
 \end{dart}
@@ -85,12 +85,11 @@ class Notes extends Table {
     \begin{column}{0.48\textwidth}
 \begin{dart}
 class Outbox extends Table {
-  TextColumn get id => text()();
-  TextColumn get entityId => text()();
-  TextColumn get op => text()();
-  TextColumn get payload => text()();
-  DateTimeColumn get queuedAt =>
-      dateTime()();
+  late final id = text()();
+  late final entityId = text()();
+  late final op = text()();
+  late final payload = text()();
+  late final queuedAt = dateTime()();
 }
 \end{dart}
     \end{column}
@@ -105,7 +104,7 @@ Future<void> saveNote(Note n) => db.transaction(() async {
       updatedAt: DateTime.now(), isDirty: true);
   await into(notes).insertOnConflictUpdate(row);
   await into(outbox).insert(OutboxCompanion.insert(
-    id: uuid.v4(), entityId: n.id,
+    id: uuid.v4(), entityId: n.id, queuedAt: DateTime.now(),
     op: 'upsert', payload: jsonEncode(row.toJson()),
   ));
 });
@@ -212,7 +211,7 @@ func list(w http.ResponseWriter, r *http.Request) {
       \begin{steps}
         \item On pull, if the local row is not dirty, upsert the server's row: no conflict.
         \item If the local row is dirty and the incoming version is higher, the server wins: keep its value.
-        \item Mark the losing row \code{updatedElsewhere} instead of silently overwriting it.
+        \item Set \code{elsewhere} on the losing row instead of silently overwriting it.
         \item Clear the marker once the user opens the note.
       \end{steps}
     \end{column}
@@ -253,7 +252,7 @@ Future<void> onIncoming(Map row) => db.transaction(() async {
 \begin{dart}
 ListTile(
   title: Text(note.title),
-  trailing: note.updatedElsewhere
+  trailing: note.elsewhere
       ? const Chip(label: Text('Updated elsewhere'))
       : null,
   onTap: () => notesDao.clearFlag(note.id),

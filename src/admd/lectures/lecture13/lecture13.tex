@@ -182,7 +182,7 @@ generationConfig: GenerationConfig(
 \begin{frame}[fragile,eyebrow=Prompting]{Ask for structured output, with a schema}
 \begin{dart}
 final model = FirebaseAI.googleAI().generativeModel(
-  model: 'gemini-2.5-flash',
+  model: 'gemini-3.5-flash',
   generationConfig: GenerationConfig(
     responseMimeType: 'application/json',
     responseSchema: Schema.object(properties: {
@@ -301,7 +301,7 @@ and reply exactly: "All clear."
     \toprule
     \thead{Store} & \thead{Runs} & \thead{Fits when} \\
     \midrule
-    Vertex AI Vector Search & Google Cloud, managed & a shared corpus outgrows one machine \\
+    Vector Search & Google Cloud, managed & a shared corpus outgrows one machine \\
     pgvector & inside your PostgreSQL & rows and vectors belong together \\
     Elasticsearch & your own cluster & you run it already and want hybrid search \\
     Chroma or FAISS & a small backend process & prototypes and corpora that fit in memory \\
@@ -387,7 +387,7 @@ final addTodo = FunctionDeclaration(
   parameters: {'title': Schema.string()},
 );
 final model = FirebaseAI.googleAI().generativeModel(
-  model: 'gemini-2.5-flash',
+  model: 'gemini-3.5-flash',
   tools: [Tool.functionDeclarations([addTodo, whereAmI])],
 );
 \end{dart}
@@ -564,7 +564,7 @@ Future<void> ask(String q) async {
     \item A tool call is a request, not an action. \muted{Your code runs it, with the signed-in user's rights, after a confirmation when it has a consequence.}
   \end{enumerate}
   \vskip 4mm
-  \kv{Further reading}{\link{https://firebase.google.com/docs/ai-logic/function-calling}{Firebase AI Logic function calling} · \link{https://modelcontextprotocol.io}{modelcontextprotocol.io} · \link{https://cloud.google.com/vertex-ai/docs/vector-search/overview}{Vertex AI Vector Search} · \link{https://github.com/pgvector/pgvector}{pgvector}}
+  \kv{Further reading}{\link{https://firebase.google.com/docs/ai-logic/function-calling}{Firebase AI Logic function calling} · \link{https://modelcontextprotocol.io}{modelcontextprotocol.io} · \link{https://docs.cloud.google.com/vertex-ai/docs/vector-search/overview}{Vector Search} · \link{https://github.com/pgvector/pgvector}{pgvector}}
   \note{Ask each student which of the three they would get wrong first in the lab. The per-user retrieval filter is the one that turns a demo into an incident.}
 \end{frame}
 

@@ -80,8 +80,8 @@ dart devtools   # already running? paste that VM Service URI
 
 \begin{frame}[eyebrow=Debugging]{What each DevTools tab is for}
   \begin{grid}[3]
-    \cell[\faLayerGroup]{Inspector}{The live widget tree and the Layout Explorer for overflow.}
-    \cell[\faIcon{tachometer-alt}]{Performance}{Frame timeline, UI versus raster thread, which frames missed budget.}
+    \cell[\faLayerGroup]{Inspector}{The live widget tree, widget properties, and the Flex explorer.}
+    \cell[\faIcon{tachometer-alt}]{Performance}{Frame timeline, UI versus raster thread, missed frames, Rebuild Stats.}
     \cell[\faMicrochip]{CPU Profiler}{Where Dart time goes: a flame chart of your own functions.}
     \cell[\faDatabase]{Memory}{Heap snapshots and allocation tracking. Find the controller you forgot to dispose.}
     \cell[\faWifi]{Network}{HTTP and WebSocket traffic, request by request. Back in Lecture 7.}
@@ -94,34 +94,34 @@ dart devtools   # already running? paste that VM Service URI
   \vskip 2mm
   \begin{itemize}
     \item Select Widget Mode: tap a pixel on the running device and the inspector jumps to that widget, and your IDE jumps to the source line that built it.
-    \item The Layout Explorer shows flex factors and incoming constraints. It is where you find the cause of a RenderFlex overflow, the yellow-and-black stripes.
+    \item Select a Row or a Column and the Widget Explorer gains a Flex explorer tab: flex factors, flex fit, alignment and incoming constraints. It is where you find the cause of a RenderFlex overflow, the yellow-and-black stripes.
   \end{itemize}
   \vskip 3mm
   \begin{takeaway}{You cannot reason about layout from the source alone.}
-    The Layout Explorer shows the constraints your widget actually received, not the ones you assumed.
+    The Flex explorer shows the constraints your widget actually received, not the ones you assumed.
   \end{takeaway}
   \note{Demo Select Widget Mode live if a device is attached. Ask the room what the yellow-and-black stripes mean; most have seen them without knowing the name.}
 \end{frame}
 
-\begin{frame}[eyebrow=Debugging]{The Widget Inspector: rebuilds and repaints}
+\begin{frame}[eyebrow=Debugging]{Counting rebuilds, highlighting repaints}
   \begin{columns}[T]
     \begin{column}{0.56\textwidth}
-      \lead{Track widget rebuilds}{Counts how many times each widget rebuilt. That count is the measurement this lecture is about.}
-      \muted{Highlight repaints wraps every layer in a rotating color. Anything flashing constantly is repainting when it should not.}
+      \lead{Rebuild Stats}{On the Performance view. It counts how many times each widget rebuilt. That count is the measurement this lecture is about.}
+      \muted{Highlight repaints, in the Inspector, wraps every layer in a rotating color. Anything flashing constantly is repainting when it should not.}
     \end{column}
     \begin{column}{0.40\textwidth}
       \begin{hint}[Try this in the lab]
         \begin{steps}
           \item Run your lab app
-          \item Open the Inspector
-          \item Turn on Track widget rebuilds
+          \item Open the Performance view
+          \item Open Rebuild Stats
           \item Type one character into a field
           \item Count what rebuilt
         \end{steps}
       \end{hint}
     \end{column}
   \end{columns}
-  \note{Ask a volunteer to run the five steps out loud. Most students expect only the text field to rebuild; the parent Scaffold often rebuilds too, which is the point.}
+  \note{Rebuild Stats lives on the Performance view, not in the Inspector: the Inspector owns Select Widget Mode, the layout guidelines and Highlight repaints. Ask a volunteer to run the five steps out loud. Most students expect only the text field to rebuild; the parent Scaffold often rebuilds too, which is the point.}
 \end{frame}
 
 \begin{frame}[eyebrow=Debugging]{Why the frame budget matters}

@@ -435,7 +435,7 @@ await d.discoverServices();
   \begin{takeaway}{macOS cannot advertise.}
     A Mac can be the central for a test, never the peripheral. Run the Go peripheral on Linux, on Windows, or on a board.
   \end{takeaway}
-  \note{The same source builds for a laptop with go build and for a board with tinygo flash. The Xtensa ESP32 modules used earlier in this course are not a straightforward BLE target; the RISC-V parts are. Ask for a show of hands on Mac laptops.}
+  \note{The same source builds for a laptop with go build and for a board with tinygo flash. The original ESP32 needs an HCI co-processor, while the C3 and the S3 drive their own radio through espradio. Ask for a show of hands on Mac laptops.}
 \end{frame}
 
 \begin{frame}[embedded,fragile,eyebrow=Peripheral]{A peripheral in Go}

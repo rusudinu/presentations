@@ -27,7 +27,7 @@
 \begin{frame}[eyebrow=Conflicts]{Where Lecture 8 left off}
   \vskip 2mm
   \begin{grid}[3]
-    \cell[\faDatabase]{The local database is the truth}{The UI reads a Drift query. Every synced row carries id, updatedAt, deletedAt, pendingSync and serverVersion.}
+    \cell[\faDatabase]{The local database is the truth}{The UI reads a Drift query. Every synced row carries id, updatedAt, deletedAt, isDirty and version.}
     \cell[\faIcon{inbox}]{Every write goes to an outbox}{The row and the intent to sync it commit in one transaction, so the queue never drifts out of step with the data.}
     \cell[\faIcon{sync-alt}]{Delta sync on a checkpoint}{Push the outbox oldest first, pull the rows changed since the cursor the server issued.}
   \end{grid}
@@ -292,13 +292,13 @@ Note resolve(Note l, ServerNote r) =>
 \begin{frame}[fragile,eyebrow=Strategies]{A resolver you can ship}
 \begin{dart}
 Note resolve(Note local, ServerNote remote) {
-  if (!local.pendingSync) return fromServer(remote);  // they are newer
-  if (remote.version <= local.serverVersion) return local;  // we are ahead
+  if (!local.isDirty) return fromServer(remote);  // they are newer
+  if (remote.version <= local.version) return local;  // we are ahead
   return local.copyWith(   // both sides moved past the same version
     title: _pick(local.title, local.titleAt, remote.title, remote.titleAt),
     body:  _pick(local.body,  local.bodyAt,  remote.body,  remote.bodyAt),
     deletedAt: local.deletedAt ?? remote.deletedAt,   // delete wins
-    serverVersion: remote.version, pendingSync: true, // push it back
+    version: remote.version, isDirty: true, // push it back
   );
 }
 \end{dart}

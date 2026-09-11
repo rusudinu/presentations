@@ -232,7 +232,7 @@ keyPassword=...
   \end{enumerate}
   \vskip 3mm
   \muted{Review takes days, not minutes, and a new developer account waits longest.}
-  \note{The realistic message: the binary is the easy half. Budget an afternoon for the forms and screenshots, and do it before the deadline, not on it.}
+  \note{The realistic message: the binary is the easy half. Budget an afternoon for the forms and screenshots, and do it before the deadline, not on it. Mention the one-time 25 dollar registration fee, and that since August 2026 a new upload must target API level 36 and its 64-bit code must support 16 KB memory pages.}
 \end{frame}
 
 \begin{frame}[eyebrow=Stores]{App Store Connect: the first release}
@@ -246,7 +246,7 @@ keyPassword=...
   \end{enumerate}
   \vskip 3mm
   \muted{Give the reviewer a demo account and notes for anything behind a login. A reviewer who cannot get in rejects the app.}
-  \note{Say that Apple's review is a human reading your notes and tapping through the app. Everything you would tell a new tester belongs in the review notes field.}
+  \note{Say that Apple's review is a human reading your notes and tapping through the app. Everything you would tell a new tester belongs in the review notes field. Membership costs 99 dollars a year, and since April 2026 every upload must be built against the iOS 26 SDK, which means Xcode 26 or newer.}
 \end{frame}
 
 \begin{frame}[eyebrow=Stores]{Test tracks before anyone real sees it}
@@ -266,7 +266,7 @@ keyPassword=...
   \begin{takeaway}{Every release goes through a test track first.}
     A build that installs and launches on ten real devices has already caught the failures an emulator hides.
   \end{takeaway}
-  \note{Point out that TestFlight builds expire after a while, so a beta is not a distribution channel. Internal testing on Play is the fastest loop you have.}
+  \note{Point out that TestFlight builds expire after 90 days, so a beta is not a distribution channel, and that it allows 100 internal testers and up to 10,000 external ones. A personal Play account registered after November 2023 must also hold 12 testers on closed testing for 14 continuous days before it may publish to production. Internal testing on Play is the fastest loop you have.}
 \end{frame}
 
 \begin{frame}[eyebrow=Stores]{Why apps get rejected}
@@ -323,7 +323,7 @@ jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: subosito/flutter-action@v2
       - run: flutter pub get
       - run: dart format --set-exit-if-changed .
@@ -474,13 +474,13 @@ final m = await fm.getInitialMessage();
       \end{hint}
     \end{column}
   \end{columns}
-  \note{Make them test all three by hand: app open, app backgrounded, app force stopped. Almost every push bug reported in the labs is one of the three cases never being tried.}
+  \note{Make them test all three by hand: app open, app backgrounded, app force stopped. Almost every push bug reported in the labs is one of the three cases never being tried. Name flutter\_local\_notifications as the package that draws the foreground notification.}
 \end{frame}
 
 \begin{frame}[eyebrow=Push]{Asking for permission, and what to send}
   \begin{columns}[T]
     \begin{column}{0.48\textwidth}
-      \lead{You get one prompt.}{iOS has always required permission. Recent Android versions require it too. A denial is final until the user walks into system settings.}
+      \lead{You get one prompt.}{iOS has always required permission, and Android 13 added POST\_NOTIFICATIONS. A denial is final until the user opens system settings.}
       \muted{Ask after the user has done something that a notification would follow: created a task with a due date, joined a conversation. Explain the value on your own screen first.}
       \muted{Group related messages, collapse duplicates, and respect quiet hours. An app that pushes daily noise gets its notifications switched off, then deleted.}
     \end{column}
@@ -546,7 +546,7 @@ final m = await fm.getInitialMessage();
         9 & Observability, local storage \\
         10 & Auth, OAuth, App Check \\
         11 & Routing, permissions, sockets \\
-        12 & AI in the app \\
+        12 & AI in the app, LLMs and RAG \\
         13 & UI polish and testing \\
         14 & Release, distribution, push \\
         \bottomrule

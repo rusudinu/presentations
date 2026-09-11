@@ -323,13 +323,13 @@ class Reading {
     \begin{column}{0.40\textwidth}
       \lead{Where this breaks}{}
       \begin{itemize}
-        \item A renamed field silently becomes \code{null} at runtime, not at compile time.
+        \item A renamed key fails at runtime, never at compile time.
         \item Every model needs this twice, kept in sync by hand.
         \item Nested objects multiply the boilerplate fast.
       \end{itemize}
     \end{column}
   \end{columns}
-  \note{Ask the room to spot the bug if device\_id were renamed on the server without updating this file: nothing turns red, fromJson just returns null for that field and the crash shows up three screens later. That gap is exactly what the generator removes.}
+  \note{Ask the room to spot the bug if device\_id were renamed on the server without updating this file: nothing turns red until the app runs, the cast throws there, and a nullable field would instead carry a null three screens further. The key name is a string literal, so no tool checks it.}
 \end{frame}
 
 \begin{frame}[fragile,eyebrow=JSON]{@JsonSerializable and the generated half}
@@ -345,25 +345,25 @@ class Reading {
   final String deviceId;
   @JsonKey(name: 'temp_c')
   final double tempC;
-  factory Reading.fromJson(Map j) =>
+  factory Reading.fromJson(Json j) =>
       _$ReadingFromJson(j);
-  Map toJson() => _$ReadingToJson(this);
+  Json toJson() => _$ReadingToJson(this);
 }
 \end{dart}
     \end{column}
     \begin{column}{0.40\textwidth}
 \begin{shell}
-dart run build_runner build \
-  --delete-conflicting-outputs
+dart run build_runner build
+dart run build_runner watch
 \end{shell}
       \begin{itemize}
         \item \code{part} links to the generated twin. Never edit a \code{.g.dart} file.
-        \item The generator fails the build instead of returning a silent null.
+        \item \code{Json} is a typedef for \code{Map<String, dynamic>}, the type the generated code expects; declare it once.
         \item Commit \code{.g.dart} files, or generate them in CI.
-      \end{itemize}
+              \end{itemize}
     \end{column}
   \end{columns}
-  \note{Two files, one model: the developer writes the class and its annotations, build\_runner writes the mapping code into reading.g.dart. Run build\_runner watch during development so it regenerates on every save.}
+  \note{Two files, one model: the developer writes the class and its annotations, build\_runner writes the mapping code into reading.g.dart. A missing key then throws at the boundary instead of turning into a silent null three screens later. Run the watch command during development so it regenerates on every save.}
 \end{frame}
 
 \begin{frame}[fragile,eyebrow=JSON]{Enums, dates and nested objects}
@@ -380,7 +380,7 @@ class Task {
   Task({required this.status,
       required this.dueAt,
       required this.lastReading});
-  factory Task.fromJson(Map j) => _$TaskFromJson(j);
+  factory Task.fromJson(Json j) => _$TaskFromJson(j);
 }
 \end{dart}
     \end{column}
@@ -410,7 +410,7 @@ class Task {
     \bottomrule
   \end{tabular}}
   \vskip 1mm
-  \muted{build\_runner is slow on large projects and fails when generated files go stale. It still belongs in CI.}
+  \muted{build\_runner is slow on large projects. It now deletes stale outputs itself, with no extra flag.}
   \note{This table is the map for the rest of the semester: freezed is the very next slide, retrofit and riverpod\_generator are options once state management from Lecture 6 is in place, and drift belongs to the local storage lecture.}
 \end{frame}
 
@@ -421,7 +421,7 @@ class Task {
 part 'task_state.freezed.dart';
 
 @freezed
-class TaskState with _$TaskState {
+sealed class TaskState with _$TaskState {
   const factory TaskState.loading() = Loading;
   const factory TaskState.data(
       List<Task> tasks) = Data;
@@ -438,7 +438,7 @@ class TaskState with _$TaskState {
       \end{itemize}
     \end{column}
   \end{columns}
-  \note{Because the three factories are the only ways to build a TaskState, Dart's exhaustiveness check on sealed classes catches a missing case at compile time, not in production. Compare this class to the hand-written state class from Lecture 6.}
+  \note{The \code{sealed} keyword is required: current freezed versions ask for \code{sealed} on a union and \code{abstract} on a single-constructor class, and the exhaustive switch depends on it. Because the three factories are the only ways to build a TaskState, Dart catches a missing case at compile time, not in production. Compare this class to the hand-written state class from Lecture 6.}
 \end{frame}
 
 \begin{frame}[eyebrow=JSON]{Which JSON approach fits}
@@ -465,7 +465,7 @@ class TaskRepository {
   TaskRepository(this._dio); final Dio _dio;
   Future<List<Task>> fetchTasks() async {
     final res = await withRetry(() => _dio.get('/tasks'));
-    return (res.data as List).map(Task.fromJson).toList();
+    return (res.data as List).map((j) => Task.fromJson(j)).toList();
   }
   Future<Task> addTask(Task task) async {
     final res = await _dio.post('/tasks', data: task.toJson());
@@ -527,7 +527,7 @@ class TaskRepository {
   \begin{enumerate}
     \item Safe and idempotent are different properties. \muted{Only safe or idempotent calls, or a POST with an idempotency key, are safe to retry.}
     \item Retry with jitter, not a fixed backoff. \muted{A thundering herd is a synchronized retry wave, and jitter is what breaks the synchronization.}
-    \item Generate the JSON mapping, do not hand-write it. \muted{json\_serializable catches a renamed field at build time; a hand-written cast fails silently at runtime.}
+    \item Generate the JSON mapping, do not hand-write it. \muted{json\_serializable keeps the mapping in sync with the class; a hand-written one drifts until it fails at runtime.}
   \end{enumerate}
   \vskip 5mm
   \kv{Further reading}{\link{https://pub.dev/packages/dio}{pub.dev/packages/dio} \textperiodcentered\ \link{https://pub.dev/packages/json_serializable}{pub.dev/packages/json\_serializable} \textperiodcentered\ \link{https://pub.dev/packages/freezed}{pub.dev/packages/freezed}}

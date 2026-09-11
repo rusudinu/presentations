@@ -149,8 +149,7 @@ class Notes extends Table {
 \begin{frame}[fragile,eyebrow=Local database]{Generating the boilerplate}
   \vskip 1mm
 \begin{shell}
-dart run build_runner build \
-    --delete-conflicting-outputs
+dart run build_runner build
 \end{shell}
   \vskip 2mm
   \muted{Drift reads the Notes table and writes the DAO mixin, the generated Note row class, and the companion classes the rest of this lecture uses. Run it again after every schema change.}
@@ -413,9 +412,9 @@ GET /sync?since=2026-08-01T09:14:22Z
 void didChangeAppLifecycleState(s) {
   if (s == AppLifecycleState.resumed) sync.now();
 }
-
-connectivity.onChanged.listen((r) {
-  if (r != ConnectivityResult.none) sync.now();
+const off = ConnectivityResult.none;
+net.onConnectivityChanged.listen((rs) {
+  if (!rs.contains(off)) sync.now();
 });
 \end{dart}
     \end{column}

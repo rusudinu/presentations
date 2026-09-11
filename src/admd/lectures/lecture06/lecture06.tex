@@ -93,7 +93,7 @@ class CounterCubit extends Cubit<int> {
   \begin{takeaway}{No Flutter imports in this file.}
     The Cubit knows nothing about widgets, so it runs in a plain Dart test with no emulator.
   \end{takeaway}
-  \note{This is the smallest useful example, and it is the one from the c4 folder in the shared repository. Point out that emit is protected: only the Cubit itself may call it, which is what keeps the direction one way.}
+  \note{This is the smallest useful example, and it is the one in examples/lib/lecture06\_bloc/cubit in the shared repository. Point out that emit is protected: only the Cubit itself may call it, which is what keeps the direction one way.}
 \end{frame}
 
 \begin{frame}[fragile,eyebrow=Cubit]{Providing it, and reading it}
@@ -199,7 +199,7 @@ class TodoBloc extends Bloc<TodoEvent, TodoState> {
     Input       & method call            & event object added with \code{add} \\
     Boilerplate & one class              & one class plus an event hierarchy \\
     Traceable   & the method name        & every input is a value you can log or replay \\
-    Concurrency & none built in          & transformers: droppable, restartable \\
+    Concurrency & none built in          & event transformers, droppable or restartable \\
     Good for    & a form, a toggle, a counter & search, pagination, anything with races \\
     \bottomrule
   \end{tabular}}
@@ -207,7 +207,7 @@ class TodoBloc extends Bloc<TodoEvent, TodoState> {
   \begin{takeaway}{Start with a Cubit.}
     Promote it to a Bloc the day you need to log the inputs, debounce them, or drop the ones that arrive while a request runs.
   \end{takeaway}
-  \note{Discourage the reflex of reaching for Bloc because it looks more professional. The promotion is mechanical: keep the state class, turn each method into an event, and move the body into a handler. That is exactly what Lab 5 Task II asks for.}
+  \note{The ready-made transformers, droppable and restartable, live in the bloc\_concurrency package; the \code{transformer} parameter itself is part of \code{on<Event>}. Discourage the reflex of reaching for Bloc because it looks more professional. The promotion is mechanical: keep the state class, turn each method into an event, and move the body into a handler. That is exactly what Lab 5 Task II asks for.}
 \end{frame}
 
 \divider{Part 3 · The widgets}{Connecting a bloc to the tree}[Provider, builder, listener, consumer]
@@ -260,7 +260,7 @@ BlocBuilder<TodoBloc, TodoState>(
       \muted{Keep the builder small and put it as deep in the tree as possible. A BlocBuilder around a whole Scaffold rebuilds the whole Scaffold.}
     \end{column}
   \end{columns}
-  \note{Measure before optimizing: turn on Track widget rebuilds in DevTools, which they learned last lecture, and show that a badly placed BlocBuilder repaints the app bar too. buildWhen is a filter, not a fix for a badly shaped state class.}
+  \note{Measure before optimizing: open Rebuild Stats on the DevTools Performance view, which they saw last lecture, and show that a badly placed BlocBuilder repaints the app bar too. buildWhen is a filter, not a fix for a badly shaped state class.}
 \end{frame}
 
 \begin{frame}[fragile,eyebrow=Widgets]{BlocListener: side effects, exactly once}

@@ -122,7 +122,7 @@ flutter build appbundle --release
     Dalvik            & early Android        & a trace JIT: it compiled while you scrolled, and janked \\
     ART, first release & Android 5 and 6     & ahead of time at install: fast, but large binaries \\
     ART today          & Android 7 and later & an interpreter, a JIT, and background compilation when idle \\
-    Baseline profiles  & Android 9 and later & hot paths compiled before the first launch, from a profile \\
+    Baseline profiles  & Android 7 and later & hot paths compiled from a profile, at install time since Android 9 \\
     \bottomrule
   \end{tabular}}
   \begin{takeaway}{Every step moved work earlier.}
@@ -142,7 +142,7 @@ flutter build appbundle --release
     \begin{column}{0.44\textwidth}
       \lead{The consequences}{Third-party apps do not get the entitlement, so everything you ship to iOS is native code compiled ahead of time.}
       \vskip 2mm
-      \muted{WebKit's JavaScript engine is the privileged exception. Bitcode is not a workaround: Apple removed it in Xcode 14, and a guide that tells you to enable it is out of date.}
+      \muted{WebKit's JavaScript engine is the privileged exception. Bitcode is not a workaround: Apple deprecated it in Xcode 14, and a guide that tells you to enable it is out of date.}
     \end{column}
   \end{columns}
   \begin{takeaway}{This one constraint explains a lot of mobile history.}
@@ -157,24 +157,24 @@ flutter build appbundle --release
     \begin{column}{0.47\textwidth}
       \lead{Flutter}{Dart compiles ahead of time to native ARM for release, so there is no interpreter in production.}
       \vskip 2mm
-      \muted{Impeller compiles its shaders at build time as well, so the GPU work is decided before you ship. Debug keeps the JIT, which is exactly what hot reload is.}
+      \muted{Impeller precompiles its shaders when the engine is built, so no shader is compiled on the user's device. Debug keeps the JIT, which is exactly what hot reload is.}
     \end{column}
     \begin{column}{0.47\textwidth}
       \lead{React Native}{Hermes precompiles JavaScript to bytecode at build time, which removes the parse cost at launch.}
       \vskip 2mm
-      \muted{The bridgeless architecture, with JSI and Fabric, has been the default since React Native 0.76 in late 2024. The serialized-JSON bridge is gone: JavaScript calls C++ directly.}
+      \muted{The bridgeless architecture, with JSI and Fabric, became the default in React Native 0.76 and the legacy one has since been removed. The serialized-JSON bridge is gone: JavaScript calls C++ directly.}
     \end{column}
   \end{columns}
   \begin{takeaway}{Both ecosystems moved the same work from run time to build time.}
     Kotlin Multiplatform starts from the other end: shared Kotlin compiled natively, native UI on top.
   \end{takeaway}
-  \note{Correct two claims students bring from older material: React Native no longer serializes JSON over a bridge, and Flutter no longer draws with Skia on current devices. Both were true and are not any more.}
+  \note{Correct two claims students bring from older material: React Native no longer serializes JSON over a bridge, and Flutter draws with Impeller on iOS, Android and desktop rather than Skia. Both were true and are not any more.}
 \end{frame}
 
 \begin{frame}[eyebrow=Compilation]{Moving work from run time to build time}
   \vskip 2mm
   \begin{grid}[3]
-    \cell[\faIcon{paint-brush}]{Shaders}{Impeller compiles every shader at build time, so the first frame with an effect costs what the thousandth costs.}
+    \cell[\faIcon{paint-brush}]{Shaders}{Impeller precompiles its shaders in the engine, so the first frame with an effect costs what the thousandth costs.}
     \cell[\faCode]{Bytecode}{Hermes precompiles JavaScript, so launch does not include a parser reading the bundle.}
     \cell[\faRocket]{Profiles}{A baseline profile compiles the hot paths before the first launch, not during it.}
     \cell[\faIcon{cut}]{Tree shaking}{Unused code and icons are removed by the release build, not skipped at run time.}
@@ -411,11 +411,11 @@ flutter build appbundle --release
 \begin{frame}[eyebrow=Exam]{Statements that used to be true}
   \vskip 2mm
   \begin{grid}[3]
-    \cell[\faIcon{paint-brush}]{"Skia draws Flutter"}{Impeller is the renderer on current iOS and Android. Skia is only a fallback for old devices.}
+    \cell[\faIcon{paint-brush}]{"Skia draws Flutter"}{Impeller draws on iOS, Android and desktop. Skia is left for the web and old Android.}
     \cell[\faClock]{"The budget is 16 ms"}{Only at 60 Hz. Most current phones run at 90 or 120 Hz, so state it as one over the refresh rate.}
     \cell[\faIcon{exchange-alt}]{"The JSON bridge"}{The bridgeless architecture replaced it. JavaScript calls C++ directly in React Native.}
-    \cell[\faCloud]{"CodePush for updates"}{It was retired in March 2025. The mainstream successor is Expo EAS Update.}
-    \cell[\faLock]{"Enable bitcode"}{Apple removed bitcode in Xcode 14. A guide that requires it is out of date.}
+    \cell[\faCloud]{"CodePush for updates"}{The hosted service closed in March 2025. The mainstream successor is Expo EAS Update.}
+    \cell[\faLock]{"Enable bitcode"}{Deprecated in Xcode 14, and the App Store no longer accepts it.}
     \cell[\faBug]{"Isolates cannot race"}{They cannot race on memory. Messages can still interleave in an order you did not expect.}
   \end{grid}
   \note{Say clearly that all six were correct at some point, which is why they are still repeated online. The exam tests the current answer, and so does an interview.}

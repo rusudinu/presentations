@@ -321,14 +321,14 @@
     \end{column}
     \begin{column}{0.42\textwidth}
       \begin{hint}[Boards for this course]
-        TinyGo supports the ESP32-C3 and ESP32-S3, with Wi-Fi through the espradio package since TinyGo 0.41, and the Raspberry Pi Pico. Support for the original ESP32 is minimal.
+        TinyGo supports the ESP32-C3 and ESP32-S3, with Wi-Fi and Bluetooth through the espradio package, and the Raspberry Pi Pico. The original ESP32 gets Wi-Fi, but no Bluetooth.
       \end{hint}
     \end{column}
   \end{columns}
   \begin{takeaway}{Buy an ESP32-C3, an ESP32-S3 or a Raspberry Pi Pico.}
     If no board arrives in time, the Wokwi simulator is accepted, and Lab 1 names the exact simulator board.
   \end{takeaway}
-  \note{Say the board recommendation plainly and repeat it in Lab 1. Warn students away from the original Xtensa ESP32, because the TinyGo support is minimal and there is no Wi-Fi or Bluetooth from TinyGo on it.}
+  \note{Say the board recommendation plainly and repeat it in Lab 1. Steer students away from the original Xtensa ESP32: TinyGo now drives it and espradio gives it Wi-Fi, but there is still no Bluetooth from TinyGo on that chip, and Lab 3 needs BLE.}
 \end{frame}
 
 \begin{frame}[embedded,eyebrow=Embedded]{The phone is the hub}
@@ -396,12 +396,12 @@
     You ship   & machine code    & source, a VM  & bytecode, a VM & source, a runtime \\
     Start-up   & fastest         & needs warm-up & medium & starts instantly \\
     Peak speed & high and steady & can beat AOT  & medium & lowest \\
-    Examples   & Go, Rust, Swift & JVM, V8, ART  & CPython & shell scripts \\
+    Examples   & Go, Rust, Swift & JVM, V8       & CPython & shell scripts \\
     \bottomrule
   \end{tabular}}
   \vskip 2mm
   \begin{takeaway}{These are a continuum, not four boxes.}
-    Real runtimes mix tiers: a browser engine has an interpreter and two compilers.
+    Android's ART mixes all three: ahead-of-time compilation, a JIT, and profiles collected on the device.
   \end{takeaway}
   \note{The row students should remember is start-up. On a phone, a cold start that takes an extra second becomes a review complaint, which is a large part of why release builds are compiled ahead of time.}
 \end{frame}
@@ -443,7 +443,7 @@ flutter run
 \begin{shell}
 flutter build apk --release
 \end{shell}
-      \muted{Compiled ahead of time to native ARM machine code. No VM ships inside the app. Fast cold start, smaller footprint, unused code removed. No hot reload, because there is nothing to reload into.}
+      \muted{Compiled ahead of time to native ARM machine code. No compiler ships inside the app, only a small runtime. Fast cold start, smaller footprint. No hot reload, because there is nothing to reload into.}
     \end{column}
   \end{columns}
   \begin{takeaway}{Never judge performance from a debug build.}

@@ -87,7 +87,7 @@
         09 & Observability and local storage \\
         10 & Authentication, OAuth, App Check \\
         11 & Routing, permissions, WebSockets \\
-        12 & AI in the app \\
+        12 & AI in the app, LLMs and RAG \\
         13 & User interface polish and testing \\
         14 & Release, distribution, push \\
         \bottomrule
@@ -295,7 +295,7 @@ asdf
   \begin{takeaway}{If it only builds on your laptop, it does not build.}
     A clean machine is the honest test of whether the repository holds everything the project needs.
   \end{takeaway}
-  \note{Keep this short: the full pipeline comes back in Lecture 15. The idea students need now is that a pull request runs checks automatically, and a red check is not someone else's problem.}
+  \note{Keep this short: the full pipeline comes back in the release lecture. The idea students need now is that a pull request runs checks automatically, and a red check is not someone else's problem.}
 \end{frame}
 
 \divider{Part 3 · Strategies}{Four ways to build an app}[Native, web, cross-platform in two flavors, and shared logic]
@@ -368,7 +368,7 @@ asdf
   \begin{takeaway}{The old serialized bridge is gone.}
     Current React Native calls into native code directly, so older descriptions of a JavaScript bridge no longer apply.
   \end{takeaway}
-  \note{The old React Native architecture serialized messages over an asynchronous bridge. That is gone, so do not repeat it. Note that a team already writing React on the web is the strongest reason to pick this option.}
+  \note{The old React Native architecture serialized messages over an asynchronous bridge. It is not only off by default, it has been removed from current releases, so do not repeat it. Note that a team already writing React on the web is the strongest reason to pick this option.}
 \end{frame}
 
 \begin{frame}[eyebrow=Strategies]{Strategy 2, other flavor: Flutter draws it}
