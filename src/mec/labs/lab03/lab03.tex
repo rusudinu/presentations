@@ -57,7 +57,7 @@ tinygo flash -target=pca10056-s140v7 .
       \lead{One source file, two ways to run it}{The same program runs under \code{go run} on a laptop and on a board after \code{tinygo flash}. The Flutter side cannot tell the difference.}
       \vskip 2mm
       \begin{warning}
-        The ESP32-C3 and ESP32-S3 work through the espradio package; the original ESP32 does not. macOS is supported as a central only, so a Mac cannot host the peripheral.
+        The ESP32-C3 and ESP32-S3 work through espradio; a plain ESP32 needs an HCI co-processor. macOS is central-only, so a Mac cannot host the peripheral.
       \end{warning}
     \end{column}
   \end{columns}
@@ -258,8 +258,8 @@ Future<void> _tryConnect() async {
 \begin{frame}[embedded,eyebrow=Troubleshooting]{The peripheral side}
   \trouble{Bluetooth adapter not found}{On Linux the service is down or the radio is blocked. Start bluetoothd, unblock with rfkill, run again.}
   \trouble{It runs, nothing scans it}{macOS is central-only in this package. Use Linux, Windows, or the board.}
-  \trouble{tinygo flash: unknown target}{Use the SoftDevice target of your board, pca10056-s140v7 on the nRF52840 development kit.}
-  \trouble{Nothing works on an ESP32}{Only the ESP32-C3 and ESP32-S3 work, through espradio. Otherwise use the nRF52840 or a laptop.}
+  \trouble{tinygo flash: unknown target}{Use your board's target: pca10056-s140v7 (nRF52840 DK) or xiao-esp32c3.}
+  \trouble{Nothing works on an ESP32}{Only the ESP32-C3 and ESP32-S3 advertise on their own, through espradio. A plain ESP32 needs an HCI co-processor: use the nRF52840 or a laptop instead.}
 \end{frame}
 
 \begin{frame}[eyebrow=Submission]{What the grader will do}

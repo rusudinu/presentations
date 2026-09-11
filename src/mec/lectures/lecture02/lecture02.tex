@@ -171,6 +171,7 @@ Future<List<Photo>> fetchPhotos() async {
         \item \code{compute()} spawns a short-lived isolate, runs one function, sends the result back and shuts it down.
         \item Arguments and results must be sendable: primitives, Strings, Lists and Maps of them.
         \item It costs a few milliseconds to spawn and copies the payload both ways. Do not reach for it to save 2 ms.
+        \item Outside Flutter, \code{Isolate.run} does the same job in plain Dart.
       \end{itemize}
     \end{column}
   \end{columns}
@@ -340,7 +341,7 @@ wg.Wait()
       \begin{itemize}
         \item \code{Add} before the goroutine starts, \code{Done} when it finishes, usually deferred.
         \item \code{Wait} blocks the caller until the count reaches zero.
-        \item Passing \code{id} as an argument avoids every goroutine capturing the same loop variable.
+        \item Recent Go gives each iteration its own \code{id}, so passing it is habit now, not a fix.
       \end{itemize}
     \end{column}
   \end{columns}
@@ -434,7 +435,7 @@ case v := <-ch2:
       \begin{itemize}
         \item \code{select} blocks until one of its cases can proceed.
         \item If several are ready at once, Go picks one at random, so no single channel is starved.
-        \item Dart has no direct equivalent: the closest is racing two Futures with a library helper.
+        \item Dart has no direct equivalent: the closest is \code{Future.any}, which races Futures.
       \end{itemize}
     \end{column}
   \end{columns}

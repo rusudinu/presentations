@@ -131,9 +131,9 @@ Future<void> refresh(String id) async {
     _user = await loadUser(id);
   } on DioException catch (e) {
     _error = 'Network error';
-  } catch (e, stack) {
-    _error = 'Unexpected error';
-    Crashlytics.recordError(e, stack);
+  } catch (e, stack) {   // anything else
+    FirebaseCrashlytics.instance
+        .recordError(e, stack);
   } finally {
     if (mounted) {
       setState(() => _loading = false);
@@ -142,7 +142,7 @@ Future<void> refresh(String id) async {
 \end{dart}
     \end{column}
     \begin{column}{0.40\textwidth}
-      \lead{One specific catch, one general catch.}{Handle the failure you expect by type, then anything else.}
+      \lead{One specific catch, one general catch.}{Handle the failure you expect by type, then log anything else.}
       \muted{Check \code{mounted} before calling setState after an await. The widget may already be gone.}
     \end{column}
   \end{columns}
@@ -366,7 +366,7 @@ Future<List<Photo>> fetchPhotos() async {
   \begin{takeaway}{Tool access raises the stakes of a wrong prompt.}
     The rest of this section is about keeping that risk under control.
   \end{takeaway}
-  \note{Keep this concrete: an agentic CLI in the lab can genuinely run git commands and delete files if asked to, which is why the review habit on the next slides is not optional.}
+  \note{Keep this concrete: an agentic CLI in the lab can genuinely run git commands and delete files if asked to, which is why the review habit on the next slides is not optional. The specification is revised often; the stable core is tools, resources and prompts.}
 \end{frame}
 
 \begin{frame}[eyebrow=Agents]{What agents are good at}
@@ -496,7 +496,7 @@ and added the empty-state case myself.
     \item An agent's output is confident, not necessarily correct. \muted{You review it, you understand it, you own it.}
   \end{enumerate}
   \vskip 5mm
-  \kv{Further reading}{\link{https://dart.dev/language/async}{dart.dev/language/async} · \link{https://docs.flutter.dev/cookbook/networking/fetch-data}{FutureBuilder cookbook}}
+  \kv{Further reading}{\link{https://dart.dev/language/async}{dart.dev/language/async} · \link{https://docs.flutter.dev/cookbook/networking/fetch-data}{FutureBuilder cookbook} · \link{https://code.claude.com/docs}{code.claude.com/docs}}
   \note{Close by pointing at Lab 4, which is the first lab to use dio and real async error handling, and remind the room that agent use in that lab is graded on the four rules from Part 3.}
 \end{frame}
 

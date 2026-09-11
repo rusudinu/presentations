@@ -137,7 +137,7 @@ ch.setMethodCallHandler { call, r in
   \begin{takeaway}{Register once, per platform, per engine.}
     A channel with no handler registered on a platform fails with \code{MissingPluginException}, not a compile error.
   \end{takeaway}
-  \note{These three are the bugs students actually hit in the lab: editing Kotlin and expecting hot reload to pick it up, freezing the native UI from inside a handler, and two packages both claiming the same channel name.}
+  \note{These three are the bugs students actually hit in the lab: editing Kotlin and expecting hot reload to pick it up, freezing the native UI from inside a handler, and two packages both claiming the same channel name. Mention pigeon, the Flutter team's generator: one Dart file describes the interface and it emits the Dart, Kotlin and Swift sides, so the method names and argument types stop being strings.}
 \end{frame}
 
 \begin{frame}[fragile,eyebrow=Channels]{EventChannel: a sensor stream, Dart side}
@@ -259,7 +259,7 @@ final _analyze = lib.lookupFunction<
       \muted{The call blocks the isolate: run a slow one on a worker isolate.}
     \end{column}
   \end{columns}
-  \note{The struct declaration mirrors the C layout field for field. On Android, dart:ffi reaches C, not Kotlin: calling into Kotlin from here still means going through JNI, which is its own cost. On iOS the C symbols are already in the process, so DynamicLibrary.process finds them directly.}
+  \note{The struct declaration mirrors the C layout field for field. On Android, dart:ffi reaches C, not Kotlin: calling into Kotlin from here still means going through JNI, which is its own cost, and jnigen is the tool that generates those bindings. On iOS the C symbols are already in the process, so DynamicLibrary.process finds them directly.}
 \end{frame}
 
 \begin{frame}[fragile,eyebrow=FFI]{ffigen: start from a C header}
@@ -314,7 +314,7 @@ class SigBindings {
 \end{dart}
     \end{column}
   \end{columns}
-  \note{One command regenerates the whole file. Point out that the generated class name, SigBindings, is exactly what was set in the ffigen config, and that this file should be treated as build output: never hand-edit it.}
+  \note{One command regenerates the whole file. Point out that the generated class name, SigBindings, is exactly what was set in the ffigen config, and that this file should be treated as build output: never hand-edit it. A build hook, hook/build.dart, is the current way to compile and bundle the C library with the package, so the app does not carry a prebuilt .so by hand.}
 \end{frame}
 
 \begin{frame}[fragile,eyebrow=FFI]{Calling the generated bindings}

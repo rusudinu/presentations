@@ -317,7 +317,7 @@ if (rc.getBool('checkout_v2_enabled')) return const CheckoutV2();
 \begin{frame}[eyebrow=Feature flags]{Rules that keep flags cheap}
   \vskip 2mm
   \begin{enumerate}
-    \item Fetches are throttled server-side. minimumFetchInterval keeps the backend from being called too often; set it to zero only in debug builds.
+    \item Fetches are throttled server-side, and billed per fetch above a free daily allowance since September 2026. Set minimumFetchInterval to zero only in debug builds.
     \item Roll out by percentile: 1, 10, 50, then 100 percent, watching crash-free users at each step. Lecture 9 covers that metric.
     \item Every live flag is a branch you must keep working. Delete the flag and the dead code path as soon as it reaches 100 percent.
     \item \textbf{Flags are not security.} The disabled code still ships inside the binary, and the values are readable. Authorization still belongs on the server.
@@ -430,7 +430,7 @@ mutation LikePost($postId: ID!) {
 final link = HttpLink('https://api.example.com/graphql');
 final client = GraphQLClient(
   link: AuthLink(getToken: () async => 'token').concat(link),
-  cache: GraphQLCache(store: HiveStore()),
+  cache: GraphQLCache(),
 );
 Query(
   options: QueryOptions(document: gql(profileQuery)),
@@ -441,7 +441,7 @@ Query(
 );
 \end{dart}
   \muted{Errors arrive with HTTP 200 plus an errors array. Check \code{hasException}.}
-  \note{graphql\_flutter gives widget-level builders with a normalized cache, fastest to start. ferry generates Dart types from the schema, so a wrong field name is a compile error, not a runtime null. A naive status check treats a GraphQL error as success.}
+  \note{The default cache lives in memory only; a store that survives a restart has to be configured. graphql\_flutter gives widget-level builders with a normalized cache, fastest to start. ferry generates Dart types from the schema, so a wrong field name is a compile error, not a runtime null. A naive status check treats a GraphQL error as success.}
 \end{frame}
 
 \begin{frame}[eyebrow=APIs]{REST vs GraphQL, side by side}

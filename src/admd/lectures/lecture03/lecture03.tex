@@ -270,7 +270,7 @@ Column(
       \muted{\code{MainAxisSize.min} shrinks the Row or Column to its children instead of taking all the space offered.}
     \end{column}
   \end{columns}
-  \note{Draw the two axes on the board for a Row and then rotate them for a Column. The single most common confusion is main versus cross when the axis changes. Ask the room which axis is horizontal in a Column.}
+  \note{Draw the two axes on the board for a Row and then rotate them for a Column. The single most common confusion is main versus cross when the axis changes. Dart's dot shorthands also accept mainAxisAlignment: .center, so expect to see both forms in code you read.}
 \end{frame}
 
 \begin{frame}[fragile,eyebrow=Layout]{Expanded and Flexible}
@@ -378,13 +378,13 @@ Row(children: [
   \begin{columns}[T]
     \begin{column}{0.56\textwidth}
 \begin{dart}
-// Eager: every child is built up front.
-ListView(
-  children: todos.map(TodoTile.new).toList(),
+ListView(   // eager: every child built now
+  children: [
+    for (final t in todos) TodoTile(todo: t),
+  ],
 )
 
-// Lazy: only the visible slice is built.
-ListView.builder(
+ListView.builder(   // lazy: visible slice
   itemCount: todos.length,
   itemBuilder: (context, i) => TodoTile(
     key: ValueKey(todos[i].id),
@@ -520,7 +520,7 @@ final ok = await showDialog<bool>(
   \begin{takeaway}{This course uses Material.}
     Page transitions already adapt. The labs are graded on Material widgets.
   \end{takeaway}
-  \note{Ask who has an iPhone and who has an Android phone, then ask whether they would notice a Material app on iOS. Most would not. Say that Cupertino matters when the client asks for it, not by default.}
+  \note{Ask who has an iPhone and who has an Android phone, then ask whether they would notice a Material app on iOS. Most would not. Say that Cupertino matters when the client asks for it, not by default. Recent Flutter releases also ship Material and Cupertino as standalone packages, material\_ui and cupertino\_ui; the widgets are the same and the flutter/material.dart import still works.}
 \end{frame}
 
 \divider{Part 5 · Worked example}{Building the Lab 3 todo screen}[Five steps from an empty Scaffold to a working list]
@@ -549,7 +549,7 @@ class TodoPage extends StatefulWidget {
       \muted{In Lecture 6 this same list moves into a Cubit and the screen goes back to stateless.}
     \end{column}
   \end{columns}
-  \note{Say out loud that a mutable done field is fine today and will be replaced by an immutable model with copyWith in Lecture 7. Building it the simple way first makes the later change meaningful.}
+  \note{Say out loud that a mutable done field is fine today and will be replaced by an immutable model with copyWith in Lecture 6. Building it the simple way first makes the later change meaningful.}
 \end{frame}
 
 \begin{frame}[fragile,eyebrow=Worked example]{Step 2: the list}

@@ -63,7 +63,7 @@ final tt = Theme.of(context).textTheme;
   \begin{takeaway}{One seed color produces the whole palette.}
     Material 3 derives every role from it and keeps the contrast between a color and its \code{on} pair correct in both modes.
   \end{takeaway}
-  \note{Point at the seed: it is the only color the designer picks. Show that the generated palette is not the seed repeated, it is a set of tones. Say the theme lives in one file, for example lib/theme/app\_theme.dart.}
+  \note{Point at the seed: it is the only color the designer picks. Show that the generated palette is not the seed repeated, it is a set of tones. Say the theme lives in one file, for example lib/theme/app\_theme.dart. Mention that Material has moved into the separate material\_ui package, that the in-SDK library is deprecated from the November 2026 release, and that dart fix performs the migration.}
 \end{frame}
 
 \begin{frame}[eyebrow=Theming]{The color roles you will actually use}
@@ -301,7 +301,7 @@ Hero(tag: 'todo-${todo.id}', child: big);
 
 \begin{frame}[fragile,eyebrow=Motion]{When to stop animating}
 \begin{dart}
-if (MediaQuery.of(context).disableAnimations) return child;
+if (MediaQuery.disableAnimationsOf(context)) return child;
 \end{dart}
   \vskip 1mm
   \begin{tabular}{@{}lp{48mm}p{58mm}@{}}
@@ -564,7 +564,7 @@ flutter test integration_test       # on a booted device or emulator
   \begin{takeaway}{Green on your laptop proves nothing.}
     Run analyze and test on every pull request. A branch that fails the checks cannot be merged. The pipeline itself is Lecture 15.
   \end{takeaway}
-  \note{Say that the CI job for this course runs the first two commands on every pull request, and that the lab grade depends on them passing. Integration tests need a device, so they usually run on a schedule rather than on every push.}
+  \note{Say that the CI job for this course runs the first two commands on every pull request, and that the lab grade depends on them passing. Integration tests need a device, so they usually run on a schedule rather than on every push. The integration\_test package comes from the SDK: add it under dev\_dependencies as integration\_test with sdk: flutter, never from pub.dev.}
 \end{frame}
 
 \begin{frame}[eyebrow=Recap]{Three things to remember}

@@ -65,7 +65,7 @@
   \vskip 1mm
   \begin{grid}[3]
     \bignum{16.7 ms}{60 Hz: the old assumption, still true on older devices}
-    \bignum{11.1 ms}{90 Hz: common mid-range phones in 2026}
+    \bignum{11.1 ms}{90 Hz: many mid-range and older phones}
     \bignum{8.3 ms}{120 Hz: most 2026 flagships}
   \end{grid}
   \vskip 1mm
@@ -87,12 +87,12 @@
     \begin{column}{0.56\textwidth}
       \begin{itemize}
         \item Flutter does not draw the platform's native widgets. It ships a renderer and paints the entire surface itself, so every rendering problem in it is Flutter's, and yours.
-        \item The renderer is \textbf{Impeller}, not Skia. It became the default on iOS in 2023 and on Android soon after, and Skia is now fully removed from both, except a fallback for very old Android devices.
+        \item The renderer is \textbf{Impeller}, not Skia. iOS runs Impeller only. Android enables it by default on API 29 and later, and falls back to the legacy OpenGL renderer below that. Flutter on the web still draws with Skia.
       \end{itemize}
     \end{column}
     \begin{column}{0.40\textwidth}
       \begin{hint}[Why it exists]
-        Skia compiled a shader the first time an effect appeared: a stutter on first use. Impeller compiles every shader at build time instead.
+        Skia compiled a shader the first time an effect appeared: a stutter on first use. Impeller precompiles its shaders when the engine is built.
       \end{hint}
     \end{column}
   \end{columns}
@@ -106,7 +106,7 @@
   \begin{itemize}
     \item Under Skia, a shader was compiled the first time the GPU needed it, mid-frame. The classic symptom was "first-run jank": an effect that stuttered once, the first time it appeared, then never again.
     \item The workaround was shader warm-up: bundling a set of SkSL shaders and compiling them during a splash screen, before the user could trigger the expensive first frame.
-    \item Impeller compiles every shader ahead of time, at build time. The first frame that uses an effect costs the same as the thousandth, so there is no first-run jank left to warm up.
+    \item Impeller precompiles its shader set when the engine itself is built. The first frame that uses an effect costs the same as the thousandth, so there is no first-run jank left to warm up.
   \end{itemize}
   \begin{takeaway}{If a tutorial tells you to warm up shaders, it predates Impeller.}
     Treat any Flutter rendering advice written before 2023 as needing a second check against current facts.
@@ -440,22 +440,22 @@ flutter run --profile        # on a real device
   \note{Turn on "Track widget builds" in the same view before demoing this: it highlights exactly which widgets rebuilt for the selected frame, which turns "something rebuilt" into "this specific widget rebuilt".}
 \end{frame}
 
-\begin{frame}[eyebrow=Profiling]{Blue bar or green bar: which thread, which fix}
+\begin{frame}[eyebrow=Profiling]{Which half of the bar: UI or raster}
   \vskip 1mm
   {\usebeamerfont{small}\begin{tabular}{@{}p{44mm}p{80mm}@{}}
     \toprule
     \thead{Signal} & \thead{What it means} \\
     \midrule
-    Tall blue bar (UI thread) & your Dart is slow: an expensive build(), or isolate-bound work \\
-    Tall green bar (raster thread) & the GPU is slow: a saveLayer, an oversized image, too many layers \\
+    Tall UI segment (light blue) & your Dart is slow: an expensive build(), or isolate-bound work \\
+    Tall raster segment (dark blue) & the GPU is slow: a saveLayer, an oversized image, too many layers \\
     One widget lights up every frame & seen with "Track widget builds"; a whole screen for one label is the bug \\
     Deep stack under performLayout & layout thrashing, often from nested IntrinsicWidth or Height \\
     \bottomrule
   \end{tabular}}
-  \begin{takeaway}{The color of the bar tells you which half of the problem you have.}
-    Fix blue with less work in build(); fix green with fewer or smaller layers.
+  \begin{takeaway}{The taller half tells you which side of the problem you have.}
+    Fix a UI segment with less work in build(); fix a raster segment with fewer or smaller layers.
   \end{takeaway}
-  \note{Some Flutter documentation still calls the raster thread the "GPU thread"; both names refer to the same green bar. Use whichever term the DevTools version in front of the room shows.}
+  \note{Some Flutter documentation still calls the raster thread the "GPU thread"; both names refer to the same segment. Janky frames also carry a red overlay in the chart, which is the fastest thing to scan for.}
 \end{frame}
 
 \begin{frame}[fragile,eyebrow=Profiling]{Before: a list screen that drops frames}
@@ -481,7 +481,7 @@ ListView(children: users.map((u) =>
       \end{itemize}
     \end{column}
   \end{columns}
-  \begin{takeaway}{The frame chart: a steady band of tall blue bars, plus green spikes on scroll.}
+  \begin{takeaway}{The frame chart: a steady band of tall UI segments, plus raster spikes on scroll.}
     Three problems, stacked in one screen.
   \end{takeaway}
   \note{This is a composite of realistic mistakes, not one bug: eager list construction, an unnecessary Opacity wrapper, and undersized decoding. Ask the room to name the fix for each before advancing.}
@@ -509,7 +509,7 @@ ListView.builder(
     \end{column}
   \end{columns}
   \begin{takeaway}{Each fix maps to an earlier slide: builder lists, keys, decoding.}
-    The blue band drops under budget, and the green spikes disappear.
+    The UI band drops under budget, and the raster spikes disappear.
   \end{takeaway}
   \note{Point out that no single change here was exotic. All three are on this lecture's slides. The skill this lecture actually teaches is reading the frame chart well enough to know which one to reach for.}
 \end{frame}
@@ -519,7 +519,7 @@ ListView.builder(
   \begin{enumerate}
     \item One frame budget is 1 divided by refresh rate. \muted{8.3 ms at 120 Hz, not a fixed 16 ms; the budget itself moves with the display.}
     \item Reconciliation, not full rebuilds. \muted{Same runtimeType and same key keep the render object. const, keys and ListView.builder are how you keep that answer true.}
-    \item Profile before you fix. \muted{The frame chart's color tells you whether the problem is your Dart, blue, or the GPU, green.}
+    \item Profile before you fix. \muted{The taller half of the frame bar tells you whether the problem is your Dart, the UI segment, or the GPU, the raster segment.}
   \end{enumerate}
   \vskip 5mm
   \kv{Further reading}{\link{https://docs.flutter.dev/perf/best-practices}{docs.flutter.dev/perf/best-practices} \textperiodcentered\ \link{https://docs.flutter.dev/tools/devtools/performance}{DevTools: Performance view} \textperiodcentered\ \link{https://docs.flutter.dev/perf/rendering-performance}{Rendering performance} \textperiodcentered\ \link{https://docs.flutter.dev/perf/impeller}{Impeller}}

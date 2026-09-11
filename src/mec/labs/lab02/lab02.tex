@@ -38,13 +38,13 @@
 
 \begin{frame}[fragile,eyebrow=Setup]{Where your code goes}
   \begin{steps}
-    \item Branch the team repository and add the two dependencies:
+    \item Branch the team repository and add the dependencies:
 \begin{shell}
 git checkout -b lab-2
-cd firmware && go get tinygo.org/x/drivers
-cd ../app   && flutter pub add mqtt_client
+cd device && go get tinygo.org/x/drivers github.com/soypat/natiu-mqtt
+cd ../app && flutter pub add mqtt_client
 \end{shell}
-    \item Firmware in \code{firmware/lab2/main.go}. App code in \code{lib/lab2/}.
+    \item Firmware in \code{device/lab2/main.go}. App code in \code{lib/lab2/}.
     \item Leave a subscriber running in a terminal for the whole lab. It is your ground truth.
   \end{steps}
   \begin{hint}[Order of work]
@@ -151,25 +151,25 @@ seq++
   \begin{columns}[T]
     \begin{column}{0.55\textwidth}
 \begin{golang}
-link, _ := netlink.New()
-err := link.NetConnect(
-    &netlink.ConnectParams{
-        Ssid: ssid, Passphrase: pass,
-    })
-if err != nil {
-    println("wifi:", err.Error())
-}
-opts := mqtt.NewClientOptions().
-    AddBroker(broker).
-    SetClientID("mec-" + team + "-board")
-c := mqtt.NewClient(opts)
-c.Connect().Wait()
+lk := link.Esplink{}   // espradio
+netdev.UseNetdev(&lk)
+lk.NetConnect(&nl.ConnectParams{
+    Ssid: ssid, Passphrase: pass})
+
+conn, _ := net.Dial("tcp", broker)
+var q mqtt.OrchestratorNoAlloc
+q.Configure(qcfg)   // QoS 1 state
+c := mqtt.NewClient(mqtt.ClientConfig{
+    Orchestrator: &q})
+var v mqtt.VariablesConnect
+v.SetDefaultMQTT([]byte(id))
+c.Connect(ctx, conn, &v)
 \end{golang}
     \end{column}
     \begin{column}{0.41\textwidth}
-      \lead{Treat this as a shape.}{The package paths for the radio move faster than the protocol does. Keep the sequence: join, connect, publish, check the error each time.}
+      \lead{Treat this as a shape.}{The radio is \code{tinygo.org/x/espradio}, the client is \code{natiu-mqtt}. Keep the sequence: join, dial, connect, publish, check the error each time.}
       \begin{hint}[The address]
-        \code{broker} is your laptop's address on the lab network, port 1883. Not \code{localhost}: that is the board.
+        \code{broker} is your laptop's address and port on the lab network, such as \code{192.168.1.10:1883}. Not \code{localhost}: that is the board.
       \end{hint}
     \end{column}
   \end{columns}
@@ -180,10 +180,12 @@ c.Connect().Wait()
 \begin{golang}
 topic := "course/" + team + "/reading"          // one team, one topic
 p := fmt.Sprintf(`{"team":%q,"c":%.2f,"seq":%d}`, team, celsius, seq)
-c.Publish(topic, 1, false, p)                   // QoS 1, retain off
+fl, _ := mqtt.NewPublishFlags(mqtt.QoS1, false, false)   // retain off
+pv := mqtt.VariablesPublish{TopicName: []byte(topic)}
+c.PublishPayload(fl, pv, []byte(p))  // then HandleNext for the PUBACK
 time.Sleep(2 * time.Second)
 \end{golang}
-  \vskip 3mm
+  \vskip 2mm
   \begin{columns}[T]
     \begin{column}{0.48\textwidth}
       \kv{Rules}{}

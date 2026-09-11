@@ -95,7 +95,7 @@
   \begin{takeaway}{You stop operating servers.}
     In exchange you work within the platform's limits.
   \end{takeaway}
-  \note{Ask who has already used a FaaS platform without knowing the term. Most students have, through Firebase Cloud Functions or a hosting provider's edge functions. The unfamiliar part is usually the billing model, not the code.}
+  \note{Ask who has already used a FaaS platform without knowing the term. Most students have, through Cloud Functions for Firebase or a hosting provider's edge functions. The unfamiliar part is usually the billing model, not the code.}
 \end{frame}
 
 \begin{frame}[eyebrow=Serverless]{Cold starts: the latency of the first request}
@@ -482,7 +482,7 @@ http.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
     \begin{column}{0.58\textwidth}
       \begin{itemize}
         \item A log line meant for a person cannot be filtered, aggregated, or alerted on reliably. A structured log line is a set of key-value fields a machine can query.
-        \item Go's log/slog, in the standard library, writes JSON by default: a level, a message, and any fields attached, one line per event.
+        \item Go's log/slog, in the standard library, writes JSON through a JSON handler: a level, a message, and any fields attached, one line per event.
         \item Always include a request identifier a client sends or the server generates, so one failing mobile session can be traced through every log line it touched.
       \end{itemize}
     \end{column}

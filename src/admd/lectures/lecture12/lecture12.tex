@@ -282,7 +282,7 @@ Future<List<double>> classify(
   \begin{takeaway}{Accelerator paths are int8-first.}
     Quantization is often the difference between running on the NPU and falling back to the CPU.
   \end{takeaway}
-  \note{Firebase machine learning custom model hosting can own the download-and-version problem for you, with rollout and rollback, if the class asks about it.}
+  \note{Firebase custom model hosting used to own the download-and-version problem, but Firebase machine learning shuts down in June 2027, so plan on your own bucket plus a version check.}
 \end{frame}
 
 \divider{Part 3 · Cloud LLMs}{Calling a model you do not host}[Where the key lives decides the architecture]
@@ -296,7 +296,7 @@ const apiKey =
     'AIzaSyD-EXAMPLE_KEY_xxxxxxxxxx';
 
 final model = GenerativeModel(
-  model: 'gemini-2.5-flash',
+  model: 'gemini-3.5-flash',
   apiKey: apiKey,  // compiled into the app
 );
 
@@ -367,11 +367,11 @@ AIzaSyD-EXAMPLE_KEY_xxxxxxxxxx
     \item Gemini. \muted{Billed to your own Firebase project.}
   \end{enumerate}
   \vskip 5mm
-  \muted{Working the same afternoon, with attestation built in, but Google models only, and only once you press Enforce in the App Check console.}
+  \muted{Working the same afternoon, with attestation built in, but Google models only. Since November 2, 2026 AI Logic enforces App Check for you, and enforcement cannot be turned off.}
   \begin{takeaway}{Both shapes hide the credential from the user.}
     Pick A for provider freedom, B for the fastest path to something that cannot be extracted from the app.
   \end{takeaway}
-  \note{Ask why Enforce is a separate switch from Activate. Activation only measures traffic; enforcement is the step that turns away requests without a valid App Check token.}
+  \note{Activation on its own only measures traffic; enforcement is the step that turns away requests without a valid App Check token. For AI Logic that step now happens automatically, so a build with no real attestation provider is refused.}
 \end{frame}
 
 \begin{frame}[fragile,eyebrow=Cloud LLMs]{firebase\_ai: the call with no key in it}
@@ -386,7 +386,7 @@ await FirebaseAppCheck.instance.activate(
 );
 final model = FirebaseAI.googleAI()
     .generativeModel(
-  model: 'gemini-2.5-flash',
+  model: 'gemini-3.5-flash',
   generationConfig: GenerationConfig(
       temperature: 0.2,
       maxOutputTokens: 512),
@@ -396,7 +396,7 @@ final model = FirebaseAI.googleAI()
     \begin{column}{0.38\textwidth}
       \lead{No apiKey parameter exists.}{The credential is the project configuration; App Check gates the request.}
       \vskip 2mm
-      \lead{activate() only measures.}{Enforcement is a separate switch you flip in the console, per product.}
+      \lead{activate() is not optional.}{AI Logic enforces App Check on its own, so a call without a valid token is refused.}
     \end{column}
   \end{columns}
   \note{maxOutputTokens is a cost control, not a style preference. temperature low and a narrow systemInstruction are the cheapest steering available, and both run before any validation code of yours does.}
@@ -505,7 +505,7 @@ responseSchema: Schema.object(properties: {
   \vskip 3mm
   \kv{Google ML Kit}{\link{https://developers.google.com/ml-kit}{developers.google.com/ml-kit}}
   \vskip 3mm
-  \kv{LiteRT}{\link{https://ai.google.dev/edge/litert}{ai.google.dev/edge/litert}}
+  \kv{LiteRT}{\link{https://developers.google.com/edge/litert}{developers.google.com/edge/litert}}
   \vskip 3mm
   \kv{tflite\_flutter on pub.dev}{\link{https://pub.dev/packages/tflite_flutter}{pub.dev/packages/tflite\_flutter}}
   \note{Point at the OWASP Mobile Application Security Verification Standard too, for the fuller checklist behind the key-extraction demo. It is not required reading for the lab.}

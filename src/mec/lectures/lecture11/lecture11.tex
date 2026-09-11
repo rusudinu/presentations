@@ -108,7 +108,7 @@ service Telemetry {
       \muted{Enums need a zero: an absent enum decodes as 0, so 0 must mean UNSPECIFIED.}
     \end{column}
   \end{columns}
-  \note{Write this live if there is time. The thing students miss: proto3 enums must have a zero value meaning unspecified, because an absent enum always decodes as 0. Versioning the package, not the file, is worth saying out loud too.}
+  \note{Write this live if there is time. The thing students miss: proto3 enums must have a zero value meaning unspecified, because an absent enum always decodes as 0. Versioning the package, not the file, is worth saying out loud too. Mention Protobuf Editions: a new file can open with \texttt{edition = ``2024'';} instead of a syntax line, which replaces the proto2 and proto3 designations without changing the wire format.}
 \end{frame}
 
 \begin{frame}[fragile,eyebrow=Contracts]{Generating stubs with protoc}
@@ -272,7 +272,7 @@ void dispose() {
 \begin{frame}[fragile,eyebrow=Implementing]{Client streaming: draining an offline queue}
   \begin{columns}[T]
     \begin{column}{0.47\textwidth}
-      Many requests, one response: the shape of an outbox drain from Lecture 9. Queue rows offline, then stream them upstream for one acknowledgement.
+      Many requests, one response: the shape of an outbox drain from Lecture 8. Queue rows offline, then stream them upstream for one acknowledgement.
     \end{column}
     \begin{column}{0.5\textwidth}
 \begin{dart}
@@ -288,7 +288,7 @@ debugPrint('stored: ${sum.accepted}');
 \end{dart}
     \end{column}
   \end{columns}
-  \note{Client streaming is the shape offline sync from Lecture 9 actually needs: drain the outbox in order and get one acknowledgement, not one round trip per row.}
+  \note{Client streaming is the shape offline sync from Lecture 8 actually needs: drain the outbox in order and get one acknowledgement, not one round trip per row.}
 \end{frame}
 
 \divider{Part 3 · The wire}{What actually travels, and how it changes}[Protobuf's size on the wire, and evolving a schema safely]
@@ -470,7 +470,7 @@ http.ListenAndServe(":8080", mux)
   \begin{takeaway}{The boundary has a shape here too:}
     what the browser sandbox will let you send is part of your architecture.
   \end{takeaway}
-  \note{If a team's project ships a Flutter web build, this is the slide that tells them why a raw gRPC channel will not compile for that target.}
+  \note{If a team's project ships a Flutter web build, this is the slide that tells them why a raw gRPC channel will not compile for that target. Connect ships Go, TypeScript and Swift clients, and a Dart one is only on the roadmap, so a Flutter web client still talks gRPC-Web.}
 \end{frame}
 
 \begin{frame}[eyebrow=Project]{Where this lands in Lab 6 and the project}

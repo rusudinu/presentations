@@ -305,7 +305,7 @@ pwm.Set(ch, pwm.Top()/4)  // quarter duty
 \divider{Part 4 · TinyGo}{Go, compiled for bare metal}[The toolchain, the machine package, and the parts of Go you give up]
 
 \begin{frame}[embedded,eyebrow=TinyGo]{TinyGo: Go, compiled for bare metal}
-  \muted{TinyGo reads ordinary Go, emits LLVM intermediate code, and has LLVM produce machine code for Cortex-M, RISC-V, AVR and WebAssembly. It is a different compiler for the same language.}
+  \muted{TinyGo reads ordinary Go, emits LLVM intermediate code, and has LLVM produce machine code for Cortex-M, RISC-V, Xtensa, AVR and WebAssembly. It is a different compiler for the same language.}
   \vskip 2mm
   \begin{columns}[T]
     \begin{column}{0.47\textwidth}
@@ -329,13 +329,13 @@ pwm.Set(ch, pwm.Top()/4)  // quarter duty
 \begin{frame}[embedded,fragile,eyebrow=TinyGo]{Which board to buy}
   \begin{columns}[T]
     \begin{column}{0.53\textwidth}
-      \accenttext{\textbf{Do not start with the original ESP32.}}
+      \accenttext{\textbf{The original ESP32 has no Bluetooth here.}}
       \vskip 2mm
-      \muted{The classic Xtensa ESP32, in most tutorials and starter kits, has minimal TinyGo support and no Wi-Fi or Bluetooth.}
+      \muted{The classic Xtensa ESP32, in most starter kits, is driven by TinyGo and gets Wi-Fi from espradio, but no Bluetooth.}
       \vskip 2mm
       \textbf{Buy one of these instead}
       \vskip 1.5mm
-      \muted{ESP32-C3 or ESP32-S3: RISC-V parts, with Wi-Fi through the espradio package since TinyGo 0.41.\par\vskip 1.5mm
+      \muted{ESP32-C3, a RISC-V part, or ESP32-S3, an Xtensa one: Wi-Fi from espradio, and Bluetooth since TinyGo 0.42.\par\vskip 1.5mm
       Raspberry Pi Pico, RP2040 or RP2350: first-tier support, best documented.}
     \end{column}
     \begin{column}{0.43\textwidth}
@@ -406,7 +406,7 @@ func main() {
 \end{golang}
     \end{column}
     \begin{column}{0.41\textwidth}
-      \lead{One API, every board.}{\code{machine.LED} and \code{machine.ADC0} are aliases resolved per target, so this source flashes to a Pico and an ESP32-C3 unchanged.}
+      \lead{One API, every board.}{\code{machine.LED} and \code{machine.ADC0} are aliases a board file defines. Where a target defines neither, name the pin yourself and the rest is unchanged.}
       \muted{\code{println} writes to the serial port. That is why the monitor is your debugger, and why an LED in the loop is the cheapest proof that the loop still runs.}
     \end{column}
   \end{columns}
@@ -432,7 +432,7 @@ raw := int16(uint16(r[0])<<8 | uint16(r[1]))
     \end{column}
     \begin{column}{0.41\textwidth}
       \lead{Write the register, then read the bytes.}{Almost every I2C sensor works this way, and \code{Tx} does both halves in one transaction.}
-      \muted{Do not write this by hand. The drivers repository carries a few hundred sensors, each hiding the register map behind a typed reader.}
+      \muted{Do not write this by hand. The drivers repository carries over a hundred devices, each hiding the register map behind a typed reader.}
       \begin{hint}[Lab 2]
         Pick a sensor that has a driver.
       \end{hint}
@@ -502,7 +502,7 @@ for r := range readings {
     \end{column}
     \begin{column}{0.43\textwidth}
       \lead{The same producer and consumer as Lecture 2.}{One goroutine samples on a schedule, the main loop drains the channel.}
-      \muted{Each goroutine costs a stack of a few hundred bytes. Affordable for a handful, not for hundreds.}
+      \muted{Each goroutine costs a fixed stack, a kilobyte or more. Affordable for a handful, not for hundreds.}
       \begin{warning}[Cooperative]
         A goroutine yields only when it blocks or sleeps. A busy loop freezes everything.
       \end{warning}
