@@ -1,13 +1,13 @@
 // Retrofit.dart - Type-safe HTTP client with annotations and code generation
 // Add to pubspec.yaml:
 //   dependencies:
-//     dio: ^5.4.0
-//     retrofit: ^4.0.0
-//     json_annotation: ^4.8.0
+//     dio: ^5.11.1
+//     retrofit: ^4.10.0
+//     json_annotation: ^4.12.0
 //   dev_dependencies:
 //     build_runner: ^2.4.0
-//     retrofit_generator: ^8.0.0
-//     json_serializable: ^6.7.0
+//     retrofit_generator: ^10.2.9
+//     json_serializable: ^6.14.1
 //
 // Run: dart run build_runner build
 // Or: dart run build_runner watch

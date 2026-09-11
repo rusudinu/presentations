@@ -1,10 +1,10 @@
 // Chopper - Declarative API client with code generation
 // Add to pubspec.yaml:
 //   dependencies:
-//     chopper: ^7.1.0
+//     chopper: ^8.7.0
 //   dev_dependencies:
 //     build_runner: ^2.4.0
-//     chopper_generator: ^7.1.0
+//     chopper_generator: ^8.7.0
 //
 // Run: dart run build_runner build
 // Or: dart run build_runner watch
@@ -23,25 +23,25 @@ abstract class PostService extends ChopperService {
     return _$PostService(client);
   }
 
-  @Get(path: '/{id}')
+  @GET(path: '/{id}')
   Future<Response<PostModel>> getPost(@Path('id') int id);
 
-  @Get()
+  @GET()
   Future<Response<List<PostModel>>> getPosts();
 
-  @Post()
+  @POST()
   Future<Response<PostModel>> createPost(@Body() PostModel post);
 
-  @Put(path: '/{id}')
+  @PUT(path: '/{id}')
   Future<Response<PostModel>> updatePost(
     @Path('id') int id,
     @Body() PostModel post,
   );
 
-  @Delete(path: '/{id}')
+  @DELETE(path: '/{id}')
   Future<Response<void>> deletePost(@Path('id') int id);
 
-  @Get(path: '', headers: {'Custom-Header': 'Value'})
+  @GET(path: '', headers: {'Custom-Header': 'Value'})
   Future<Response<List<PostModel>>> getPostsWithHeaders();
 }
 
@@ -99,6 +99,15 @@ class PostConverter extends JsonConverter {
   }
 }
 
+class LoggingInterceptor implements Interceptor {
+  @override
+  FutureOr<Response<BodyType>> intercept<BodyType>(Chain<BodyType> chain) {
+    final request = chain.request;
+    print('Request: ${request.method} ${request.url}');
+    return chain.proceed(request);
+  }
+}
+
 void main() async {
   // Create Chopper client
   final chopper = ChopperClient(
@@ -110,10 +119,7 @@ void main() async {
     interceptors: [
       HttpLoggingInterceptor(),
       // Add custom interceptor
-      (Request request) async {
-        print('Request: ${request.method} ${request.url}');
-        return request;
-      },
+      LoggingInterceptor(),
     ],
   );
 
