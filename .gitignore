@@ -45,3 +45,6 @@ build/
 
 # local secrets and settings
 .env
+
+# course syllabi are not published here
+Fisa-disciplinei*.docx
