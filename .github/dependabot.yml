@@ -4,8 +4,8 @@ updates:
     directories:
       - "/admd/examples"
       - "/mec/examples"
-      - "/he/demo"
-      - "/he/demo2"
+      - "/talks/he/demo"
+      - "/talks/he/demo2"
     schedule:
       interval: "weekly"
       day: "sunday"
@@ -31,8 +31,8 @@ updates:
   - package-ecosystem: "gradle"
     directories:
       - "/admd/examples/android"
-      - "/he/demo/android"
-      - "/he/demo2/android"
+      - "/talks/he/demo/android"
+      - "/talks/he/demo2/android"
     schedule:
       interval: "weekly"
       day: "sunday"

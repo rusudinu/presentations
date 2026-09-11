@@ -42,3 +42,6 @@ node_modules/
 .dart_tool/
 .flutter-plugins-dependencies
 build/
+
+# local secrets and settings
+.env

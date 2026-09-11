@@ -54,8 +54,10 @@ jobs:
           else
             echo "all=false" >> "$GITHUB_OUTPUT"
             # one target per changed deck folder: src/<course>/<kind>/<deck>/<deck>.pdf
-            echo "$changed" | grep -E '^src/(admd|mec)/(lectures|labs)/[^/]+/' \
-              | sed -E 's#^(src/[^/]+/[^/]+/([^/]+))/.*#\1/\2.pdf#' | sort -u > targets.txt
+            { echo "$changed" | grep -E '^src/(admd|mec)/(lectures|labs)/[^/]+/' \
+                | sed -E 's#^(src/[^/]+/[^/]+/([^/]+))/.*#\1/\2.pdf#';
+              echo "$changed" | grep -E '^src/talks/[^/]+/' \
+                | sed -E 's#^(src/talks/([^/]+))/.*#\1/\2.pdf#'; } | sort -u > targets.txt
             cat targets.txt
           fi
 
@@ -64,6 +66,7 @@ jobs:
         run: |
           make -C src/admd all publish
           make -C src/mec all publish
+          make -C src/talks all publish
 
       - name: Build the changed decks
         if: steps.plan.outputs.all == 'false'
@@ -76,6 +79,7 @@ jobs:
           done < targets.txt
           make -C src/admd publish
           make -C src/mec publish
+          make -C src/talks publish
 
       - name: Fail on slides that run into the footer
         shell: bash
@@ -92,7 +96,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add admd/*.pdf mec/*.pdf admd/README.md mec/README.md
+          git add admd/*.pdf mec/*.pdf admd/README.md mec/README.md talks/*/*.pdf
           if git diff --cached --quiet; then
             echo "No PDF changed; nothing to commit."
             exit 0

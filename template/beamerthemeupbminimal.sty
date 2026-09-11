@@ -146,8 +146,12 @@
   \ifupb@progress\ifupb@dark\else
   \begin{tikzpicture}[remember picture,overlay]
     \fill[upbHairline] (current page.south west) rectangle ([yshift=0.6pt]current page.south east);
+    % divide before multiplying: paperwidth * 37 already exceeds TeX's maximum dimension
+    \edef\upb@total{\inserttotalframenumber}\edef\upb@cur{\insertframenumber}%
+    \ifnum\upb@total<\upb@cur\let\upb@total\upb@cur\fi
+    \ifnum\upb@total<1 \def\upb@total{1}\fi
     \fill[upbAccent] (current page.south west) rectangle
-      ([yshift=0.6pt,xshift=\dimexpr\paperwidth*\insertframenumber/\inserttotalframenumber\relax]current page.south west);
+      ([yshift=0.6pt,xshift=\dimexpr(\paperwidth/\upb@total)*\upb@cur\relax]current page.south west);
   \end{tikzpicture}\fi\fi}
 
 % ------------------------------------------------------ lists ---------------

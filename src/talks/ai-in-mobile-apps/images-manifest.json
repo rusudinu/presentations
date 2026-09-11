@@ -1,0 +1,1428 @@
+[
+ {
+  "deck": "onia",
+  "slide": 1,
+  "title": "Founder and Senior Engineer @ CodingShadows",
+  "text": [
+   "Building for next-gen mobile experiences"
+  ],
+  "images": [
+   {
+    "file": "onia-s01-1.png",
+    "px": [
+     1600,
+     333
+    ],
+    "orig_px": [
+     1920,
+     400
+    ],
+    "on_slide_pct": [
+     19,
+     7
+    ]
+   },
+   {
+    "file": "onia-s01-2.png",
+    "px": [
+     1600,
+     1600
+    ],
+    "orig_px": [
+     2048,
+     2048
+    ],
+    "on_slide_pct": [
+     34,
+     61
+    ]
+   }
+  ]
+ },
+ {
+  "deck": "onia",
+  "slide": 2,
+  "title": "Dinu-Ștefan RUSU",
+  "text": [
+   "2",
+   "rusudinu.ro | codingshadows.com"
+  ],
+  "images": [
+   {
+    "file": "onia-s02-1.png",
+    "px": [
+     435,
+     116
+    ],
+    "orig_px": [
+     435,
+     116
+    ],
+    "on_slide_pct": [
+     25,
+     8
+    ]
+   },
+   {
+    "file": "onia-s02-2.png",
+    "px": [
+     241,
+     209
+    ],
+    "orig_px": [
+     241,
+     209
+    ],
+    "on_slide_pct": [
+     6,
+     8
+    ]
+   },
+   {
+    "file": "onia-s02-3.png",
+    "px": [
+     299,
+     223
+    ],
+    "orig_px": [
+     299,
+     223
+    ],
+    "on_slide_pct": [
+     6,
+     8
+    ]
+   },
+   {
+    "file": "onia-s02-4.png",
+    "px": [
+     954,
+     145
+    ],
+    "orig_px": [
+     954,
+     145
+    ],
+    "on_slide_pct": [
+     17,
+     5
+    ]
+   },
+   {
+    "file": "onia-s02-5.png",
+    "px": [
+     314,
+     102
+    ],
+    "orig_px": [
+     314,
+     102
+    ],
+    "on_slide_pct": [
+     12,
+     7
+    ]
+   },
+   {
+    "file": null,
+    "note": "linked or empty picture"
+   },
+   {
+    "file": "onia-s02-7.png",
+    "px": [
+     1600,
+     900
+    ],
+    "orig_px": [
+     2560,
+     1440
+    ],
+    "on_slide_pct": [
+     14,
+     7
+    ]
+   },
+   {
+    "file": "onia-s02-8.png",
+    "px": [
+     866,
+     324
+    ],
+    "orig_px": [
+     866,
+     324
+    ],
+    "on_slide_pct": [
+     11,
+     7
+    ]
+   },
+   {
+    "file": "onia-s02-9.png",
+    "px": [
+     824,
+     293
+    ],
+    "orig_px": [
+     824,
+     293
+    ],
+    "on_slide_pct": [
+     12,
+     7
+    ]
+   }
+  ]
+ },
+ {
+  "deck": "onia",
+  "slide": 3,
+  "title": "Agenda",
+  "text": [
+   "3",
+   "On-device Image processing and data extraction / Integrating conversational workflows into an existing application / Integrating existing applications into LLMs (MCP Servers)"
+  ],
+  "images": []
+ },
+ {
+  "deck": "onia",
+  "slide": 4,
+  "title": "On-device Image processing",
+  "text": [
+   "4"
+  ],
+  "images": []
+ },
+ {
+  "deck": "onia",
+  "slide": 5,
+  "title": "On-device Image processing",
+  "text": [
+   "5"
+  ],
+  "images": [
+   {
+    "file": "onia-s05-1.png",
+    "px": [
+     1600,
+     523
+    ],
+    "orig_px": [
+     1918,
+     628
+    ],
+    "on_slide_pct": [
+     85,
+     49
+    ]
+   }
+  ]
+ },
+ {
+  "deck": "onia",
+  "slide": 6,
+  "title": "On-device Image processing",
+  "text": [
+   "6"
+  ],
+  "images": [
+   {
+    "file": "onia-s06-1.png",
+    "px": [
+     1178,
+     390
+    ],
+    "orig_px": [
+     1178,
+     390
+    ],
+    "on_slide_pct": [
+     82,
+     48
+    ]
+   }
+  ]
+ },
+ {
+  "deck": "onia",
+  "slide": 7,
+  "title": "On-device Image processing",
+  "text": [
+   "7"
+  ],
+  "images": [
+   {
+    "file": "onia-s07-1.png",
+    "px": [
+     1600,
+     1543
+    ],
+    "orig_px": [
+     1619,
+     1562
+    ],
+    "on_slide_pct": [
+     34,
+     59
+    ]
+   },
+   {
+    "file": "onia-s07-2.png",
+    "px": [
+     304,
+     304
+    ],
+    "orig_px": [
+     304,
+     304
+    ],
+    "on_slide_pct": [
+     16,
+     29
+    ]
+   },
+   {
+    "file": "onia-s07-3.png",
+    "px": [
+     1600,
+     319
+    ],
+    "orig_px": [
+     1842,
+     368
+    ],
+    "on_slide_pct": [
+     70,
+     25
+    ]
+   }
+  ]
+ },
+ {
+  "deck": "onia",
+  "slide": 8,
+  "title": "What now?",
+  "text": [
+   "8"
+  ],
+  "images": [
+   {
+    "file": "onia-s08-1.png",
+    "px": [
+     1600,
+     872
+    ],
+    "orig_px": [
+     2816,
+     1536
+    ],
+    "on_slide_pct": [
+     103,
+     100
+    ]
+   }
+  ]
+ },
+ {
+  "deck": "onia",
+  "slide": 9,
+  "title": "On-device Image processing",
+  "text": [
+   "9"
+  ],
+  "images": [
+   {
+    "file": "onia-s09-1.png",
+    "px": [
+     1600,
+     328
+    ],
+    "orig_px": [
+     1794,
+     368
+    ],
+    "on_slide_pct": [
+     85,
+     31
+    ]
+   }
+  ]
+ },
+ {
+  "deck": "onia",
+  "slide": 10,
+  "title": "On-device Image processing",
+  "text": [
+   "10"
+  ],
+  "images": [
+   {
+    "file": "onia-s10-1.png",
+    "px": [
+     1600,
+     328
+    ],
+    "orig_px": [
+     1794,
+     368
+    ],
+    "on_slide_pct": [
+     85,
+     31
+    ]
+   }
+  ]
+ },
+ {
+  "deck": "onia",
+  "slide": 11,
+  "title": "On-device Image processing",
+  "text": [
+   "11"
+  ],
+  "images": [
+   {
+    "file": "onia-s11-1.png",
+    "px": [
+     1600,
+     571
+    ],
+    "orig_px": [
+     2194,
+     784
+    ],
+    "on_slide_pct": [
+     85,
+     54
+    ]
+   },
+   {
+    "file": "onia-s11-2.png",
+    "px": [
+     984,
+     492
+    ],
+    "orig_px": [
+     984,
+     492
+    ],
+    "on_slide_pct": [
+     30,
+     27
+    ]
+   }
+  ]
+ },
+ {
+  "deck": "onia",
+  "slide": 12,
+  "title": "On-device Image processing",
+  "text": [
+   "12"
+  ],
+  "images": [
+   {
+    "file": "onia-s12-1.png",
+    "px": [
+     1600,
+     571
+    ],
+    "orig_px": [
+     2194,
+     784
+    ],
+    "on_slide_pct": [
+     85,
+     54
+    ]
+   },
+   {
+    "file": "onia-s12-2.png",
+    "px": [
+     1600,
+     872
+    ],
+    "orig_px": [
+     2816,
+     1536
+    ],
+    "on_slide_pct": [
+     43,
+     55
+    ]
+   }
+  ]
+ },
+ {
+  "deck": "onia",
+  "slide": 13,
+  "title": "On-device Image processing",
+  "text": [
+   "13"
+  ],
+  "images": [
+   {
+    "file": "onia-s13-1.png",
+    "px": [
+     1600,
+     973
+    ],
+    "orig_px": [
+     1920,
+     1168
+    ],
+    "on_slide_pct": [
+     64,
+     69
+    ]
+   }
+  ]
+ },
+ {
+  "deck": "onia",
+  "slide": 14,
+  "title": "Cloud image processing",
+  "text": [
+   "14"
+  ],
+  "images": [
+   {
+    "file": "onia-s14-1.png",
+    "px": [
+     1600,
+     362
+    ],
+    "orig_px": [
+     1712,
+     388
+    ],
+    "on_slide_pct": [
+     85,
+     34
+    ]
+   }
+  ]
+ },
+ {
+  "deck": "onia",
+  "slide": 15,
+  "title": "Recap",
+  "text": [
+   "15"
+  ],
+  "images": [
+   {
+    "file": "onia-s15-1.png",
+    "px": [
+     1600,
+     487
+    ],
+    "orig_px": [
+     2154,
+     656
+    ],
+    "on_slide_pct": [
+     85,
+     46
+    ]
+   }
+  ]
+ },
+ {
+  "deck": "onia",
+  "slide": 16,
+  "title": "Recap",
+  "text": [
+   "16"
+  ],
+  "images": [
+   {
+    "file": "onia-s16-1.png",
+    "px": [
+     1600,
+     481
+    ],
+    "orig_px": [
+     4228,
+     1272
+    ],
+    "on_slide_pct": [
+     93,
+     50
+    ]
+   }
+  ]
+ },
+ {
+  "deck": "onia",
+  "slide": 17,
+  "title": "Integrating conversational workflows into an existing application",
+  "text": [
+   "17"
+  ],
+  "images": [
+   {
+    "file": "onia-s17-1.png",
+    "px": [
+     1600,
+     440
+    ],
+    "orig_px": [
+     1788,
+     492
+    ],
+    "on_slide_pct": [
+     85,
+     42
+    ]
+   }
+  ]
+ },
+ {
+  "deck": "onia",
+  "slide": 18,
+  "title": "Integrating conversational workflows into an existing application",
+  "text": [
+   "18"
+  ],
+  "images": [
+   {
+    "file": "onia-s18-1.png",
+    "px": [
+     704,
+     404
+    ],
+    "orig_px": [
+     704,
+     404
+    ],
+    "on_slide_pct": [
+     39,
+     40
+    ]
+   }
+  ]
+ },
+ {
+  "deck": "onia",
+  "slide": 19,
+  "title": "",
+  "text": [
+   "19"
+  ],
+  "images": [
+   {
+    "file": "onia-s19-1.png",
+    "px": [
+     1600,
+     1008
+    ],
+    "orig_px": [
+     8424,
+     5310
+    ],
+    "on_slide_pct": [
+     85,
+     95
+    ]
+   }
+  ]
+ },
+ {
+  "deck": "onia",
+  "slide": 20,
+  "title": "",
+  "text": [
+   "20"
+  ],
+  "images": [
+   {
+    "file": "onia-s20-1.png",
+    "px": [
+     1290,
+     2796
+    ],
+    "orig_px": [
+     1290,
+     2796
+    ],
+    "on_slide_pct": [
+     26,
+     100
+    ]
+   },
+   {
+    "file": "onia-s20-2.png",
+    "px": [
+     1290,
+     2796
+    ],
+    "orig_px": [
+     1290,
+     2796
+    ],
+    "on_slide_pct": [
+     26,
+     100
+    ]
+   },
+   {
+    "file": "onia-s20-3.png",
+    "px": [
+     1290,
+     2796
+    ],
+    "orig_px": [
+     1290,
+     2796
+    ],
+    "on_slide_pct": [
+     26,
+     100
+    ]
+   }
+  ]
+ },
+ {
+  "deck": "onia",
+  "slide": 21,
+  "title": "Enriching context",
+  "text": [
+   "21"
+  ],
+  "images": [
+   {
+    "file": "onia-s21-1.png",
+    "px": [
+     1600,
+     1130
+    ],
+    "orig_px": [
+     1601,
+     1131
+    ],
+    "on_slide_pct": [
+     59,
+     75
+    ]
+   }
+  ]
+ },
+ {
+  "deck": "onia",
+  "slide": 22,
+  "title": "",
+  "text": [
+   "22"
+  ],
+  "images": [
+   {
+    "file": "onia-s22-1.png",
+    "px": [
+     1401,
+     1408
+    ],
+    "orig_px": [
+     1401,
+     1408
+    ],
+    "on_slide_pct": [
+     56,
+     100
+    ]
+   }
+  ]
+ },
+ {
+  "deck": "onia",
+  "slide": 23,
+  "title": "",
+  "text": [
+   "23"
+  ],
+  "images": [
+   {
+    "file": "onia-s23-1.png",
+    "px": [
+     1326,
+     1408
+    ],
+    "orig_px": [
+     1326,
+     1408
+    ],
+    "on_slide_pct": [
+     53,
+     100
+    ]
+   }
+  ]
+ },
+ {
+  "deck": "onia",
+  "slide": 24,
+  "title": "RAG Demo",
+  "text": [
+   "24"
+  ],
+  "images": []
+ },
+ {
+  "deck": "onia",
+  "slide": 25,
+  "title": "Integrating existing applications into LLMs (as MCP Servers)",
+  "text": [
+   "25"
+  ],
+  "images": [
+   {
+    "file": "onia-s25-1.png",
+    "px": [
+     1014,
+     108
+    ],
+    "orig_px": [
+     1014,
+     108
+    ],
+    "on_slide_pct": [
+     70,
+     13
+    ]
+   }
+  ]
+ },
+ {
+  "deck": "onia",
+  "slide": 26,
+  "title": "Integrating existing applications into LLMs (as MCP Servers)",
+  "text": [
+   "26"
+  ],
+  "images": [
+   {
+    "file": "onia-s26-1.png",
+    "px": [
+     1014,
+     244
+    ],
+    "orig_px": [
+     1014,
+     244
+    ],
+    "on_slide_pct": [
+     70,
+     30
+    ]
+   }
+  ]
+ },
+ {
+  "deck": "onia",
+  "slide": 27,
+  "title": "Integrating existing applications into LLMs (as MCP Servers)",
+  "text": [
+   "27"
+  ],
+  "images": [
+   {
+    "file": "onia-s27-1.png",
+    "px": [
+     1600,
+     294
+    ],
+    "orig_px": [
+     2132,
+     392
+    ],
+    "on_slide_pct": [
+     85,
+     28
+    ]
+   }
+  ]
+ },
+ {
+  "deck": "onia",
+  "slide": 28,
+  "title": "Recap",
+  "text": [
+   "28"
+  ],
+  "images": [
+   {
+    "file": "onia-s28-1.png",
+    "px": [
+     1600,
+     1088
+    ],
+    "orig_px": [
+     1964,
+     1336
+    ],
+    "on_slide_pct": [
+     83,
+     100
+    ]
+   }
+  ]
+ },
+ {
+  "deck": "onia",
+  "slide": 29,
+  "title": "MCP Demo With LMStudio",
+  "text": [
+   "29"
+  ],
+  "images": []
+ },
+ {
+  "deck": "onia",
+  "slide": 30,
+  "title": "Securing cloud\u000bLLM workflows",
+  "text": [
+   "30"
+  ],
+  "images": [
+   {
+    "file": "onia-s30-1.png",
+    "px": [
+     1600,
+     1847
+    ],
+    "orig_px": [
+     2634,
+     3042
+    ],
+    "on_slide_pct": [
+     49,
+     100
+    ]
+   }
+  ]
+ },
+ {
+  "deck": "onia",
+  "slide": 31,
+  "title": "Request processing\u000band token set-up",
+  "text": [
+   "31"
+  ],
+  "images": [
+   {
+    "file": "onia-s31-1.png",
+    "px": [
+     1543,
+     1109
+    ],
+    "orig_px": [
+     1543,
+     1109
+    ],
+    "on_slide_pct": [
+     78,
+     100
+    ]
+   }
+  ]
+ },
+ {
+  "deck": "onia",
+  "slide": 32,
+  "title": "Reasoning, Validation, Human in the Loop",
+  "text": [
+   "32"
+  ],
+  "images": [
+   {
+    "file": "onia-s32-1.png",
+    "px": [
+     1586,
+     1557
+    ],
+    "orig_px": [
+     1586,
+     1557
+    ],
+    "on_slide_pct": [
+     57,
+     100
+    ]
+   }
+  ]
+ },
+ {
+  "deck": "onia",
+  "slide": 33,
+  "title": "Output guardrails",
+  "text": [
+   "33"
+  ],
+  "images": [
+   {
+    "file": "onia-s33-1.png",
+    "px": [
+     1328,
+     985
+    ],
+    "orig_px": [
+     1328,
+     985
+    ],
+    "on_slide_pct": [
+     76,
+     100
+    ]
+   }
+  ]
+ },
+ {
+  "deck": "onia",
+  "slide": 34,
+  "title": "",
+  "text": [
+   "rusudinu.ro\u000bcodingshadows.com",
+   "Questions",
+   "See you at",
+   "©"
+  ],
+  "images": [
+   {
+    "file": "onia-s34-1.png",
+    "px": [
+     1536,
+     1024
+    ],
+    "orig_px": [
+     1536,
+     1024
+    ],
+    "on_slide_pct": [
+     100,
+     100
+    ]
+   },
+   {
+    "file": "onia-s34-2.png",
+    "px": [
+     512,
+     512
+    ],
+    "orig_px": [
+     512,
+     512
+    ],
+    "on_slide_pct": [
+     6,
+     11
+    ]
+   },
+   {
+    "file": "onia-s34-3.png",
+    "px": [
+     1600,
+     333
+    ],
+    "orig_px": [
+     1920,
+     400
+    ],
+    "on_slide_pct": [
+     19,
+     7
+    ]
+   }
+  ]
+ },
+ {
+  "deck": "rag",
+  "slide": 1,
+  "title": "Retrieval Augmented Generation (RAG)",
+  "text": [
+   "1"
+  ],
+  "images": []
+ },
+ {
+  "deck": "rag",
+  "slide": 2,
+  "title": "Vector Embeddings",
+  "text": [
+   "Embeddings are high-dimensional dense vectors (arrays of floating-point numbers) that represent data. / In this vector space, objects with similar meanings are positioned closer together. /  / [0.12, -0.45, 0.88, ... 0.05] / Example: The vector for \"King\" minus \"Man\" plus \"Woman\" results in a vector closest to \"Queen\"."
+  ],
+  "images": []
+ },
+ {
+  "deck": "rag",
+  "slide": 3,
+  "title": "How Vector Search Works",
+  "text": [
+   "1. Ingestion: Source data (text, images) is passed through an Embedding Model to generate vectors.\u000b / 2. Indexing: Vectors are stored in Elasticsearch.\u000b / 3. Query Time: The user's query is vectorized using the same model.\u000b / 4. Similarity: Elasticsearch calculates the distance (Cosine, Euclidean, Dot Product) to find the nearest neighbors."
+  ],
+  "images": [
+   {
+    "file": "rag-s03-1.png",
+    "px": [
+     1600,
+     872
+    ],
+    "orig_px": [
+     2816,
+     1536
+    ],
+    "on_slide_pct": [
+     57,
+     55
+    ]
+   }
+  ]
+ },
+ {
+  "deck": "rag",
+  "slide": 4,
+  "title": "Distance Metrics",
+  "text": [],
+  "images": []
+ },
+ {
+  "deck": "rag",
+  "slide": 5,
+  "title": "Search Methods: Exact vs. Approximate",
+  "text": [],
+  "images": []
+ },
+ {
+  "deck": "rag",
+  "slide": 6,
+  "title": "Hybrid Search: Best of Both Worlds",
+  "text": [],
+  "images": []
+ },
+ {
+  "deck": "rag",
+  "slide": 7,
+  "title": "LMStudio",
+  "text": [
+   "Desktop application for Windows, macOS, and Linux that allows users to discover, download, and run large language models (LLMs) locally"
+  ],
+  "images": [
+   {
+    "file": "rag-s07-1.png",
+    "px": [
+     1600,
+     1019
+    ],
+    "orig_px": [
+     3206,
+     2042
+    ],
+    "on_slide_pct": [
+     64,
+     72
+    ]
+   }
+  ]
+ },
+ {
+  "deck": "rag",
+  "slide": 8,
+  "title": "LMStudio – Downloading a model",
+  "text": [],
+  "images": [
+   {
+    "file": "rag-s08-1.png",
+    "px": [
+     1600,
+     1019
+    ],
+    "orig_px": [
+     3206,
+     2042
+    ],
+    "on_slide_pct": [
+     64,
+     72
+    ]
+   }
+  ]
+ },
+ {
+  "deck": "rag",
+  "slide": 9,
+  "title": "LMStudio – Starting the server",
+  "text": [],
+  "images": [
+   {
+    "file": "rag-s09-1.png",
+    "px": [
+     1600,
+     1019
+    ],
+    "orig_px": [
+     3206,
+     2042
+    ],
+    "on_slide_pct": [
+     68,
+     78
+    ]
+   },
+   {
+    "file": "rag-s09-2.png",
+    "px": [
+     852,
+     146
+    ],
+    "orig_px": [
+     852,
+     146
+    ],
+    "on_slide_pct": [
+     44,
+     14
+    ]
+   }
+  ]
+ },
+ {
+  "deck": "rag",
+  "slide": 10,
+  "title": "LMStudio – Selecting embedding models",
+  "text": [],
+  "images": [
+   {
+    "file": "rag-s10-1.png",
+    "px": [
+     1600,
+     1019
+    ],
+    "orig_px": [
+     3206,
+     2042
+    ],
+    "on_slide_pct": [
+     64,
+     72
+    ]
+   }
+  ]
+ },
+ {
+  "deck": "rag",
+  "slide": 11,
+  "title": "Creating an index",
+  "text": [],
+  "images": []
+ },
+ {
+  "deck": "rag",
+  "slide": 12,
+  "title": "Indexing documents",
+  "text": [],
+  "images": []
+ },
+ {
+  "deck": "rag",
+  "slide": 13,
+  "title": "Searching text",
+  "text": [],
+  "images": []
+ },
+ {
+  "deck": "rag",
+  "slide": 14,
+  "title": "Generating embeddings",
+  "text": [],
+  "images": []
+ },
+ {
+  "deck": "rag",
+  "slide": 15,
+  "title": "Libraries used",
+  "text": [
+   "The openai library is used to generate vector embeddings from text. It connects to an OpenAI-compatible API (likely a local one, such as LMStudio) to create these embeddings. /  / The elasticsearch library is used to store and search these vector embeddings. It acts as a vector database, allowing the application to perform semantic searches to find the most relevant documents for a given query."
+  ],
+  "images": []
+ },
+ {
+  "deck": "rag",
+  "slide": 16,
+  "title": "Initial dataset",
+  "text": [],
+  "images": [
+   {
+    "file": "rag-s16-1.png",
+    "px": [
+     1600,
+     771
+    ],
+    "orig_px": [
+     2452,
+     1182
+    ],
+    "on_slide_pct": [
+     86,
+     74
+    ]
+   }
+  ]
+ },
+ {
+  "deck": "rag",
+  "slide": 17,
+  "title": "Embedding dataset",
+  "text": [],
+  "images": []
+ },
+ {
+  "deck": "rag",
+  "slide": 18,
+  "title": "Elasticsearch Model",
+  "text": [],
+  "images": [
+   {
+    "file": "rag-s18-1.png",
+    "px": [
+     1600,
+     557
+    ],
+    "orig_px": [
+     2984,
+     1040
+    ],
+    "on_slide_pct": [
+     87,
+     54
+    ]
+   }
+  ]
+ },
+ {
+  "deck": "rag",
+  "slide": 19,
+  "title": "Index visualization",
+  "text": [],
+  "images": [
+   {
+    "file": "rag-s19-1.png",
+    "px": [
+     1600,
+     539
+    ],
+    "orig_px": [
+     2940,
+     992
+    ],
+    "on_slide_pct": [
+     89,
+     54
+    ]
+   }
+  ]
+ },
+ {
+  "deck": "rag",
+  "slide": 20,
+  "title": "One document’s values",
+  "text": [],
+  "images": [
+   {
+    "file": "rag-s20-1.png",
+    "px": [
+     1268,
+     1338
+    ],
+    "orig_px": [
+     1268,
+     1338
+    ],
+    "on_slide_pct": [
+     53,
+     100
+    ]
+   }
+  ]
+ },
+ {
+  "deck": "rag",
+  "slide": 21,
+  "title": "Querying the embeddings",
+  "text": [],
+  "images": []
+ },
+ {
+  "deck": "rag",
+  "slide": 22,
+  "title": "Diagrams",
+  "text": [
+   "22"
+  ],
+  "images": [
+   {
+    "file": "rag-s22-1.png",
+    "px": [
+     1600,
+     1130
+    ],
+    "orig_px": [
+     1601,
+     1131
+    ],
+    "on_slide_pct": [
+     59,
+     75
+    ]
+   }
+  ]
+ },
+ {
+  "deck": "rag",
+  "slide": 23,
+  "title": "",
+  "text": [
+   "23"
+  ],
+  "images": [
+   {
+    "file": "rag-s23-1.png",
+    "px": [
+     1401,
+     1408
+    ],
+    "orig_px": [
+     1401,
+     1408
+    ],
+    "on_slide_pct": [
+     56,
+     100
+    ]
+   }
+  ]
+ },
+ {
+  "deck": "rag",
+  "slide": 24,
+  "title": "",
+  "text": [
+   "24"
+  ],
+  "images": [
+   {
+    "file": "rag-s24-1.png",
+    "px": [
+     1326,
+     1408
+    ],
+    "orig_px": [
+     1326,
+     1408
+    ],
+    "on_slide_pct": [
+     53,
+     100
+    ]
+   }
+  ]
+ }
+]
