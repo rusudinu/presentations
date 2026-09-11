@@ -1,4 +1,5 @@
 // GENERATED CODE - DO NOT MODIFY BY HAND
+// dart format width=80
 
 part of 'chopper_example.dart';
 
@@ -20,22 +21,14 @@ final class _$PostService extends PostService {
   @override
   Future<Response<PostModel>> getPost(int id) {
     final Uri $url = Uri.parse('/posts/${id}');
-    final Request $request = Request(
-      'GET',
-      $url,
-      client.baseUrl,
-    );
+    final Request $request = Request('GET', $url, client.baseUrl);
     return client.send<PostModel, PostModel>($request);
   }
 
   @override
   Future<Response<List<PostModel>>> getPosts() {
     final Uri $url = Uri.parse('/posts');
-    final Request $request = Request(
-      'GET',
-      $url,
-      client.baseUrl,
-    );
+    final Request $request = Request('GET', $url, client.baseUrl);
     return client.send<List<PostModel>, PostModel>($request);
   }
 
@@ -43,48 +36,29 @@ final class _$PostService extends PostService {
   Future<Response<PostModel>> createPost(PostModel post) {
     final Uri $url = Uri.parse('/posts');
     final $body = post;
-    final Request $request = Request(
-      'POST',
-      $url,
-      client.baseUrl,
-      body: $body,
-    );
+    final Request $request = Request('POST', $url, client.baseUrl, body: $body);
     return client.send<PostModel, PostModel>($request);
   }
 
   @override
-  Future<Response<PostModel>> updatePost(
-    int id,
-    PostModel post,
-  ) {
+  Future<Response<PostModel>> updatePost(int id, PostModel post) {
     final Uri $url = Uri.parse('/posts/${id}');
     final $body = post;
-    final Request $request = Request(
-      'PUT',
-      $url,
-      client.baseUrl,
-      body: $body,
-    );
+    final Request $request = Request('PUT', $url, client.baseUrl, body: $body);
     return client.send<PostModel, PostModel>($request);
   }
 
   @override
   Future<Response<void>> deletePost(int id) {
     final Uri $url = Uri.parse('/posts/${id}');
-    final Request $request = Request(
-      'DELETE',
-      $url,
-      client.baseUrl,
-    );
+    final Request $request = Request('DELETE', $url, client.baseUrl);
     return client.send<void, void>($request);
   }
 
   @override
   Future<Response<List<PostModel>>> getPostsWithHeaders() {
     final Uri $url = Uri.parse('/posts');
-    final Map<String, String> $headers = {
-      'Custom-Header': 'Value',
-    };
+    final Map<String, String> $headers = {'Custom-Header': 'Value'};
     final Request $request = Request(
       'GET',
       $url,

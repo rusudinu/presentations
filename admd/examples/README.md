@@ -19,7 +19,7 @@ The isolate and concurrency demos used by Mobile and Embedded Computing, Lecture
 
 ```bash
 flutter pub get
-dart run build_runner build --delete-conflicting-outputs   # regenerates the *.g.dart files
+dart run build_runner build                                # regenerates the *.g.dart files
 flutter run -t lib/lecture06_bloc/cubit/main.dart          # run one example as the app entry point
 ```
 
