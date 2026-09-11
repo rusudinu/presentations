@@ -15,20 +15,20 @@ dependencies:
   equatable: ^2.0.7
   # HTTP libraries
   http: ^1.1.0              # Simple HTTP client with RetryClient support
-  dio: ^5.4.0               # Feature-rich HTTP client with interceptors
-  chopper: ^7.1.0           # Declarative REST API client
-  retrofit: ^4.0.0          # Type-safe REST API client with annotations
-  json_annotation: ^4.8.0   # JSON serialization annotations
+  dio: ^5.11.1               # Feature-rich HTTP client with interceptors
+  chopper: ^8.7.0           # Declarative REST API client
+  retrofit: ^4.10.0          # Type-safe REST API client with annotations
+  json_annotation: ^4.12.0   # JSON serialization annotations
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^6.0.0
   # Code generation
-  build_runner: ^2.4.0           # Build system for Dart code generation
-  chopper_generator: ^7.1.0      # Code generator for Chopper
-  retrofit_generator: ^8.0.0     # Code generator for Retrofit
-  json_serializable: ^6.7.0      # JSON serialization code generator
+  build_runner: ^2.16.1           # Build system for Dart code generation
+  chopper_generator: ^8.7.0      # Code generator for Chopper
+  retrofit_generator: ^10.2.9     # Code generator for Retrofit
+  json_serializable: ^6.14.1      # JSON serialization code generator
 
 flutter:
   uses-material-design: true
