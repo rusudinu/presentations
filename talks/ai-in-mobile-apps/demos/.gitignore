@@ -1,0 +1,3 @@
+# the uv-managed venv built by `make setup`, and Jupyter's autosaves
+.venv/
+.ipynb_checkpoints/

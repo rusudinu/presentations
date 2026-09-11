@@ -18,6 +18,20 @@ The isolate and concurrency demos used by Mobile and Embedded Computing, Lecture
 ## Running
 
 ```bash
+make help     # every target
+make setup    # flutter pub get
+make gen      # regenerates the *.g.dart files
+make list     # every runnable file, with the command that runs it
+make analyze  # static analysis
+```
+
+`make run TARGET=lib/lecture06_bloc/cubit/main.dart` runs one example as the app entry point, with
+`DEVICE=<id>` to pick a device (`make devices` lists them). `make lectureNN` runs a lecture's single
+entry point, and every pure Dart file has a target named after it, for example `make jitter_strategies`.
+
+The same commands without make:
+
+```bash
 flutter pub get
 dart run build_runner build                                # regenerates the *.g.dart files
 flutter run -t lib/lecture06_bloc/cubit/main.dart          # run one example as the app entry point

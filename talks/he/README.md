@@ -6,4 +6,5 @@ Given as a guest session; the audience is students who have not used either befo
 
 - **Slides:** [HE GitHub and Flutter.pptx](HE%20GitHub%20and%20Flutter.pptx)
 - **Demos:** [demo/](demo/) and [demo2/](demo2/), two small Flutter projects shown during the talk.
-  Run either with `flutter pub get && flutter run` inside its folder.
+  Run either with `make setup && make run` inside its folder (`make help` lists the targets,
+  `make list` the entry points of `demo/`), or with `flutter pub get && flutter run` directly.
