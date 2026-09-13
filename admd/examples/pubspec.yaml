@@ -27,7 +27,7 @@ dev_dependencies:
   # Code generation
   build_runner: ^2.16.1           # Build system for Dart code generation
   chopper_generator: ^8.7.0      # Code generator for Chopper
-  retrofit_generator: ^10.2.9     # Code generator for Retrofit
+  retrofit_generator: ^10.2.11     # Code generator for Retrofit
   json_serializable: ^6.14.1      # JSON serialization code generator
 
 flutter:
