@@ -14,7 +14,7 @@
 
 \titleframe
 
-\begin{frame}[eyebrow=Today]{What this lab is for}
+\begin{frame}[eyebrow=Today]{Lab objectives}
   \vskip 2mm
   \begin{grid}[2]
     \cell[\faLock]{Null safety in code}{When to use \code{?}, \code{?.}, \code{??} and \code{late}}
@@ -24,7 +24,7 @@
   \taskmeta{Time}{2 hours}{Submit}{Push to \code{admd-labs}, branch \code{lab-2}, before Lab 3}
 \end{frame}
 
-\begin{frame}[fragile,eyebrow=Setup]{Where your code goes}
+\begin{frame}[fragile,eyebrow=Setup]{Branch and file layout}
   \begin{steps}
     \item Open the project from Lab 1 and create a branch:
 \begin{shell}
@@ -39,7 +39,7 @@ git checkout -b lab-2
   \end{hint}
 \end{frame}
 
-\begin{frame}[eyebrow=Reference]{The null-safety toolkit}
+\begin{frame}[eyebrow=Reference]{Null-safety types and operators}
   {\small
   \begin{columns}[T]
     \begin{column}{0.50\textwidth}
@@ -70,7 +70,7 @@ git checkout -b lab-2
   \end{takeaway}
 \end{frame}
 
-\begin{frame}[fragile,eyebrow=Reference]{Null safety in one file}
+\begin{frame}[fragile,eyebrow=Reference]{Null safety example}
 \begin{dart}
 class Room {
   final String code;            // always present
@@ -135,7 +135,7 @@ class Room {
   }
 \end{frame}
 
-\begin{frame}[fragile,eyebrow=Scaffolding]{Just enough UI to see your objects}
+\begin{frame}[fragile,eyebrow=Scaffolding]{Minimal UI for the models}
 \begin{dart}
 ListView.builder(
   itemCount: accounts.length,
@@ -199,7 +199,7 @@ ListView.builder(
   }
 \end{frame}
 
-\begin{frame}[eyebrow=Troubleshooting]{Errors you will hit today}
+\begin{frame}[eyebrow=Troubleshooting]{Common errors}
   {\small
   \trouble{Non-nullable 'x' not assigned before use}{Give a value, use \code{?}, or mark \code{late}}
   \trouble{LateInitializationError on 'x'}{A \code{late} field read before it was set}
@@ -209,6 +209,6 @@ ListView.builder(
   }
 \end{frame}
 
-\closingframe{Push before you leave}{Branch lab-2 · one commit per task}
+\closingframe{Submission}{Branch lab-2 · one commit per task}
 
 \end{document}

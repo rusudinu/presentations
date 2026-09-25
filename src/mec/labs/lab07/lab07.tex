@@ -5,7 +5,7 @@
 \course{Mobile and Embedded Computing}
 \decklabel{Lab 7}
 \title{Lab test}
-\subtitle{Rules, format, and two practice specs}
+\subtitle{Rules, format, two practice specs}
 \author{Dinu-Ștefan Rusu}
 \institute{FILS, Universitatea Politehnica București}
 \date{Week 14}
@@ -14,7 +14,7 @@
 
 \titleframe
 
-\begin{frame}[eyebrow=Today]{What this lab is for}
+\begin{frame}[eyebrow=Today]{Lab objectives}
   \vskip 2mm
   \begin{grid}[2]
     \cell[\faIcon{stopwatch}]{Prove three skills, once}{Build a small app from a one-page spec in ninety minutes: a device message, an offline write, and a remote read.}
@@ -24,7 +24,7 @@
   \taskmeta{Time}{90 minutes}{Submit}{Push to your project repo, branch \code{lab-7}, before time is up}
 \end{frame}
 
-\begin{frame}[eyebrow=Rules]{Individual, timed, your own machine}
+\begin{frame}[eyebrow=Rules]{Rules}
   \begin{steps}
     \item You work alone. No pair programming, no shared screens, no copying a teammate's branch.
     \item Ninety minutes, one sitting, starting when you receive the spec.
@@ -36,7 +36,7 @@
   \end{takeaway}
 \end{frame}
 
-\begin{frame}[eyebrow=Rules]{What you may and may not use}
+\begin{frame}[eyebrow=Rules]{Allowed resources}
   \begin{steps}
     \item Internet access is allowed: official docs, package pages, your own past labs.
     \item AI agents are allowed for writing code.
@@ -58,7 +58,7 @@
   \muted{Addresses and ports are announced at the start of the test. Write them down before the clock starts.}
 \end{frame}
 
-\begin{frame}[eyebrow=Format]{One spec, three requirements}
+\begin{frame}[eyebrow=Format]{Test format}
   \vskip 2mm
   \begin{grid}[2]
     \cell[\faIcon{file-alt}]{One page, handed at the start}{An app idea and three requirements, on paper or a shared document. Nothing changes once the clock starts.}
@@ -68,7 +68,7 @@
   \muted{Every spec asks for the same three kinds of requirement, described next.}
 \end{frame}
 
-\begin{frame}[embedded,eyebrow=Format]{The three requirements, generically}
+\begin{frame}[embedded,eyebrow=Format]{Requirement types}
   \begin{grid}[3]
     \cell[\faWifi]{Publish or subscribe over MQTT}{Talk to the broker: publish a reading, or subscribe and show a value live, with reconnect handled.}
     \cell[\faDatabase]{One offline-capable write}{A local write goes through an outbox and reaches the server once connectivity returns.}
@@ -76,7 +76,7 @@
   \end{grid}
 \end{frame}
 
-\begin{frame}[eyebrow=Rubric]{5 points per requirement}
+\begin{frame}[eyebrow=Rubric]{Rubric}
   {\usebeamerfont{small}\begin{tabular}{@{}p{30mm}p{42mm}p{42mm}@{}}
     \toprule
     \thead{Requirement} & \thead{Full credit (5 p)} & \thead{Partial credit (2.5 p)} \\
@@ -90,7 +90,7 @@
   \muted{Anything not attempted scores zero.}
 \end{frame}
 
-\begin{frame}[fragile,eyebrow=Submission]{Push before the clock runs out}
+\begin{frame}[fragile,eyebrow=Submission]{Submission}
 \begin{shell}
 git checkout -b lab-7
 git push -u origin lab-7
@@ -106,7 +106,7 @@ git push -u origin lab-7
   \end{warning}
 \end{frame}
 
-\begin{frame}[eyebrow=Prepare]{How to prepare}
+\begin{frame}[eyebrow=Prepare]{Preparation}
   \vskip 2mm
   {\usebeamerfont{small}\begin{tabular}{@{}p{62mm}p{20mm}@{}}
     \toprule
@@ -167,13 +167,13 @@ git push -u origin lab-7
   \end{columns}
 \end{frame}
 
-\begin{frame}[eyebrow=Troubleshooting]{Mistakes that cost time}
+\begin{frame}[eyebrow=Troubleshooting]{Common mistakes}
   \trouble{Client not connected}{You published before the MQTT connect finished. Await the connection state before the first publish or subscribe.}
   \trouble{An outbox row stays queued forever}{The drain loop never marks the row sent after a successful post. Update its status inside the same transaction as the network call.}
   \trouble{A gRPC call hangs and the screen never updates}{No deadline was set. Attach one, and handle the deadline-exceeded status instead of swallowing it.}
   \trouble{BLE scan returns no devices}{A runtime permission was never requested: \code{BLUETOOTH\_SCAN} on Android, the usage string on iOS.}
 \end{frame}
 
-\closingframe{Push before time runs out.}{Branch lab-7 · one pull request · nothing after the deadline}
+\closingframe{Submission}{Branch lab-7 · one pull request · nothing after the deadline}
 
 \end{document}

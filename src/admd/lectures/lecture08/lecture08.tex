@@ -15,15 +15,15 @@
 \titleframe
 
 \objectivesframe{
-  \cell[\faCloud]{Configure a backend}{flutterfire configure, a Firestore read and write behind a security rule.}
-  \cell[\faIcon{box}]{Add a dependency safely}{Read a pub.dev page, pin a version constraint, and know what pubspec.lock is for.}
-  \cell[\faToggleOn]{Ship behind a flag}{Firebase Remote Config: defaults, fetch and activate, and a kill switch.}
-  \cell[\faIcon{exchange-alt}]{Compare REST and GraphQL}{Over- and under-fetching, a GraphQL schema, and when each style wins.}
+  \cell[\faCloud]{Firebase setup}{flutterfire configure, a Firestore read and write behind a security rule.}
+  \cell[\faIcon{box}]{Package dependencies}{Read a pub.dev page, pin a version constraint, and know what pubspec.lock is for.}
+  \cell[\faToggleOn]{Feature flags}{Firebase Remote Config: defaults, fetch and activate, and a kill switch.}
+  \cell[\faIcon{exchange-alt}]{REST and GraphQL}{Over- and under-fetching, a GraphQL schema, and when each style wins.}
 }
 
-\divider{Part 1 · Firebase}{A backend you configure instead of writing}[flutterfire, Firestore, and the rule that is the only server you get]
+\divider{Part 1 · Firebase}{Firebase and Firestore}[flutterfire, Firestore, security rules, Cloud Functions]
 
-\begin{frame}[eyebrow=Firebase]{What Firebase actually is}
+\begin{frame}[eyebrow=Firebase]{Firebase overview}
   \vskip 2mm
   \begin{grid}[3]
     \cell[\faDatabase]{Firestore}{A document database with live query streams. Wired up in this lecture.}
@@ -36,7 +36,7 @@
   \note{Ask which of these the room has already heard of. Most will know Auth and Analytics from other apps; Firestore and Remote Config are usually new. This slide is the map for the rest of the lecture: most of what a small app needs is one of these six pieces.}
 \end{frame}
 
-\begin{frame}[eyebrow=Firebase]{Firestore: documents, not tables}
+\begin{frame}[eyebrow=Firebase]{Firestore data model}
   \vskip 2mm
   \begin{enumerate}
     \item A Firestore database holds collections. Each collection holds documents, and each document holds fields: strings, numbers, booleans, timestamps, maps, and arrays.
@@ -50,7 +50,7 @@
   \note{Students coming from a relational-database course will instinctively want to normalize. Point out that a query returning 500 documents bills 500 reads, so a duplicated field that avoids a second query is usually the right call.}
 \end{frame}
 
-\begin{frame}[fragile,eyebrow=Firebase]{Wiring Firebase into a Flutter app}
+\begin{frame}[fragile,eyebrow=Firebase]{Firebase setup in Flutter}
 \begin{shell}
 # once per machine
 dart pub global activate flutterfire_cli
@@ -109,7 +109,7 @@ db.collection('readings').doc(uid).snapshots();
   \note{Point out the three shapes: set with merge for a write that should not clobber other fields, get for a one-time read, and snapshots for a live Stream that a StreamBuilder owns directly. Mention that reads are billed per document: a query returning 500 documents costs 500 reads, on every rebuild.}
 \end{frame}
 
-\begin{frame}[fragile,eyebrow=Firebase]{The security rule that guards it}
+\begin{frame}[fragile,eyebrow=Firebase]{Firestore security rules}
   \begin{columns}[T]
     \begin{column}{0.5\textwidth}
 \begin{codeblock}
@@ -131,7 +131,7 @@ match /readings/{userId} {
   \note{Highlight the commented-out wrong version. request.auth != null only proves someone is signed in; it does not prove they own this document. The uid comparison is the entire rule.}
 \end{frame}
 
-\begin{frame}[eyebrow=Firebase]{Cloud Functions, and where Firebase stops}
+\begin{frame}[eyebrow=Firebase]{Cloud Functions and Firebase limits}
   \vskip 1mm
   \begin{enumerate}
     \item Cloud Functions are the same serverless model from a FaaS platform, wired to Firebase triggers: a Firestore write, a new Auth user, a scheduled job, or an HTTPS call your app invokes directly.
@@ -168,9 +168,9 @@ final res = await fn.call({
   \note{Contrast this with a REST call where the client would pass a user id in the body. Here the identity comes from the auth token Firebase already verified, which is what makes the callable trustworthy.}
 \end{frame}
 
-\divider{Part 2 · Packages}{Depending on someone else's code}[pub.dev, version constraints, and the lockfile you must commit]
+\divider{Part 2 · Packages}{Package dependencies}[pub.dev, version constraints, pubspec.lock]
 
-\begin{frame}[eyebrow=Packages]{Choosing a package you can live with}
+\begin{frame}[eyebrow=Packages]{Choosing a package}
   \vskip 2mm
   \begin{grid}[3]
     \cell[\faIcon{search}]{pub.dev is the registry}{Every package lives here, with docs and the install command.}
@@ -213,7 +213,7 @@ flutter pub outdated   # newer
   \note{Ask who has hand-edited a pubspec.yaml version number before running pub get, then hit a resolution error. flutter pub add avoids that whole class of mistake.}
 \end{frame}
 
-\begin{frame}[fragile,eyebrow=Packages]{Version constraints: what the caret allows}
+\begin{frame}[fragile,eyebrow=Packages]{Version constraints and caret syntax}
   \vskip 1mm
   {\usebeamerfont{small}\begin{tabular}{@{}lp{40mm}p{48mm}@{}}
     \toprule
@@ -233,7 +233,7 @@ flutter pub outdated   # newer
   \note{Walk through the caret examples on the table. The gap between 0.x and 1.x constraints is the one students get wrong most often: before 1.0, a minor bump is allowed to break the API.}
 \end{frame}
 
-\begin{frame}[eyebrow=Packages]{pubspec.lock: what to commit}
+\begin{frame}[eyebrow=Packages]{pubspec.lock and version control}
   \vskip 2mm
   \begin{enumerate}
     \item \textbf{pubspec.yaml says what you will accept. pubspec.lock records what you actually got.}
@@ -244,9 +244,9 @@ flutter pub outdated   # newer
   \note{This is the rule the admd-labs repository is graded against: commit pubspec.lock so the grader resolves the exact versions you tested against, not whatever is newest on the day it is cloned.}
 \end{frame}
 
-\divider{Part 3 · Feature flags}{Deploy is not release}[Firebase Remote Config: staged rollout and a kill switch]
+\divider{Part 3 · Feature flags}{Feature flags}[Firebase Remote Config, staged rollout, kill switch]
 
-\begin{frame}[eyebrow=Feature flags]{Deploy is not release}
+\begin{frame}[eyebrow=Feature flags]{Deployment versus release}
   \begin{columns}[T]
     \begin{column}{0.54\textwidth}
       \begin{itemize}
@@ -265,7 +265,7 @@ flutter pub outdated   # newer
   \note{Ask the room to name a bug that only a store review can fix versus one a flag flip fixes. The distinction is whether the bad code is still reachable once you flip the flag off.}
 \end{frame}
 
-\begin{frame}[eyebrow=Feature flags]{The tool: Firebase Remote Config}
+\begin{frame}[eyebrow=Feature flags]{Firebase Remote Config}
   \begin{columns}[T]
     \begin{column}{0.54\textwidth}
       \begin{itemize}
@@ -306,7 +306,7 @@ if (rc.getBool('checkout_v2_enabled')) return const CheckoutV2();
   \note{Point at minimumFetchInterval: fetches are throttled server-side, so this exists so the backend is not called too often. Set it to Duration.zero only in debug builds, or you get throttled while testing.}
 \end{frame}
 
-\begin{frame}[eyebrow=Feature flags]{Rules that keep flags cheap}
+\begin{frame}[eyebrow=Feature flags]{Feature flag guidelines}
   \vskip 2mm
   \begin{enumerate}
     \item Fetches are throttled server-side, and billed per fetch above a free daily allowance since September 2026. Set minimumFetchInterval to zero only in debug builds.
@@ -317,9 +317,9 @@ if (rc.getBool('checkout_v2_enabled')) return const CheckoutV2();
   \note{The security point is the one to slow down on. A flag hides a feature from the UI, but a curious user reading the APK can still find the disabled code and, if the values are not re-checked server-side, the data behind it.}
 \end{frame}
 
-\divider{Part 4 · APIs}{Talking to a server}[REST, GraphQL, and the cost of each round trip]
+\divider{Part 4 · APIs}{REST and GraphQL}[REST, GraphQL, round trips]
 
-\begin{frame}[eyebrow=APIs]{REST, and what the verbs promise}
+\begin{frame}[eyebrow=APIs]{REST verbs and semantics}
   \vskip 1mm
   \muted{Resources named by URLs, acted on with standard HTTP methods.}
   {\usebeamerfont{small}\begin{tabular}{@{}lccp{44mm}@{}}
@@ -387,7 +387,7 @@ query ProfileScreen($id: ID!) {
   \note{Point out the non-nullable markers on ID and String. That is the schema's version of Dart's null safety, and the two map onto each other directly in generated code.}
 \end{frame}
 
-\begin{frame}[fragile,eyebrow=APIs]{GraphQL: mutations and what the schema buys}
+\begin{frame}[fragile,eyebrow=APIs]{GraphQL mutations and schema benefits}
   \begin{columns}[T]
     \begin{column}{0.42\textwidth}
 \begin{codeblock}
@@ -433,7 +433,7 @@ Query(
   \note{The default cache lives in memory only; a store that survives a restart has to be configured. graphql\_flutter gives widget-level builders with a normalized cache, fastest to start. ferry generates Dart types from the schema, so a wrong field name is a compile error, not a runtime null. A naive status check treats a GraphQL error as success.}
 \end{frame}
 
-\begin{frame}[eyebrow=APIs]{REST vs GraphQL, side by side}
+\begin{frame}[eyebrow=APIs]{REST vs GraphQL comparison}
   {\renewcommand{\arraystretch}{1.0}\usebeamerfont{small}\begin{tabular}{@{}lp{44mm}p{44mm}@{}}
     \toprule
     \thead{Aspect} & \thead{REST} & \thead{GraphQL} \\
@@ -448,7 +448,7 @@ Query(
   \note{Ask the room to place the ADMD lab app on this table. A todo list with one client is a clean REST fit; a dashboard combining several related resources for multiple platforms is where GraphQL starts to pay off.}
 \end{frame}
 
-\begin{frame}[eyebrow=Recap]{Three things to remember}
+\begin{frame}[eyebrow=Recap]{Summary}
   \vskip 2mm
   \begin{enumerate}
     \item Firestore rules are the only server-side check you get. \muted{Validate on the client for speed, on the rules for correctness.}

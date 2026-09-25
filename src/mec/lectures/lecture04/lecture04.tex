@@ -15,16 +15,16 @@
 \titleframe
 
 \objectivesframe{
-  \cell[\faSatelliteDish]{Choose a transport}{Why polling a sensor is wrong, what the four push options are, and where MQTT fits.}
-  \cell[\faIcon{project-diagram}]{Use MQTT properly}{Topics and wildcards, QoS levels, retained messages, last will, keep-alive and sessions.}
-  \cell[\faLock]{Secure a small device}{TLS with certificates or pre-shared keys, one identity per device, and credential rotation.}
-  \cell[\faIcon{sync-alt}]{Ship an update}{Two partitions, a signature check and a rollback, so a bad image does not brick the board.}
+  \cell[\faSatelliteDish]{Transport selection}{Why polling a sensor is wrong, what the four push options are, and where MQTT fits.}
+  \cell[\faIcon{project-diagram}]{MQTT in practice}{Topics and wildcards, QoS levels, retained messages, last will, keep-alive and sessions.}
+  \cell[\faLock]{Device security}{TLS with certificates or pre-shared keys, one identity per device, and credential rotation.}
+  \cell[\faIcon{sync-alt}]{Over-the-air updates}{Two partitions, a signature check and a rollback, so a bad image does not brick the board.}
 }
 
 % =====================================================================
-\divider{Part 1 · Pushing}{Getting a reading off the device}[Why polling is the wrong shape, and the four alternatives]
+\divider{Part 1 · Pushing}{Push-based data delivery}[Polling, push mechanisms, and brokers]
 
-\begin{frame}[embedded,eyebrow=Pushing]{Why polling a sensor is the wrong shape}
+\begin{frame}[embedded,eyebrow=Pushing]{Limitations of polling}
   \vskip 2mm
   \begin{columns}[T]
     \begin{column}{0.56\textwidth}
@@ -46,7 +46,7 @@
   \note{Ask the room what poll interval they would pick for a room thermometer. Whatever number comes back, point out that it is both too slow for an alarm and far too fast for a value that changes twice an hour.}
 \end{frame}
 
-\begin{frame}[eyebrow=Pushing]{Four ways to push, and when each one fits}
+\begin{frame}[eyebrow=Pushing]{Push mechanisms}
   \vskip 2mm
   {\usebeamerfont{small}\hyphenpenalty=10000\exhyphenpenalty=10000 \begin{tabular}{@{}lll>{\raggedright\arraybackslash}p{48mm}@{}}
     \toprule
@@ -64,7 +64,7 @@
   \note{If someone asks why not WebSocket for the sensor too: a broker gives you fan-out, a last known value and offline queueing that you would otherwise write yourself. Note that MQTT over WebSocket is common, because the transport and the protocol are separate choices.}
 \end{frame}
 
-\begin{frame}[embedded,eyebrow=Pushing]{Where MQTT fits: a broker in the middle}
+\begin{frame}[embedded,eyebrow=Pushing]{The MQTT broker model}
   \vskip 3mm
   \begin{grid}[3]
     \cell[\faMicrochip]{The device publishes}{It connects outward to one address, sends a reading on a topic, and knows nothing else about the system.}
@@ -78,7 +78,7 @@
 \end{frame}
 
 % =====================================================================
-\divider{Part 2 · MQTT}{The protocol in detail}[Topics, quality of service, retained state, and what a session holds]
+\divider{Part 2 · MQTT}{The protocol in detail}[Topics, quality of service, retained state, and sessions]
 
 \begin{frame}[embedded,eyebrow=MQTT]{The broker, the client, and the connection}
   \vskip 2mm
@@ -135,7 +135,7 @@ $SYS/broker/uptime     broker statistics, not matched by a root '#'
   \note{Walk through the QoS 2 exchange once so students see four packets for one message. Then ask which of their project messages genuinely cannot be sent twice. Usually the answer is a command such as unlock, and nothing else.}
 \end{frame}
 
-\begin{frame}[embedded,eyebrow=MQTT]{What QoS costs, and what it does not buy}
+\begin{frame}[embedded,eyebrow=MQTT]{QoS costs and limits}
   \vskip 2mm
   \begin{columns}[T]
     \begin{column}{0.55\textwidth}
@@ -194,7 +194,7 @@ $SYS/broker/uptime     broker statistics, not matched by a root '#'
   \note{Connect this to the wake, send, sleep loop from Lecture 3. The point to make out loud is that staying connected is a feature you buy with battery, so buy it only when the device has to be told something.}
 \end{frame}
 
-\begin{frame}[eyebrow=MQTT]{MQTT 5, in one slide}
+\begin{frame}[eyebrow=MQTT]{MQTT 5}
   \vskip 2mm
   \begin{grid}[3]
     \cell[\faExclamationCircle]{Reason codes}{Every acknowledgement carries a code, so a refused connection or a denied publish says why.}
@@ -208,9 +208,9 @@ $SYS/broker/uptime     broker statistics, not matched by a root '#'
 \end{frame}
 
 % =====================================================================
-\divider{Part 3 · Both ends}{From the board to the phone}[A broker on your laptop, TinyGo publishing, Flutter subscribing]
+\divider{Part 3 · Both ends}{From the board to the phone}[Local broker, TinyGo publisher, Flutter subscriber]
 
-\begin{frame}[fragile,eyebrow=Both ends]{A broker on your own machine}
+\begin{frame}[fragile,eyebrow=Both ends]{Local broker setup}
   \vskip 1mm
 \begin{shell}
 sudo apt install mosquitto mosquitto-clients
@@ -229,7 +229,7 @@ mosquitto_pub -h localhost -u dev -P pass -t mec/lab/r1/temp -m '{"c":21.4}'
   \note{Insist on allow_anonymous false from the first minute. A broker that accepts anyone is a habit, and the habit is what ends up on a public address later. The -v flag prints the topic next to the payload, which is what you want when wildcards are involved.}
 \end{frame}
 
-\begin{frame}[fragile,embedded,eyebrow=Both ends]{TinyGo: join the network and publish}
+\begin{frame}[fragile,embedded,eyebrow=Both ends]{TinyGo publisher}
   \vskip 1mm
   \begin{columns}[T]
     \begin{column}{0.57\textwidth}
@@ -259,7 +259,7 @@ c.PublishPayload(fl, pv, payload)
   \note{Keep this snippet as a shape rather than a recipe: the package paths move faster than the protocol does. It follows the mqtt example in the espradio repository, with natiu-mqtt as the client, and Lab 2 uses the same shape. What does not move is the sequence: join, dial, connect, publish, and check the error at each stage.}
 \end{frame}
 
-\begin{frame}[fragile,eyebrow=Both ends]{Flutter: connect, subscribe, decode}
+\begin{frame}[fragile,eyebrow=Both ends]{Flutter subscriber}
   \vskip 1mm
 \begin{dart}
 final c = MqttServerClient('10.0.2.2', 'phone-1')  // mqtt_client
@@ -278,7 +278,7 @@ c.updates!.listen((events) {
   \note{The stream goes straight into a BLoC event, exactly like the WebSocket screen from the ADMD labs. Say that out loud: the transport changed, the state management did not, and that is the payoff of keeping the two separate.}
 \end{frame}
 
-\begin{frame}[fragile,eyebrow=Both ends]{Reconnect, and the app going to background}
+\begin{frame}[fragile,eyebrow=Both ends]{Reconnection and backgrounding}
 \begin{dart}
 Future<void> _scheduleReconnect() async {
   var delay = const Duration(seconds: 1);
@@ -295,7 +295,7 @@ Future<void> _scheduleReconnect() async {
   \note{Ask what happens without the jitter when the broker restarts. Thirty devices retry on the same schedule forever. This is the thundering herd from Lecture 10, met early and on hardware.}
 \end{frame}
 
-\begin{frame}[eyebrow=Both ends]{The lab broker is not the project broker}
+\begin{frame}[eyebrow=Both ends]{Lab broker versus project broker}
   \vskip 2mm
   {\usebeamerfont{small}\hyphenpenalty=10000\exhyphenpenalty=10000 \begin{tabular}{@{}l>{\raggedright\arraybackslash}p{42mm}>{\raggedright\arraybackslash}p{46mm}@{}}
     \toprule
@@ -315,9 +315,9 @@ Future<void> _scheduleReconnect() async {
 \end{frame}
 
 % =====================================================================
-\divider{Part 4 · CoAP}{Request and response on UDP}[When a datagram protocol beats a broker]
+\divider{Part 4 · CoAP}{Request and response on UDP}
 
-\begin{frame}[embedded,eyebrow=CoAP]{CoAP: REST for constrained devices}
+\begin{frame}[embedded,eyebrow=CoAP]{CoAP}
   \vskip 1mm
   \begin{grid}[3]
     \cell[\faCode]{A familiar shape}{GET, POST, PUT and DELETE on URIs, with response codes that mirror HTTP. RFC 7252.}
@@ -330,7 +330,7 @@ Future<void> _scheduleReconnect() async {
   \note{Students who have taken Internet Protocols will recognize every piece here. Keep the emphasis on the device side: no connection state means a node can answer from deep sleep, which no TCP protocol can do.}
 \end{frame}
 
-\begin{frame}[eyebrow=CoAP]{CoAP or MQTT}
+\begin{frame}[eyebrow=CoAP]{CoAP versus MQTT}
   \vskip 1mm
   {\usebeamerfont{small}\hyphenpenalty=10000\exhyphenpenalty=10000 \begin{tabular}{@{}l>{\raggedright\arraybackslash}p{42mm}>{\raggedright\arraybackslash}p{46mm}@{}}
     \toprule
@@ -351,9 +351,9 @@ Future<void> _scheduleReconnect() async {
 \end{frame}
 
 % =====================================================================
-\divider{Part 5 · Trust}{Identity, encryption, updates}[What it takes to put a board on a real network and keep it there]
+\divider{Part 5 · Trust}{Identity, encryption, updates}
 
-\begin{frame}[embedded,eyebrow=Trust]{What an open broker gives away}
+\begin{frame}[embedded,eyebrow=Trust]{Risks of an open broker}
   \vskip 2mm
   \begin{columns}[T]
     \begin{column}{0.55\textwidth}
@@ -375,7 +375,7 @@ Future<void> _scheduleReconnect() async {
   \note{Search engines index reachable brokers. Show one anonymized example if you have it, or simply state that scanning the whole address space for port 1883 takes hours, not weeks. Students underestimate how quickly an exposed port is found.}
 \end{frame}
 
-\begin{frame}[embedded,eyebrow=Trust]{TLS on a device with kilobytes of RAM}
+\begin{frame}[embedded,eyebrow=Trust]{TLS on constrained devices}
   \begin{columns}[T]
     \begin{column}{0.56\textwidth}
       \begin{itemize}
@@ -415,7 +415,7 @@ Future<void> _scheduleReconnect() async {
   \note{Pre-shared keys are underrated for small fleets: no certificate authority, no expiry, far less code. The trade is that you need a real way to get a distinct secret onto each unit, which is the next slide.}
 \end{frame}
 
-\begin{frame}[embedded,eyebrow=Trust]{One identity per device}
+\begin{frame}[embedded,eyebrow=Trust]{Per-device identity}
   \vskip 2mm
   \begin{columns}[T]
     \begin{column}{0.56\textwidth}
@@ -435,7 +435,7 @@ Future<void> _scheduleReconnect() async {
   \note{For the project a manual step is fine: one account and one topic prefix per board, written down in the team's README. The point is that the process exists and is per device, not that it is automated.}
 \end{frame}
 
-\begin{frame}[fragile,embedded,eyebrow=Trust]{Rotating credentials and the ACL}
+\begin{frame}[fragile,embedded,eyebrow=Trust]{Credential rotation and ACLs}
   \vskip 1mm
   \begin{columns}[T]
     \begin{column}{0.46\textwidth}
@@ -458,7 +458,7 @@ topic read  mec/cmd/sensor01/#
   \note{Ask what a device should do when its credential expires while it is offline in a basement. Any honest answer involves a local grace period and a way to re-provision by hand, which is exactly why expiry dates have to be realistic.}
 \end{frame}
 
-\begin{frame}[embedded,eyebrow=Trust]{Over the air: two slots and a bootloader}
+\begin{frame}[embedded,eyebrow=Trust]{Over-the-air updates}
   \vskip 1mm
   {\usebeamerfont{small}\hyphenpenalty=10000\exhyphenpenalty=10000 \begin{tabular}{@{}l>{\raggedright\arraybackslash}p{48mm}>{\raggedright\arraybackslash}p{38mm}@{}}
     \toprule
@@ -495,7 +495,7 @@ topic read  mec/cmd/sensor01/#
   \note{Ask what a self test should check. The useful answer is whatever failure would make the device unreachable, because that is the only class of bug rollback can save you from. A wrong sensor reading is not one of them.}
 \end{frame}
 
-\begin{frame}[fragile,embedded,eyebrow=Trust]{Topic design for your project}
+\begin{frame}[fragile,embedded,eyebrow=Trust]{Project topic design}
   \vskip 1mm
 \begin{codeblock}
 mec/<team>/<device>/telemetry/<sensor>   device publishes, QoS 1
@@ -512,7 +512,7 @@ mec/<team>/<device>/cmd/<name>/ack       device answers, same request id
 \end{frame}
 
 % =====================================================================
-\begin{frame}[eyebrow=Recap]{Three things to remember}
+\begin{frame}[eyebrow=Recap]{Summary}
   \vskip 2mm
   \begin{enumerate}
     \item MQTT is publish and subscribe through a broker. \muted{The device never learns who is listening, and a retained message plus a last will give the app a status topic it can trust.}

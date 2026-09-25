@@ -5,7 +5,7 @@
 \course{Mobile and Embedded Computing}
 \decklabel{Lecture 11}
 \title{gRPC, Protocol Buffers, HTTP/2 and HTTP/3}
-\subtitle{Contract-first calls, streaming, and the transport underneath them}
+\subtitle{Protobuf contracts, streaming, wire format, transport}
 \author{Dinu-Ștefan Rusu}
 \institute{FILS, Universitatea Politehnica București}
 \date{Spring 2027}
@@ -15,13 +15,13 @@
 \titleframe
 
 \objectivesframe{
-  \cell[\faServer]{Design the contract}{Write a .proto file and generate Go and Dart stubs with protoc, from one source of truth.}
-  \cell[\faCode]{Call all four shapes}{Unary, server streaming, client streaming and bidirectional, and know which one a screen needs.}
-  \cell[\faBolt]{Reason about the wire}{Why protobuf is smaller than JSON, how a schema evolves safely, and what HTTP/2 buys for free.}
-  \cell[\faClock]{Survive the network}{Deadlines, cancellation and the radio tail on a mobile client.}
+  \cell[\faServer]{Service contracts}{Write a .proto file and generate Go and Dart stubs with protoc, from one source of truth.}
+  \cell[\faCode]{Call shapes}{Unary, server streaming, client streaming and bidirectional, and know which one a screen needs.}
+  \cell[\faBolt]{Wire format}{Why protobuf is smaller than JSON, how a schema evolves safely, and what HTTP/2 buys for free.}
+  \cell[\faClock]{Deadlines and cancellation}{Deadlines, cancellation and the radio tail on a mobile client.}
 }
 
-\begin{frame}[eyebrow=Overview]{What gRPC is}
+\begin{frame}[eyebrow=Overview]{gRPC overview}
   \vskip 3mm
   \begin{grid}[4]
     \cell[\faServer]{Contract first}{gRPC is a Remote Procedure Call (RPC) framework: one .proto file is the source of truth for every client and the server.}
@@ -32,9 +32,9 @@
   \note{Set the frame for the whole lecture: gRPC bundles a contract, a codec and a transport. Ask which of these four ideas the room has already met without the name attached to it.}
 \end{frame}
 
-\divider{Part 1 · Contracts}{Designing the call before writing code}[RPC versus REST, and the .proto contract]
+\divider{Part 1 · Contracts}{Contract-first design}[RPC versus REST, .proto contracts]
 
-\begin{frame}[fragile,eyebrow=Contracts]{RPC models verbs, REST models nouns}
+\begin{frame}[fragile,eyebrow=Contracts]{RPC versus REST}
   \begin{columns}[T]
     \begin{column}{0.53\textwidth}
       \begin{itemize}
@@ -85,7 +85,7 @@ GetDashboard(user_id: 42)
   \note{This table is the decision your team makes for project requirement four. Point out that a public, discoverable API is the one case where REST is still the right default.}
 \end{frame}
 
-\begin{frame}[fragile,eyebrow=Contracts]{Contract first: the .proto file}
+\begin{frame}[fragile,eyebrow=Contracts]{The .proto contract}
   \begin{columns}[T]
     \begin{column}{0.62\textwidth}
 \begin{codeblock}
@@ -129,7 +129,7 @@ protoc -Iproto --dart_out=grpc:lib/gen \
   \note{Live demo works well here: run these two commands and show the generated files appearing under gen/ and lib/gen. Both plugins read the exact same .proto file.}
 \end{frame}
 
-\begin{frame}[eyebrow=Contracts]{What the generator produces}
+\begin{frame}[eyebrow=Contracts]{Generated code}
   \vskip 2mm
   \begin{itemize}
     \item \textbf{Typed message classes.} \muted{Reading, SubmitReadingResponse and their siblings, as real classes with typed getters, equality and a binary codec already written.}
@@ -142,7 +142,7 @@ protoc -Iproto --dart_out=grpc:lib/gen \
   \note{Ask what happens if two developers hand-edit the same generated file differently. The answer is why generated code stays out of manual review.}
 \end{frame}
 
-\divider{Part 2 · Implementing}{A Go server and a generated Dart client}[Unary calls, then a stream of sensor readings]
+\divider{Part 2 · Implementing}{A Go server and a generated Dart client}[Unary calls, server streaming, client streaming]
 
 \begin{frame}[fragile,eyebrow=Implementing]{A Go server: the unary call}
   \begin{columns}[T]
@@ -166,7 +166,7 @@ func (s *server) SubmitReading(ctx context.Context,
   \note{The server struct embeds pb.UnimplementedTelemetryServer so new RPCs keep it compiling. This is the same Go from Lecture 10, now speaking a generated interface. main() wires it up: net.Listen, grpc.NewServer, RegisterTelemetryServer, Serve.}
 \end{frame}
 
-\begin{frame}[eyebrow=Implementing]{Errors are codes, not strings}
+\begin{frame}[eyebrow=Implementing]{gRPC status codes}
   \vskip 1mm
   \begin{center}
   {\usebeamerfont{small}
@@ -288,9 +288,9 @@ debugPrint('stored: ${sum.accepted}');
   \note{Client streaming is the shape offline sync from Lecture 8 actually needs: drain the outbox in order and get one acknowledgement, not one round trip per row.}
 \end{frame}
 
-\divider{Part 3 · The wire}{What travels, and how it changes}[Protobuf's size on the wire, and evolving a schema safely]
+\divider{Part 3 · The wire}{Wire format and schema evolution}[Protobuf encoding size, schema evolution]
 
-\begin{frame}[fragile,eyebrow=Wire format]{Why protobuf is smaller, and by how much}
+\begin{frame}[fragile,eyebrow=Wire format]{Protobuf encoding size}
   \begin{columns}[T]
     \begin{column}{0.55\textwidth}
       {\usebeamerfont{small}
@@ -318,7 +318,7 @@ debugPrint('stored: ${sum.accepted}');
   \note{This slide replaces the temptation to quote a multiplier. Have students serialize one real message both ways and print the byte counts themselves.}
 \end{frame}
 
-\begin{frame}[fragile,eyebrow=Wire format]{Schema evolution without breaking old apps}
+\begin{frame}[fragile,eyebrow=Wire format]{Schema evolution}
   \begin{columns}[T]
     \begin{column}{0.55\textwidth}
 \begin{codeblock}
@@ -361,9 +361,9 @@ message Reading {
   \note{Client streaming is the one students under-use: draining an offline queue is exactly this shape, one call instead of one round trip per row.}
 \end{frame}
 
-\divider{Part 4 · Transport}{HTTP/2, HTTP/3, and what a phone pays for}[One warm connection, and what happens when the network changes]
+\divider{Part 4 · Transport}{HTTP/2 and HTTP/3 transport}[Multiplexing, QUIC, network changes]
 
-\begin{frame}[eyebrow=Transport]{HTTP/2: one connection, many streams}
+\begin{frame}[eyebrow=Transport]{HTTP/2 multiplexing}
   {\usebeamerfont{small}
   \begin{columns}[T]
     \begin{column}{0.55\textwidth}
@@ -385,7 +385,7 @@ message Reading {
   \note{The head-of-line blocking TCP still causes is the setup for the next slide: QUIC is the fix HTTP/2 could not make on its own. HPACK is HTTP/2's header compression.}
 \end{frame}
 
-\begin{frame}[eyebrow=Transport]{HTTP/3 and QUIC: the mobile case}
+\begin{frame}[eyebrow=Transport]{HTTP/3 and QUIC on mobile}
   {\usebeamerfont{small}
   \begin{columns}[T]
     \begin{column}{0.55\textwidth}
@@ -409,7 +409,7 @@ message Reading {
   \note{Emphasize connection migration: it is the one QUIC feature with no equivalent fix in HTTP/2, because TCP's identity is tied to the IP and port.}
 \end{frame}
 
-\begin{frame}[eyebrow=Numbers]{One connection, four shapes, zero round trips}
+\begin{frame}[eyebrow=Numbers]{Key numbers}
   \vskip 4mm
   \begin{grid}[3]
     \bignum{1}{TCP connection, reused for every call}
@@ -439,9 +439,9 @@ message Reading {
   \note{This is where Lecture 7's background execution material and this lecture meet. A team whose project needs a live gRPC stream while backgrounded will find it does not survive on iOS. Keepalive pings are not free either: they hold the connection open and wake the radio, so tune the interval.}
 \end{frame}
 
-\divider{Part 5 · Reaching everywhere}{The browser, and the project}[gRPC-Web, Connect, and where Lab 6 picks this up]
+\divider{Part 5 · Reaching everywhere}{Browser support and the project}[gRPC-Web, Connect, Lab 6]
 
-\begin{frame}[fragile,eyebrow=gRPC]{gRPC-Web and Connect: the browser problem}
+\begin{frame}[fragile,eyebrow=gRPC]{gRPC-Web and Connect}
   \begin{columns}[T]
     \begin{column}{0.55\textwidth}
       {\usebeamerfont{small}
@@ -465,7 +465,7 @@ http.ListenAndServe(":8080", mux)
   \note{If a team's project ships a Flutter web build, this is the slide that tells them why a raw gRPC channel will not compile for that target. Connect ships Go, TypeScript and Swift clients, and a Dart one is only on the roadmap, so a Flutter web client still talks gRPC-Web.}
 \end{frame}
 
-\begin{frame}[eyebrow=Project]{Where this lands in Lab 6 and the project}
+\begin{frame}[eyebrow=Project]{gRPC in Lab 6 and the project}
   \vskip 3mm
   \begin{grid}[2]
     \cell[\faServer]{Lab 6}{One .proto with a unary call and a server-streaming call, a Go server, and a generated Dart client. The stream updates live, canceling stops it, and a two-second deadline fails a call against a server that sleeps three seconds.}
@@ -476,7 +476,7 @@ http.ListenAndServe(":8080", mux)
   \note{Preview Lab 6 concretely: a .proto with one unary and one server-streaming call, generated stubs, a running server, a Flutter client, a deadline and a cancel.}
 \end{frame}
 
-\begin{frame}[eyebrow=Recap]{Three things to remember}
+\begin{frame}[eyebrow=Recap]{Summary}
   \vskip 2mm
   \begin{enumerate}
     \item A .proto is a contract. \muted{Field numbers are the wire format; never renumber or reuse one.}

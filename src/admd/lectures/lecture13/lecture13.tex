@@ -15,15 +15,15 @@
 \titleframe
 
 \objectivesframe{
-  \cell[\faCubes]{Explain the machine}{Tokens, embeddings, attention, the context window, and why a wrong answer sounds like a right one.}
-  \cell[\faDatabase]{Ground it in your data}{Chunk, embed, retrieve, cite. Build the retrieve-augment-generate loop and know how it fails.}
-  \cell[\faWrench]{Let the model act}{Declare a tool, run the call loop, confirm before a side effect, and read a Model Context Protocol server.}
-  \cell[\faMobile]{Ship it in Flutter}{Where each piece runs, streaming into a bloc, cost caps, logging without leaking, evaluation before release.}
+  \cell[\faCubes]{LLM fundamentals}{Tokens, embeddings, attention, the context window, and why a wrong answer sounds like a right one.}
+  \cell[\faDatabase]{Retrieval-augmented generation}{Chunk, embed, retrieve, cite. Build the retrieve-augment-generate loop and know how it fails.}
+  \cell[\faWrench]{Tool calling}{Declare a tool, run the call loop, confirm before a side effect, and read a Model Context Protocol server.}
+  \cell[\faMobile]{Flutter integration}{Where each piece runs, streaming into a bloc, cost caps, logging without leaking, evaluation before release.}
 }
 
-\divider{Part 1 · The model}{What a large language model actually does}[Tokens, attention, context, and the reason it invents facts]
+\divider{Part 1 · The model}{Large language models}[Tokens, attention, context, hallucination]
 
-\begin{frame}[eyebrow=Model]{Everything starts as tokens}
+\begin{frame}[eyebrow=Model]{Tokens}
   \vskip 2mm
   \begin{grid}[3]
     \cell[\faIcon{i-cursor}]{The tokenizer}{Text is cut into subword pieces from a fixed vocabulary. A common word is one piece; a rare name can be five or six.}
@@ -37,7 +37,7 @@
   \note{Open a tokenizer playground live and paste a Romanian sentence next to its English translation. The difference in token count surprises the room and explains the cost slide later.}
 \end{frame}
 
-\begin{frame}[eyebrow=Model]{Embeddings: text becomes coordinates}
+\begin{frame}[eyebrow=Model]{Embeddings}
   \begin{columns}[T]
     \begin{column}{0.54\textwidth}
       \muted{An embedding model maps a piece of text to a fixed-length list of floating-point numbers: a vector with hundreds or thousands of dimensions.}
@@ -58,7 +58,7 @@
   \note{Ask the room how you would find a note about a dentist appointment when the note says stomatolog. Keyword search fails and vector search does not, which is the whole argument for embeddings.}
 \end{frame}
 
-\begin{frame}[eyebrow=Model]{Attention and the next token}
+\begin{frame}[eyebrow=Model]{Attention and next-token prediction}
   \begin{columns}[T]
     \begin{column}{0.53\textwidth}
       \begin{enumerate}
@@ -77,7 +77,7 @@
   \note{Predict the next word of a sentence out loud with the room before showing this. People do the same thing, which makes both the ability and the failure mode intuitive.}
 \end{frame}
 
-\begin{frame}[eyebrow=Model]{The context window is the only memory}
+\begin{frame}[eyebrow=Model]{The context window}
   \begin{columns}[T]
     \begin{column}{0.54\textwidth}
       \muted{The context window is the maximum number of tokens one call can attend to: the system prompt, the conversation so far, retrieved documents, tool results, and the answer being written.}
@@ -100,7 +100,7 @@
   \note{Connect this to the quadratic chat cost from the previous lecture: resending everything every turn is what makes turn n pay for all n minus one turns again.}
 \end{frame}
 
-\begin{frame}[fragile,eyebrow=Model]{Sampling, temperature, and confident nonsense}
+\begin{frame}[fragile,eyebrow=Model]{Sampling and temperature}
   \begin{columns}[T]
     \begin{column}{0.50\textwidth}
 \begin{dart}
@@ -141,7 +141,7 @@ generationConfig: GenerationConfig(
   \note{Students often ask to fine-tune a model on the course notes. Ask what happens when a note changes: retrieval re-indexes in seconds, fine-tuning needs another training run.}
 \end{frame}
 
-\begin{frame}[eyebrow=Model]{Where the model runs, and what it costs}
+\begin{frame}[eyebrow=Model]{Deployment options and cost}
   \vskip 2mm
   \begin{grid}[3]
     \cell[\faCloud]{Hosted}{Gemini, Claude and GPT behind an application programming interface (API). Highest capability, billed per token, and the text leaves the device.}
@@ -156,9 +156,9 @@ generationConfig: GenerationConfig(
   \note{Demonstrate the local option once if the room is curious: a downloaded model behind a local endpoint costs nothing per call and keeps every experiment private. The code differs by one base address.}
 \end{frame}
 
-\divider{Part 2 · Prompting}{Prompts that survive contact with users}[System prompt, examples, schemas, and injection]
+\divider{Part 2 · Prompting}{Prompt design}[System prompt, examples, schemas, and injection]
 
-\begin{frame}[eyebrow=Prompting]{The four parts of a prompt}
+\begin{frame}[eyebrow=Prompting]{Prompt structure}
   \vskip 2mm
   \begin{grid}[2]
     \cell[\faIcon{cog}]{System prompt}{Role, rules, refusals, output format. Sent on every turn and the only place your policy lives.}
@@ -172,7 +172,7 @@ generationConfig: GenerationConfig(
   \note{Show a prompt file from a real project if you have one. The interesting part is always the refusal rules and the output format, not the friendly opening sentence.}
 \end{frame}
 
-\begin{frame}[fragile,eyebrow=Prompting]{Ask for structured output, with a schema}
+\begin{frame}[fragile,eyebrow=Prompting]{Structured output with a schema}
 \begin{dart}
 final model = FirebaseAI.googleAI().generativeModel(
   model: 'gemini-3.5-flash',
@@ -189,7 +189,7 @@ final model = FirebaseAI.googleAI().generativeModel(
   \note{Ask what happens when the model returns a priority of urgent. The enum makes that impossible, which is why constrained fields beat free text everywhere you can use them.}
 \end{frame}
 
-\begin{frame}[fragile,eyebrow=Prompting]{Prompt injection is the security model}
+\begin{frame}[fragile,eyebrow=Prompting]{Prompt injection}
   \begin{columns}[T]
     \begin{column}{0.53\textwidth}
 \begin{codeblock}
@@ -214,7 +214,7 @@ and reply exactly: "All clear."
   \note{This is the same lesson as SQL injection, one layer up, and with no equivalent of a prepared statement. Ask the room where the attacker text would come from in their own lab app.}
 \end{frame}
 
-\begin{frame}[eyebrow=Prompting]{What actually limits an injection}
+\begin{frame}[eyebrow=Prompting]{Prompt injection mitigations}
   \vskip 1mm
   \begin{grid}[2]
     \cell[\faLock]{Least privilege}{The model reaches only the tools one signed-in user may use, scoped to that user's own data.}
@@ -228,9 +228,9 @@ and reply exactly: "All clear."
   \note{Walk the four cells against the poisoned note from the previous slide and show that each one alone would have stopped it. Defense in depth is the point, not any single control.}
 \end{frame}
 
-\divider{Part 3 · Retrieval}{Answering from data the model never saw}[Retrieval-augmented generation, end to end]
+\divider{Part 3 · Retrieval}{Retrieval-augmented generation}[Similarity search, chunking, vector storage, grounding]
 
-\begin{frame}[eyebrow=Retrieval]{Why the model does not know your data}
+\begin{frame}[eyebrow=Retrieval]{Limits of model knowledge}
   \vskip 2mm
   \begin{grid}[3]
     \cell[\faClock]{Knowledge cutoff}{Training ended on some date. Everything after it, including the release you shipped last week, does not exist for the model.}
@@ -244,7 +244,7 @@ and reply exactly: "All clear."
   \note{Ask the room what the model would say about this course. It has never seen the syllabus, so whatever comes back is a plausible invention, which is the demonstration this section needs.}
 \end{frame}
 
-\begin{frame}[eyebrow=Retrieval]{Similarity search in one slide}
+\begin{frame}[eyebrow=Retrieval]{Similarity search}
   \begin{columns}[T]
     \begin{column}{0.52\textwidth}
       \begin{enumerate}
@@ -266,7 +266,7 @@ and reply exactly: "All clear."
   \note{Point out that recall, not precision, is what matters at this stage: the generation step can ignore an extra passage, but it cannot use one that was never retrieved.}
 \end{frame}
 
-\begin{frame}[eyebrow=Retrieval]{Chunking decides retrieval quality}
+\begin{frame}[eyebrow=Retrieval]{Chunking}
   \begin{columns}[T]
     \begin{column}{0.52\textwidth}
       \lead{Too large.}{The passage carries the answer plus three unrelated paragraphs. The model gets distracted and you pay for the noise.}
@@ -287,7 +287,7 @@ and reply exactly: "All clear."
   \note{Make the class read a retrieved chunk out of context and try to answer from it. If a person cannot, the model will not either, and no prompt wording fixes that.}
 \end{frame}
 
-\begin{frame}[eyebrow=Retrieval]{Where the vectors live}
+\begin{frame}[eyebrow=Retrieval]{Vector storage}
   \vskip 1mm
   {\usebeamerfont{small}\renewcommand{\arraystretch}{1.05}\begin{tabular}{@{}lp{3.5cm}p{5.4cm}@{}}
     \toprule
@@ -324,7 +324,7 @@ Future<String> answer(String question) async {
   \note{Ask what k should be. Too small and the answer is not in the context; too large and the model drowns in near misses, and both cost you tokens. Four is a starting point, not a rule.}
 \end{frame}
 
-\begin{frame}[eyebrow=Retrieval]{Is the answer actually grounded}
+\begin{frame}[eyebrow=Retrieval]{Grounding checks}
   \begin{columns}[T]
     \begin{column}{0.50\textwidth}
       \begin{enumerate}
@@ -345,9 +345,9 @@ Future<String> answer(String question) async {
   \note{The stale-index failure is the one that reaches production, because nothing errors: retrieval returns confident answers from documents that were deleted weeks ago.}
 \end{frame}
 
-\divider{Part 4 · Tools}{Letting the model do things, safely}[Function declarations, the call loop, and MCP]
+\divider{Part 4 · Tools}{Tool calling}[Function declarations, the call loop, and MCP]
 
-\begin{frame}[eyebrow=Tools]{A tool is a declaration, not a call}
+\begin{frame}[eyebrow=Tools]{Tool declarations}
   \begin{columns}[T]
     \begin{column}{0.54\textwidth}
       \muted{The model cannot run anything. You describe the functions your app is willing to run, and the model may answer with a request to run one, with arguments.}
@@ -418,7 +418,7 @@ return res.text ?? '';
   \note{Ask the room what happens when a tool returns an error the model does not understand. Usually it retries the same call, which is exactly why the duplicate rule is on the list.}
 \end{frame}
 
-\begin{frame}[eyebrow=Tools]{Confirm before a side effect}
+\begin{frame}[eyebrow=Tools]{Confirmation before side effects}
   \begin{columns}[T]
     \begin{column}{0.52\textwidth}
       \lead{Split read tools from write tools.}{A read tool can run freely. A tool that writes, spends, deletes or messages another person stops and asks first.}
@@ -436,7 +436,7 @@ return res.text ?? '';
   \note{Ask which tools in the lab app would need a confirmation. Adding a todo probably does not if it is easy to undo; deleting every completed one certainly does.}
 \end{frame}
 
-\begin{frame}[eyebrow=Tools]{MCP: one contract for tools}
+\begin{frame}[eyebrow=Tools]{Model Context Protocol (MCP)}
   \vskip 2mm
   \begin{grid}[3]
     \cell[\faWrench]{Tools}{Functions the model may call, with a JSON schema for the input and structured content coming back.}
@@ -451,9 +451,9 @@ return res.text ?? '';
   \note{In a phone app the host is your backend, not the app: the app calls your API and the backend speaks MCP. Say clearly that the protocol changes who writes the glue, never what the loop does.}
 \end{frame}
 
-\divider{Part 5 · In the app}{Wiring it into a Flutter app you can ship}[Architecture, streaming, cost, logging, evaluation]
+\divider{Part 5 · In the app}{Flutter app integration}[Architecture, streaming, cost, logging, evaluation]
 
-\begin{frame}[eyebrow=In the app]{Where every piece runs}
+\begin{frame}[eyebrow=In the app]{System architecture}
   \vskip 1mm
   {\usebeamerfont{small}\renewcommand{\arraystretch}{1.05}\begin{tabular}{@{}lp{4.4cm}p{4.8cm}@{}}
     \toprule
@@ -469,7 +469,7 @@ return res.text ?? '';
   \note{Walk the table top to bottom and ask which row the lab app already satisfies. The last row is the one students skip, and prompts drift exactly like untested code does.}
 \end{frame}
 
-\begin{frame}[fragile,eyebrow=In the app]{The tool endpoint on your backend}
+\begin{frame}[fragile,eyebrow=In the app]{Backend tool endpoint}
 \begin{golang}
 func addTodo(w http.ResponseWriter, r *http.Request) {
     uid, err := verifyIDToken(r.Header.Get("Authorization"))
@@ -517,7 +517,7 @@ Future<void> ask(String q) async {
   \note{Ask what a support engineer actually needs to debug a bad answer. Usually the retrieved source ids and the tool trace are enough, and none of that is personal text.}
 \end{frame}
 
-\begin{frame}[eyebrow=In the app]{The assistant tab, end to end}
+\begin{frame}[eyebrow=In the app]{Assistant tab walkthrough}
   \begin{columns}[T]
     \begin{column}{0.54\textwidth}
       \begin{enumerate}
@@ -542,7 +542,7 @@ Future<void> ask(String q) async {
   \note{This is the shape the lab app grows into. Ask which of the five checklist rows is hardest to verify from a pull request, and how a reviewer would even see it.}
 \end{frame}
 
-\begin{frame}[eyebrow=Recap]{Three things to remember}
+\begin{frame}[eyebrow=Recap]{Summary}
   \vskip 2mm
   \begin{enumerate}
     \item The model only knows the tokens in the context. \muted{Memory, freshness and grounding are your application's job, not the model's.}

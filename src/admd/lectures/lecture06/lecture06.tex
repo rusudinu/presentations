@@ -15,15 +15,15 @@
 \titleframe
 
 \objectivesframe{
-  \cell[\faIcon{exchange-alt}]{Events in, states out}{Write a Cubit and a Bloc, and know which of the two a screen deserves.}
-  \cell[\faLayerGroup]{The widgets}{BlocProvider, BlocBuilder, BlocListener, BlocConsumer, read and watch.}
+  \cell[\faIcon{exchange-alt}]{Cubit and Bloc}{Write a Cubit and a Bloc, and know which of the two a screen deserves.}
+  \cell[\faLayerGroup]{Bloc widgets}{BlocProvider, BlocBuilder, BlocListener, BlocConsumer, read and watch.}
   \cell[\faDatabase]{State and data}{Immutable Equatable states, copyWith, and a repository under the bloc.}
-  \cell[\faVial]{Prove it works}{Test a bloc with bloc\_test, and read Riverpod code when you meet it.}
+  \cell[\faVial]{Testing and Riverpod}{Test a bloc with bloc\_test, and read Riverpod code when you meet it.}
 }
 
-\divider{Part 1 · Why}{When setState is not enough}[Shared state, side effects, and tests]
+\divider{Part 1 · Why}{Limits of setState}[Shared state, side effects, testing]
 
-\begin{frame}[eyebrow=Why]{Where setState stops scaling}
+\begin{frame}[eyebrow=Why]{Scaling problems with setState}
   \vskip 2mm
   \begin{grid}[3]
     \cell[\faIcon{share-alt}]{Two screens, one truth}{The list screen and the detail screen both own a copy. They drift apart within a week.}
@@ -36,7 +36,7 @@
   \note{Ask the room who has shipped a screen where two widgets disagreed about the same value. Every one of these six problems has bitten someone in Lab 3 or Lab 4. This lecture is the tool that fixes them, and the lab right after it is built on it.}
 \end{frame}
 
-\begin{frame}[eyebrow=Why]{The shape of the answer}
+\begin{frame}[eyebrow=Why]{BLoC data flow}
   \vskip 2mm
   \begin{grid}[3]
     \cell[\faHandPointer]{The UI sends}{A tap becomes an event or a method call. The widget does not decide anything.}
@@ -51,7 +51,7 @@
   \note{Draw the loop on the board once: widget, event, bloc, state, widget. Stress that a widget never mutates state directly. That single rule is what makes the whole pattern testable and traceable.}
 \end{frame}
 
-\begin{frame}[eyebrow=Why]{The vocabulary}
+\begin{frame}[eyebrow=Why]{BLoC terminology}
   \vskip 1mm
   {\usebeamerfont{small}\begin{tabular}{@{}lp{52mm}p{56mm}@{}}
     \toprule
@@ -70,9 +70,9 @@
   \note{Get the words fixed early, because the package names them consistently and the error messages use them. Point out that state and event are plain Dart classes: there is nothing magic about either.}
 \end{frame}
 
-\divider{Part 2 · Cubit and Bloc}{Two classes, one pattern}[emit, on<Event>, and how to choose]
+\divider{Part 2 · Cubit and Bloc}{Cubit and Bloc}[emit, on<Event>, choosing between them]
 
-\begin{frame}[fragile,eyebrow=Cubit]{A Cubit is a class with methods}
+\begin{frame}[fragile,eyebrow=Cubit]{Defining a Cubit}
   \begin{columns}[T]
     \begin{column}{0.56\textwidth}
 \begin{dart}
@@ -96,7 +96,7 @@ class CounterCubit extends Cubit<int> {
   \note{This is the smallest useful example, and it is the one in examples/lib/lecture06\_bloc/cubit in the shared repository. Point out that emit is protected: only the Cubit itself may call it, which is what keeps the direction one way.}
 \end{frame}
 
-\begin{frame}[fragile,eyebrow=Cubit]{Providing it, and reading it}
+\begin{frame}[fragile,eyebrow=Cubit]{Providing and reading a Cubit}
   \begin{columns}[T]
     \begin{column}{0.58\textwidth}
 \begin{dart}
@@ -145,7 +145,7 @@ class TodoCubit extends Cubit<TodoState> {
   \note{Three emits for one action is the normal shape: loading, then either ready or failure. The UI never asks whether a request is in flight, because the state already says so. Note that the repository is injected, which is the hook every test uses.}
 \end{frame}
 
-\begin{frame}[fragile,eyebrow=Bloc]{Bloc: events are objects}
+\begin{frame}[fragile,eyebrow=Bloc]{Bloc: event classes}
   \begin{columns}[T]
     \begin{column}{0.62\textwidth}
 \begin{dart}
@@ -171,7 +171,7 @@ final class TodoAdded extends TodoEvent {
   \note{The past tense convention comes from the package documentation and it pays off: an event log then reads like a story of the session. Ask the room what a bad event name would look like, and why an imperative name pushes logic back into the widget.}
 \end{frame}
 
-\begin{frame}[fragile,eyebrow=Bloc]{The Bloc: one handler per event}
+\begin{frame}[fragile,eyebrow=Bloc]{Bloc event handlers}
 \begin{dart}
 class TodoBloc extends Bloc<TodoEvent, TodoState> {
   TodoBloc(this._repo) : super(const TodoState()) {
@@ -190,7 +190,7 @@ class TodoBloc extends Bloc<TodoEvent, TodoState> {
   \note{Every event type needs exactly one on registration, and registering the same type twice throws at construction time. The handler receives the event and an Emitter, which is the only object allowed to publish while that handler runs.}
 \end{frame}
 
-\begin{frame}[eyebrow=Bloc]{Cubit or Bloc}
+\begin{frame}[eyebrow=Bloc]{Cubit versus Bloc}
   \vskip 1mm
   {\usebeamerfont{small}\begin{tabular}{@{}lp{44mm}p{58mm}@{}}
     \toprule
@@ -210,9 +210,9 @@ class TodoBloc extends Bloc<TodoEvent, TodoState> {
   \note{The ready-made transformers, droppable and restartable, live in the bloc\_concurrency package; the \code{transformer} parameter itself is part of \code{on<Event>}. Discourage the reflex of reaching for Bloc because it looks more professional. The promotion is mechanical: keep the state class, turn each method into an event, and move the body into a handler. That is exactly what Lab 5 Task II asks for.}
 \end{frame}
 
-\divider{Part 3 · The widgets}{Connecting a bloc to the tree}[Provider, builder, listener, consumer]
+\divider{Part 3 · The widgets}{Bloc widgets}[Provider, builder, listener, consumer]
 
-\begin{frame}[fragile,eyebrow=Widgets]{BlocProvider: one owner, one subtree}
+\begin{frame}[fragile,eyebrow=Widgets]{BlocProvider and scope}
   \begin{columns}[T]
     \begin{column}{0.58\textwidth}
 \begin{dart}
@@ -263,7 +263,7 @@ BlocBuilder<TodoBloc, TodoState>(
   \note{Measure before optimizing: open Rebuild Stats on the DevTools Performance view, which they saw last lecture, and show that a badly placed BlocBuilder repaints the app bar too. buildWhen is a filter, not a fix for a badly shaped state class.}
 \end{frame}
 
-\begin{frame}[fragile,eyebrow=Widgets]{BlocListener: side effects, exactly once}
+\begin{frame}[fragile,eyebrow=Widgets]{BlocListener for side effects}
 \begin{dart}
 BlocListener<TodoBloc, TodoState>(
   listenWhen: (previous, current) => previous.status != current.status,
@@ -281,7 +281,7 @@ BlocListener<TodoBloc, TodoState>(
   \note{This is the slide that prevents the classic bug of a snack bar firing three times. Say the rule out loud: a builder returns a widget and does nothing else. Anything that touches the world outside the tree goes in a listener.}
 \end{frame}
 
-\begin{frame}[fragile,eyebrow=Widgets]{BlocConsumer: both, when both are needed}
+\begin{frame}[fragile,eyebrow=Widgets]{BlocConsumer}
 \begin{dart}
 BlocConsumer<AuthCubit, AuthState>(
   listenWhen: (previous, current) => current.error != null,
@@ -316,7 +316,7 @@ BlocConsumer<AuthCubit, AuthState>(
   \note{These two mistakes are the ones you will see most often in the lab. The error message for watch outside build is clear; the read in build failure is silent, which makes it worse. Show it once with a stale counter.}
 \end{frame}
 
-\divider{Part 4 · State and data}{Designing state, and its data}[Equatable, copyWith, repositories]
+\divider{Part 4 · State and data}{State design and repositories}[Equatable, copyWith, repositories]
 
 \begin{frame}[fragile,eyebrow=State]{One state class with a status}
   \begin{columns}[T]
@@ -345,7 +345,7 @@ class TodoState extends Equatable {
   \note{Forgetting to add a new field to props is the single most common Equatable bug, and it looks like a UI that refuses to update. Say the symptom out loud so they recognize it later: the data is right in the debugger and wrong on screen.}
 \end{frame}
 
-\begin{frame}[fragile,eyebrow=State]{copyWith, and the two failure modes}
+\begin{frame}[fragile,eyebrow=State]{copyWith and common errors}
   \begin{columns}[T]
     \begin{column}{0.56\textwidth}
 \begin{dart}
@@ -391,7 +391,7 @@ Widget body(AuthState state) => switch (state) {
   \note{This is the payoff of the pattern matching slide from Lecture 2. Contrast it with the status enum: the enum keeps one class and permits impossible combinations, the sealed hierarchy makes them unrepresentable but costs more classes.}
 \end{frame}
 
-\begin{frame}[eyebrow=State]{Which shape to pick}
+\begin{frame}[eyebrow=State]{Choosing a state shape}
   \vskip 2mm
   \begin{grid}[2]
     \cell[\faLayerGroup]{One class with a status}{Fewer classes, and copyWith carries data across a reload so the list stays on screen while it refreshes. Cost: states like loading with old data and an error must be checked by hand.}
@@ -405,7 +405,7 @@ Widget body(AuthState state) => switch (state) {
   \note{Give the concrete rule: a list that pulls to refresh is the first case, an authentication gate is the second. Tell them Lab 5 uses the status field version, because the todo list must survive a reload.}
 \end{frame}
 
-\begin{frame}[eyebrow=Data]{The layers under a screen}
+\begin{frame}[eyebrow=Data]{App layers}
   \vskip 2mm
   \begin{grid}[2]
     \cell[\faIcon{mobile-alt}]{Widget}{Renders a state and sends events. Holds no business rule.}
@@ -419,7 +419,7 @@ Widget body(AuthState state) => switch (state) {
   \note{Connect this back to Lecture 7, where the repository gets its real implementation with dio and json serialization. Today the point is only the boundary: the bloc depends on an interface it can be handed a fake of.}
 \end{frame}
 
-\begin{frame}[fragile,eyebrow=Data]{A repository}
+\begin{frame}[fragile,eyebrow=Data]{Repository implementation}
   \begin{columns}[T]
     \begin{column}{0.56\textwidth}
 \begin{dart}
@@ -445,7 +445,7 @@ class TodoRepository {
   \note{Point out that fetchTodos is named after the use case, not after the endpoint. If the API changes shape next semester, only this file changes. That is the entire argument for the layer.}
 \end{frame}
 
-\begin{frame}[fragile,eyebrow=Data]{Wiring it at the top of the app}
+\begin{frame}[fragile,eyebrow=Data]{Providing repositories at the app root}
   \begin{columns}[T]
     \begin{column}{0.62\textwidth}
 \begin{dart}
@@ -495,9 +495,9 @@ lib/
   \note{Mention that the bloc, event and state files are conventionally siblings, and many teams use part files to join them. Keep it simple in the lab: three files, plain imports, no code generation yet.}
 \end{frame}
 
-\divider{Part 5 · Testing and alternatives}{Proving it works}[bloc\_test, and Riverpod as the alternative]
+\divider{Part 5 · Testing and alternatives}{Testing and Riverpod}[bloc\_test, Riverpod]
 
-\begin{frame}[fragile,eyebrow=Testing]{bloc\_test: one full example}
+\begin{frame}[fragile,eyebrow=Testing]{bloc\_test example}
 \begin{dart}
 blocTest<TodoBloc, TodoState>(
   'add then toggle emits two ready states',
@@ -516,7 +516,7 @@ blocTest<TodoBloc, TodoState>(
   \note{Two more parameters are worth knowing: seed sets a starting state, and verify runs assertions after the last emit. The whole test takes a few milliseconds because no widget is built. Stress that expect compares states with equals, so a broken props list fails here, which is exactly where you want it to fail.}
 \end{frame}
 
-\begin{frame}[eyebrow=Testing]{What to test at each layer}
+\begin{frame}[eyebrow=Testing]{Testing each layer}
   \vskip 2mm
   \begin{grid}[3]
     \cell[\faDatabase]{Repository}{Feed it a fake API. Assert that JSON becomes models and that a failure becomes the error your app expects.}
@@ -548,7 +548,7 @@ class TodoList extends ConsumerWidget {
   \note{\code{ProviderScope} at the root replaces the tower of BlocProviders. The key difference to name out loud: flutter\_bloc resolves dependencies through the widget tree at runtime, Riverpod resolves them through Dart references at compile time. Everything else is a consequence of that one choice.}
 \end{frame}
 
-\begin{frame}[fragile,eyebrow=Riverpod]{NotifierProvider holds the logic}
+\begin{frame}[fragile,eyebrow=Riverpod]{NotifierProvider}
 \begin{dart}
 class TodoListNotifier extends Notifier<List<Todo>> {
   @override
@@ -566,7 +566,7 @@ final todoListProvider =
   \note{Show that build returns the initial state instead of a constructor argument, and that assigning to state is the emit of this world. A Notifier is a Cubit with a different spelling, which is the honest summary.}
 \end{frame}
 
-\begin{frame}[eyebrow=Riverpod]{Choosing between them}
+\begin{frame}[eyebrow=Riverpod]{BLoC versus Riverpod}
   \vskip 1mm
   {\usebeamerfont{small}\begin{tabular}{@{}lp{46mm}p{54mm}@{}}
     \toprule
@@ -586,7 +586,7 @@ final todoListProvider =
   \note{Be explicit that this is not a verdict on quality. The reason for the course choice is that the explicit event log makes it easier to grade and easier to discuss in a review. Tell them they will meet Riverpod in real code and should be able to read it.}
 \end{frame}
 
-\begin{frame}[eyebrow=Mistakes]{Four mistakes to expect}
+\begin{frame}[eyebrow=Mistakes]{Common mistakes}
   \vskip 2mm
   \begin{grid}[2]
     \cell[\faExclamationCircle]{Logic in the widget}{An \code{if} in build that decides a business rule. Move it into the bloc and emit the decision as state.}
@@ -599,7 +599,7 @@ final todoListProvider =
   \note{Ask which of the four they think they will hit first in Lab 5. The mutation one is the most likely, because Dart lists are mutable by default and the compiler will not stop them.}
 \end{frame}
 
-\begin{frame}[eyebrow=Recap]{Three things to remember}
+\begin{frame}[eyebrow=Recap]{Summary}
   \vskip 2mm
   \begin{enumerate}
     \item Events in, states out. \muted{The widget sends and renders. The bloc decides. Nothing else mutates state.}

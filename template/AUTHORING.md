@@ -33,8 +33,9 @@ A lecture is two hours. Target **30 to 38 slides** counting title, dividers, rec
 1. `\titleframe`
 2. `\objectivesframe{...}` with exactly four `\cell`s: what the student can do after the lecture.
 3. Three to five sections, each opened with `\divider{Part N · Name}{One-line title}[Optional subtitle]`.
+   The subtitle is a plain list of the section's topics.
 4. Content slides. Every content slide has an `eyebrow=` that names its section.
-5. A recap slide (`eyebrow=Recap`) with three numbered points, then a further-reading slide or block
+5. A recap slide (`eyebrow=Recap`, titled "Summary") with three numbered points, then a further-reading slide or block
    with two to four links.
 6. `\closingframe{...}{...}`.
 
@@ -47,7 +48,7 @@ rules.
 A lab is two hours, every second week. Target **12 to 18 slides**.
 
 1. `\titleframe`
-2. "What this lab is for" (`eyebrow=Today`): a two-cell `grid` with the two skills practiced, then
+2. "Lab objectives" (`eyebrow=Today`): a two-cell `grid` with the two skills practiced, then
    `\taskmeta{Time}{2 hours}{Submit}{...}`.
 3. Setup: where the code goes, the branch name, packages to add, the command to run first.
 4. Tasks (`eyebrow=Task I`, `Task II`, ...): `steps` with one requirement per step, on the right a
@@ -67,6 +68,8 @@ next lab.
 The slide is 160 × 90 mm. The theme leaves roughly 60 mm of height under the title block.
 
 - Title: at most 55 characters, so it fits on one line. Sentence case. No trailing period.
+  A plain noun phrase naming the topic ("Grading", "Retry with backoff"), not a sentence:
+  no "you", no who/what/how/why/where phrasing, no questions, no metaphors or punchlines.
 - Eyebrow: one to three words.
 - Body text: at most about 90 words per slide. Prefer a `grid`, a table, or two `columns` over a
   wall of text.

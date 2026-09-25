@@ -5,7 +5,7 @@
 \course{Mobile and Embedded Computing}
 \decklabel{Lecture 1}
 \title{Orientation, the device spectrum, and how code runs}
-\subtitle{How the course works, and what runs under your app}
+\subtitle{Course plan, device spectrum, and code execution}
 \author{Dinu-Ștefan Rusu}
 \institute{FILS, Universitatea Politehnica București}
 \date{Spring 2027}
@@ -15,16 +15,16 @@
 \titleframe
 
 \objectivesframe{
-  \cell[\faGraduationCap]{Know the plan}{The 14 lectures, the 7 labs, the 7 project sessions, and how the 10 points are earned.}
-  \cell[\faIcon{mobile-alt}]{Read the spectrum}{Where a phone, a single-board computer and a microcontroller sit, and how their budgets differ.}
-  \cell[\faCode]{Source to instructions}{Compilers, interpreters, JIT and AOT, and why Dart is built both ways.}
+  \cell[\faGraduationCap]{Course plan}{The 14 lectures, the 7 labs, the 7 project sessions, and how the 10 points are earned.}
+  \cell[\faIcon{mobile-alt}]{Device spectrum}{Where a phone, a single-board computer and a microcontroller sit, and how their budgets differ.}
+  \cell[\faCode]{Compilation models}{Compilers, interpreters, JIT and AOT, and why Dart is built both ways.}
   \cell[\faRecycle]{Memory on a phone}{What a garbage collector does for you, and what it costs inside a frame.}
 }
 
 % =====================================================================
-\divider{Part 1 · Orientation}{How this course works}[Lectures, labs, the project, and how you are graded]
+\divider{Part 1 · Orientation}{Course organization}[Lectures, labs, project, grading]
 
-\begin{frame}[eyebrow=Orientation]{Who is teaching this course}
+\begin{frame}[eyebrow=Orientation]{Instructor}
   \vskip 3mm
   \begin{columns}[T]
     \begin{column}{0.52\textwidth}
@@ -44,7 +44,7 @@
   \note{Introduce yourself in under two minutes. Say plainly that the material is chosen from production experience, not from a textbook. Point at the Teams channel as the fastest way to reach you between sessions.}
 \end{frame}
 
-\begin{frame}[eyebrow=Orientation]{What this course is about}
+\begin{frame}[eyebrow=Orientation]{Course scope}
   \vskip 2mm
   \begin{grid}[3]
     \cell[\faMicrochip]{Under the app}{How code executes, how the phone spends energy, how a microcontroller is programmed.}
@@ -99,7 +99,7 @@
   \note{Point out the arc: the device side first, then the phone side, then the server side, then measurement. Tell students that every lecture deck goes on Moodle the same day it is presented.}
 \end{frame}
 
-\begin{frame}[eyebrow=Orientation]{Labs, project sessions, and the rhythm}
+\begin{frame}[eyebrow=Orientation]{Labs and project sessions}
   \vskip 1mm
   {\usebeamerfont{small}
   \begin{tabular}{@{}rll@{}}
@@ -120,7 +120,7 @@
   \note{Make the branch rule concrete now: one branch per lab, pushed before the next lab starts. Say that a lab pushed late is still graded, but a lab never pushed is worth nothing.}
 \end{frame}
 
-\begin{frame}[eyebrow=Orientation]{Grading: 100 points, four sources}
+\begin{frame}[eyebrow=Orientation]{Grading}
   \vskip 4mm
   \begin{grid}[3]
     \bignum{40 p}{final exam, in the exam session}
@@ -155,7 +155,7 @@
   \note{Open the shared sheet on the projector and show that claiming is first come, first served.}
 \end{frame}
 
-\begin{frame}[eyebrow=Orientation]{The project: five graded requirements}
+\begin{frame}[eyebrow=Orientation]{Project requirements}
   \vskip 2mm
   \begin{grid}[3]
     \cell[\faMicrochip]{1. A device component}{A TinyGo program on a board, or in the Wokwi simulator, reading a sensor.}
@@ -168,7 +168,7 @@
   \note{Stress that the project extends the ADMD app rather than starting a new one, so the hours go into device and sync work. All five requirements are needed for approval, not four out of five.}
 \end{frame}
 
-\begin{frame}[eyebrow=Orientation]{Project milestones, one per session}
+\begin{frame}[eyebrow=Orientation]{Project milestones}
   \vskip 2mm
   {\usebeamerfont{small}
   \begin{tabular}{@{}rl@{}}
@@ -189,7 +189,7 @@
   \note{Tell teams to treat week 3 as the real deadline: a board that never prints anything to serial is the failure mode that kills projects. Encourage the simulator if hardware delivery looks uncertain.}
 \end{frame}
 
-\begin{frame}[eyebrow=Orientation]{What you are assumed to know already}
+\begin{frame}[eyebrow=Orientation]{Prerequisites}
   \vskip 2mm
   \begin{columns}[T]
     \begin{column}{0.55\textwidth}
@@ -210,9 +210,9 @@
 \end{frame}
 
 % =====================================================================
-\divider{Part 2 · The device spectrum}{From the cloud to a microcontroller}[What changes when the machine runs on a battery]
+\divider{Part 2 · The device spectrum}{From the cloud to a microcontroller}
 
-\begin{frame}[eyebrow=Device spectrum]{One spectrum, four points on it}
+\begin{frame}[eyebrow=Device spectrum]{The device spectrum}
   \vskip 2mm
   {\usebeamerfont{small}
   \begin{tabular}{@{}lp{24mm}p{26mm}p{22mm}p{24mm}@{}}
@@ -232,7 +232,7 @@
   \note{Ask the room to guess the RAM of an ESP32 before you show the last column. The guesses are usually off by three orders of magnitude, which is exactly the reflex this table is meant to reset.}
 \end{frame}
 
-\begin{frame}[eyebrow=Device spectrum]{What changes when you leave the desktop}
+\begin{frame}[eyebrow=Device spectrum]{Mobile and embedded constraints}
   \vskip 2mm
   \begin{grid}[3]
     \cell[\faBatteryHalf]{Battery is a resource}{Every cycle and every radio wake-up costs energy your code cannot replenish.}
@@ -245,7 +245,7 @@
   \note{The ARM note matters twice: your Dart release build is compiled to ARM machine code, and a native library built for x86 will not load on a phone. Come back to this in Lecture 12, when we call C from Dart.}
 \end{frame}
 
-\begin{frame}[eyebrow=Device spectrum]{What every app negotiates for}
+\begin{frame}[eyebrow=Device spectrum]{Device resources}
   \vskip 1mm
   \begin{grid}[3]
     \cell[\faMicrochip]{CPU}{Compute, shared with every other scheduled process.}
@@ -284,7 +284,7 @@
   \note{This is the clearest example of a budget you cannot negotiate. Ask students how much RAM their own phone has, then ask how much of it is actually free with a browser and a chat app already open.}
 \end{frame}
 
-\begin{frame}[eyebrow=Device spectrum]{The numbers worth carrying in your head}
+\begin{frame}[eyebrow=Device spectrum]{Key figures}
   \vskip 2mm
   \begin{grid}[3]
     \bignum{8–16 GB}{RAM in a 2026 flagship phone}
@@ -301,9 +301,9 @@
 \end{frame}
 
 % =====================================================================
-\divider{Part 3 · Embedded}{Where embedded fits, and why the phone is the hub}[Kilobytes of RAM, milliwatts of power, and often no operating system]
+\divider{Part 3 · Embedded}{Embedded systems and the phone as hub}[Kilobytes of RAM, milliwatts of power, no operating system]
 
-\begin{frame}[embedded,eyebrow=Embedded]{The same constraints, taken further}
+\begin{frame}[embedded,eyebrow=Embedded]{Embedded constraints}
   \vskip 2mm
   \begin{columns}[T]
     \begin{column}{0.54\textwidth}
@@ -325,7 +325,7 @@
   \note{Say the board recommendation plainly and repeat it in Lab 1. Steer students away from the original Xtensa ESP32: TinyGo now drives it and espradio gives it Wi-Fi, but there is still no Bluetooth from TinyGo on that chip, and Lab 3 needs BLE.}
 \end{frame}
 
-\begin{frame}[embedded,eyebrow=Embedded]{The phone is the hub}
+\begin{frame}[embedded,eyebrow=Embedded]{The phone as hub}
   \vskip 1mm
   \begin{grid}[3]
     \cell[\faMicrochip]{Sensor and microcontroller}{A TinyGo program reads a sensor and publishes it. Milliwatts, no screen, no user.}
@@ -340,9 +340,9 @@
 \end{frame}
 
 % =====================================================================
-\divider{Part 4 · How code runs}{From source text to a running program}[Compilers, interpreters, JIT, AOT, and garbage collection]
+\divider{Part 4 · How code runs}{Code execution}[Compilers, interpreters, JIT, AOT, and garbage collection]
 
-\begin{frame}[eyebrow=How code runs]{From source text to instructions}
+\begin{frame}[eyebrow=How code runs]{Compilation stages}
   \vskip 2mm
   \begin{grid}[2]
     \cell[\faCode]{1. Source text}{Characters in a file. The CPU can execute none of it, so something must translate it.}
@@ -399,7 +399,7 @@
   \note{The row students should remember is start-up. On a phone, a cold start that takes an extra second becomes a review complaint, which is a large part of why release builds are compiled ahead of time.}
 \end{frame}
 
-\begin{frame}[eyebrow=How code runs]{Is compiled code faster}
+\begin{frame}[eyebrow=How code runs]{Compiled versus interpreted performance}
   \vskip 2mm
   \begin{columns}[T]
     \begin{column}{0.56\textwidth}
@@ -421,7 +421,7 @@
   \note{This slide exists to kill a number students repeat from the internet. Push back the moment anyone quotes a speed multiplier without naming a workload and a device.}
 \end{frame}
 
-\begin{frame}[fragile,eyebrow=How code runs]{Why Dart is compiled two different ways}
+\begin{frame}[fragile,eyebrow=How code runs]{Dart JIT and AOT compilation}
   \vskip 2mm
   \begin{columns}[T]
     \begin{column}{0.50\textwidth}
@@ -445,7 +445,7 @@ flutter build apk --release
   \note{Students routinely report performance problems that only exist in debug builds. Show the difference live if there is time: run the same screen with and without the release flag.}
 \end{frame}
 
-\begin{frame}[eyebrow=How code runs]{Garbage collection, in one slide}
+\begin{frame}[eyebrow=How code runs]{Garbage collection}
   \vskip 2mm
   \begin{columns}[T]
     \begin{column}{0.56\textwidth}
@@ -468,7 +468,7 @@ flutter build apk --release
 \end{frame}
 
 % =====================================================================
-\begin{frame}[eyebrow=Recap]{Three things to remember}
+\begin{frame}[eyebrow=Recap]{Summary}
   \vskip 2mm
   \begin{enumerate}
     \item One spectrum, cloud to microcontroller. \muted{This course lives on the constrained half, where the machine runs on a battery.}

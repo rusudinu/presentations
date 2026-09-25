@@ -5,7 +5,7 @@
 \course{Mobile and Embedded Computing}
 \decklabel{Lab 5}
 \title{Offline-first sync}
-\subtitle{An outbox, a drain loop, and one conflict rule}
+\subtitle{Outbox, drain loop, delta sync, conflict rule}
 \author{Dinu-Ștefan Rusu}
 \institute{FILS, Universitatea Politehnica București}
 \date{Week 10}
@@ -14,7 +14,7 @@
 
 \titleframe
 
-\begin{frame}[eyebrow=Today]{What this lab is for}
+\begin{frame}[eyebrow=Today]{Lab objectives}
   \vskip 2mm
   \begin{grid}[2]
     \cell[\faDatabase]{Write once, sync later}{Every note write commits to the notes table and an outbox row, in one transaction. No edit is ever lost to a dropped connection.}
@@ -24,7 +24,7 @@
   \taskmeta{Time}{2 hours}{Submit}{Push to your team repo, branch \code{lab-5}, before next lab}
 \end{frame}
 
-\begin{frame}[fragile,eyebrow=Setup]{Where your code goes}
+\begin{frame}[fragile,eyebrow=Setup]{Branch, dependencies, file layout}
   \begin{steps}
     \item Branch the repository, add Drift, and generate the boilerplate:
 \begin{shell}
@@ -40,7 +40,7 @@ dart run build_runner build
   \end{hint}
 \end{frame}
 
-\begin{frame}[eyebrow=Task I]{Schema and outbox, one transaction}
+\begin{frame}[eyebrow=Task I]{Schema and outbox in one transaction}
   \begin{columns}[T]
     \begin{column}{0.55\textwidth}
       \begin{steps}
@@ -64,7 +64,7 @@ dart run build_runner build
   \end{takeaway}
 \end{frame}
 
-\begin{frame}[fragile,eyebrow=Task I]{Two tables, one purpose}
+\begin{frame}[fragile,eyebrow=Task I]{Notes and Outbox tables}
   \begin{columns}[T]
     \begin{column}{0.48\textwidth}
 \begin{dart}
@@ -96,7 +96,7 @@ class Outbox extends Table {
   \end{columns}
 \end{frame}
 
-\begin{frame}[fragile,eyebrow=Task I]{Both writes, one transaction}
+\begin{frame}[fragile,eyebrow=Task I]{Both writes in one transaction}
   \vskip 1mm
 \begin{dart}
 Future<void> saveNote(Note n) => db.transaction(() async {
@@ -112,7 +112,7 @@ Future<void> saveNote(Note n) => db.transaction(() async {
   \muted{watch() on notes fires the moment this commits. The outbox row leaves later, but the edit is already on screen.}
 \end{frame}
 
-\begin{frame}[eyebrow=Task II]{Drain the outbox, then pull the delta}
+\begin{frame}[eyebrow=Task II]{Outbox drain and delta pull}
   \begin{columns}[T]
     \begin{column}{0.55\textwidth}
       \begin{steps}
@@ -133,7 +133,7 @@ Future<void> saveNote(Note n) => db.transaction(() async {
   \end{columns}
 \end{frame}
 
-\begin{frame}[fragile,eyebrow=Task II]{The drain loop}
+\begin{frame}[fragile,eyebrow=Task II]{Drain loop}
 \begin{dart}
 Future<void> drainOutbox() async {
   final batch = await (select(outbox)
@@ -169,7 +169,7 @@ Future<void> pull() async {
 \end{dart}
 \end{frame}
 
-\begin{frame}[fragile,eyebrow=Reference]{The whole sync server, part 1}
+\begin{frame}[fragile,eyebrow=Reference]{Sync server, part 1}
 \begin{golang}
 type Note struct{ ID, Title, Body, UpdatedAt, DeletedAt string; Version int }
 var mu sync.Mutex; var version int
@@ -187,7 +187,7 @@ func upsert(w http.ResponseWriter, r *http.Request) {
 \end{golang}
 \end{frame}
 
-\begin{frame}[fragile,eyebrow=Reference]{The whole sync server, part 2}
+\begin{frame}[fragile,eyebrow=Reference]{Sync server, part 2}
 \begin{golang}
 func list(w http.ResponseWriter, r *http.Request) {
   since, _ := strconv.Atoi(r.URL.Query().Get("since"))
@@ -205,7 +205,7 @@ func list(w http.ResponseWriter, r *http.Request) {
   \muted{main() wires POST and GET on /notes to these handlers, then listens on :8080.}
 \end{frame}
 
-\begin{frame}[eyebrow=Task III]{One conflict rule, and a visible marker}
+\begin{frame}[eyebrow=Task III]{Conflict rule and marker}
   \begin{columns}[T]
     \begin{column}{0.55\textwidth}
       \begin{steps}
@@ -229,7 +229,7 @@ func list(w http.ResponseWriter, r *http.Request) {
   \end{takeaway}
 \end{frame}
 
-\begin{frame}[fragile,eyebrow=Task III]{The rule: server version wins}
+\begin{frame}[fragile,eyebrow=Task III]{Conflict rule: server version wins}
   \vskip 1mm
 \begin{dart}
 Future<void> onIncoming(Map row) => db.transaction(() async {
@@ -247,7 +247,7 @@ Future<void> onIncoming(Map row) => db.transaction(() async {
   \muted{Both devices run this same function, so both reach the same answer without talking to each other.}
 \end{frame}
 
-\begin{frame}[fragile,eyebrow=Task III]{The marker in the list}
+\begin{frame}[fragile,eyebrow=Task III]{Conflict marker in the list}
   \vskip 1mm
 \begin{dart}
 ListTile(
@@ -262,7 +262,7 @@ ListTile(
   \end{takeaway}
 \end{frame}
 
-\begin{frame}[eyebrow=Acceptance]{What the grader will do}
+\begin{frame}[eyebrow=Acceptance]{Acceptance checks}
   \vskip 1mm
   \begin{columns}[T]
     \begin{column}{0.48\textwidth}
@@ -281,13 +281,13 @@ ListTile(
   \end{columns}
 \end{frame}
 
-\begin{frame}[eyebrow=Troubleshooting]{Four failures you will meet}
+\begin{frame}[eyebrow=Troubleshooting]{Common errors}
   \trouble{Target of URI hasn't been generated: app\_db.g.dart}{build\_runner has not run, or ran before the table file was saved. Re-run it, then restart analysis.}
   \trouble{Connection refused, or the request hangs until it times out}{The emulator's \code{localhost} is itself. Point the client at \code{10.0.2.2}, not \code{localhost}.}
   \trouble{The outbox row count never drops to zero}{An exception is swallowed silently, or the loop never runs because the connectivity check never fires. Log every iteration.}
   \trouble{A device keeps re-downloading rows it already has}{The checkpoint was saved before the transaction committed, or the comparison used \code{>=} instead of \code{>}.}
 \end{frame}
 
-\closingframe{Push before you leave.}{Branch lab-5 · one commit per task · your conflict rule named in the README}
+\closingframe{Submission}{Branch lab-5 · one commit per task · your conflict rule named in the README}
 
 \end{document}

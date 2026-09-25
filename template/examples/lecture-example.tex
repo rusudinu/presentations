@@ -5,7 +5,7 @@
 \course{Application Development for Mobile Devices}
 \decklabel{Lecture 5}
 \title{State Management, Part 1}
-\subtitle{Debugging, Stateless vs Stateful, and where state should live}
+\subtitle{Debugging, Stateless vs Stateful, and state placement}
 \author{Dinu-Ștefan Rusu}
 \institute{FILS, Universitatea Politehnica București}
 \date{Autumn 2026}
@@ -15,13 +15,13 @@
 \titleframe
 
 \objectivesframe{
-  \cell[\faBug]{Debug on purpose}{Launch and attach DevTools, read the inspector, set breakpoints and step through Dart.}
+  \cell[\faBug]{Debugging}{Launch and attach DevTools, read the inspector, set breakpoints and step through Dart.}
   \cell[\faLayerGroup]{The three trees}{Widget, Element and RenderObject, and what setState actually triggers.}
   \cell[\faToggleOn]{Stateless vs Stateful}{When a widget really needs a State object, and when it genuinely does not.}
   \cell[\faIcon{share-alt}]{Sharing state}{Lifting state up, InheritedWidget, and why value equality decides rebuilds.}
 }
 
-\divider{Part 1 · Debugging}{Seeing what your app is actually doing}[DevTools, breakpoints, and useful logging]
+\divider{Part 1 · Debugging}{Debugging}[DevTools, breakpoints, and useful logging]
 
 \begin{frame}[eyebrow=Debugging]{The debugging toolbox}
   \vskip 2mm
@@ -59,7 +59,7 @@ debugDumpRenderTree();     // sizes + constraints
   \end{takeaway}
 \end{frame}
 
-\begin{frame}[eyebrow=State]{Pick the smallest tool that works}
+\begin{frame}[eyebrow=State]{Tools for shared state}
   \vskip 1mm
   {\usebeamerfont{small}\begin{tabular}{@{}lllp{14mm}p{44mm}@{}}
     \toprule
@@ -79,7 +79,7 @@ debugDumpRenderTree();     // sizes + constraints
   \end{takeaway}
 \end{frame}
 
-\begin{frame}[eyebrow=Numbers]{Why the frame budget matters}
+\begin{frame}[eyebrow=Numbers]{The frame budget}
   \vskip 4mm
   \begin{grid}[3]
     \bignum{16.7 ms}{per frame at 60 Hz}
@@ -113,7 +113,7 @@ func main() {
   \end{columns}
 \end{frame}
 
-\begin{frame}[eyebrow=Recap]{Three things to remember}
+\begin{frame}[eyebrow=Recap]{Summary}
   \vskip 2mm
   \begin{enumerate}
     \item Widgets are immutable blueprints. \muted{The State object is what persists across builds.}

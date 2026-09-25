@@ -6,7 +6,7 @@
 \course{Application Development for Mobile Devices}
 \decklabel{Lab 3}
 \title{Widgets, UI, and DevTools}
-\subtitle{Composing layouts, handling gestures, and debugging}
+\subtitle{Layouts, gestures and debugging}
 \author{Dinu-Ștefan Rusu}
 \institute{FILS, Universitatea Politehnica București}
 \date{Week 6}
@@ -15,7 +15,7 @@
 
 \titleframe
 
-\begin{frame}[eyebrow=Today]{What this lab is for}
+\begin{frame}[eyebrow=Today]{Lab objectives}
   \vskip 2mm
   \begin{grid}[2]
     \cell[\faThLarge]{Compose a screen}{Build a todo list from layout widgets, then add swipe gestures with Dismissible.}
@@ -25,7 +25,7 @@
   \taskmeta{Time}{2 hours}{Submit}{Push to \code{admd-labs}, branch \code{lab-3}, before Lab 4}
 \end{frame}
 
-\begin{frame}[fragile,eyebrow=Setup]{Where your code goes}
+\begin{frame}[fragile,eyebrow=Setup]{Branch and file layout}
   \begin{steps}
     \item Open the project from Lab 2 and create a branch: \code{git checkout -b lab-3}
     \item Create \code{lib/screens/todo\_screen.dart}. All three tasks happen there.
@@ -37,7 +37,7 @@
   \end{hint}
 \end{frame}
 
-\begin{frame}[eyebrow=Task I]{The todo screen, element by element}
+\begin{frame}[eyebrow=Task I]{The todo screen}
   \begin{columns}[T]
     \begin{column}{0.55\textwidth}
       \begin{steps}
@@ -59,7 +59,7 @@
   \end{columns}
 \end{frame}
 
-\begin{frame}[eyebrow=Reference]{Layout widgets you need today}
+\begin{frame}[eyebrow=Reference]{Layout widgets}
   \begin{columns}[T]
     \begin{column}{0.55\textwidth}
       \begin{itemize}
@@ -81,7 +81,7 @@
   \end{columns}
 \end{frame}
 
-\begin{frame}[fragile,eyebrow=Task I]{Stateless or stateful?}
+\begin{frame}[fragile,eyebrow=Task I]{Stateless and stateful widgets}
   \begin{columns}[T]
     \begin{column}{0.55\textwidth}
 \begin{dart}
@@ -107,7 +107,7 @@ class _TodoState extends State<TodoScreen> {
   \end{columns}
 \end{frame}
 
-\begin{frame}[fragile,eyebrow=Task II]{The anatomy of one swipeable row}
+\begin{frame}[fragile,eyebrow=Task II]{Structure of a swipeable row}
   \begin{columns}[T]
     \begin{column}{0.55\textwidth}
 \begin{dart}
@@ -160,7 +160,7 @@ flutter run
   \end{columns}
 \end{frame}
 
-\begin{frame}[eyebrow=Reference]{The DevTools tabs you need today}
+\begin{frame}[eyebrow=Reference]{DevTools tabs}
   \begin{columns}[T]
     \begin{column}{0.55\textwidth}
       \lead{Inspector}{The live widget tree. Select Widget Mode lets you tap a widget on screen. Track widget rebuilds counts how many times each widget rebuilt after an action.}
@@ -179,7 +179,7 @@ flutter run
   \end{columns}
 \end{frame}
 
-\begin{frame}[fragile,eyebrow=Task III]{The three bugs to plant}
+\begin{frame}[fragile,eyebrow=Task III]{Planted bugs}
   \begin{columns}[T]
     \begin{column}{0.55\textwidth}
 \begin{dart}
@@ -209,7 +209,7 @@ final visible = _items.where(
   \end{columns}
 \end{frame}
 
-\begin{frame}[eyebrow=Reference]{What rebuilds, and why}
+\begin{frame}[eyebrow=Reference]{Widget rebuilds}
   \code{setState} marks one element dirty. Only that subtree rebuilds on the next frame. The framework reuses the element and State when the new widget has the same \code{runtimeType} and key.
   \vskip 3mm
   \begin{columns}[T]
@@ -234,6 +234,6 @@ final visible = _items.where(
   \trouble{The data changed, the screen did not}{You mutated state outside \code{setState}. No rebuilds.}
 \end{frame}
 
-\closingframe{Push before you leave.}{Branch lab-3 · one commit per task · screenshots of DevTools in the PR description}
+\closingframe{Submission}{Branch lab-3 · one commit per task · screenshots of DevTools in the PR description}
 
 \end{document}

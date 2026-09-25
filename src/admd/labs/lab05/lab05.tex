@@ -6,7 +6,7 @@
 \course{Application Development for Mobile Devices}
 \decklabel{Lab 5}
 \title{BLoC}
-\subtitle{Cubit, events, and one test that proves the state}
+\subtitle{Cubit, Bloc events and bloc\_test}
 \author{Dinu-Ștefan Rusu}
 \institute{FILS, Universitatea Politehnica București}
 \date{Week 10}
@@ -15,7 +15,7 @@
 
 \titleframe
 
-\begin{frame}[eyebrow=Today]{What this lab is for}
+\begin{frame}[eyebrow=Today]{Lab objectives}
   \vskip 2mm
   \begin{grid}[2]
     \cell[\faLayerGroup]{Separate logic from UI}{Move the todo list out of setState and into a Cubit, then a Bloc, while the screen only reacts to state.}
@@ -25,7 +25,7 @@
   \taskmeta{Time}{2 hours}{Submit}{Push to your admd-labs repo, branch \code{lab-5}, before next lab}
 \end{frame}
 
-\begin{frame}[fragile,eyebrow=Setup]{Where your code goes}
+\begin{frame}[fragile,eyebrow=Setup]{Branch and file layout}
   \begin{steps}
     \item Open the project from Lab 4 and create a branch: \code{git checkout -b lab-5}
     \item Keep \code{lib/models/todo.dart} from Lab 4. Create a new \code{lib/todos/} folder for everything else.
@@ -36,7 +36,7 @@
   \end{hint}
 \end{frame}
 
-\begin{frame}[fragile,eyebrow=Setup]{The feature's folder structure}
+\begin{frame}[fragile,eyebrow=Setup]{Feature folder structure}
   \begin{codeblock}
 lib/
   models/todo.dart
@@ -109,7 +109,7 @@ class TodoState extends Equatable {
 \end{dart}
 \end{frame}
 
-\begin{frame}[fragile,eyebrow=Task I]{TodoCubit: four methods, one shape}
+\begin{frame}[fragile,eyebrow=Task I]{TodoCubit methods}
 \begin{dart}
 class TodoCubit extends Cubit<TodoState> {
   TodoCubit() : super(const TodoState());
@@ -125,7 +125,7 @@ class TodoCubit extends Cubit<TodoState> {
 \end{dart}
 \end{frame}
 
-\begin{frame}[fragile,eyebrow=Task I]{Wiring: BlocProvider and BlocBuilder}
+\begin{frame}[fragile,eyebrow=Task I]{BlocProvider and BlocBuilder}
 \begin{dart}
 void main() => runApp(BlocProvider(
       create: (_) => TodoCubit()..load(),
@@ -143,7 +143,7 @@ BlocBuilder<TodoCubit, TodoState>(
 \end{dart}
 \end{frame}
 
-\begin{frame}[eyebrow=Reference]{From Cubit to Bloc: why promote}
+\begin{frame}[eyebrow=Reference]{From Cubit to Bloc}
   \vskip 2mm
   \begin{center}
   \begin{tabular}{lll}
@@ -203,7 +203,7 @@ class AddTodo extends TodoEvent {
 \end{dart}
 \end{frame}
 
-\begin{frame}[fragile,eyebrow=Task II]{TodoRepository: the only class that calls dio}
+\begin{frame}[fragile,eyebrow=Task II]{TodoRepository and dio}
 \begin{dart}
 class TodoRepository {
   TodoRepository(this._dio);
@@ -220,7 +220,7 @@ class TodoRepository {
 \end{dart}
 \end{frame}
 
-\begin{frame}[fragile,eyebrow=Task II]{TodoBloc: one handler per event}
+\begin{frame}[fragile,eyebrow=Task II]{TodoBloc event handlers}
 \begin{dart}
 class TodoBloc extends Bloc<TodoEvent, TodoState> {
   TodoBloc(this._repo) : super(const TodoState()) {
@@ -237,7 +237,7 @@ class TodoBloc extends Bloc<TodoEvent, TodoState> {
   \end{hint}
 \end{frame}
 
-\begin{frame}[eyebrow=Task III]{Proving it with bloc\_test}
+\begin{frame}[eyebrow=Task III]{Testing with bloc\_test}
   \begin{columns}[T]
     \begin{column}{0.55\textwidth}
       \begin{steps}
@@ -258,7 +258,7 @@ class TodoBloc extends Bloc<TodoEvent, TodoState> {
   \end{columns}
 \end{frame}
 
-\begin{frame}[fragile,eyebrow=Task III]{One test, two emitted states}
+\begin{frame}[fragile,eyebrow=Task III]{Test with two emitted states}
 \begin{dart}
 void main() {
   final repo = FakeTodoRepository();
@@ -277,7 +277,7 @@ void main() {
 \end{dart}
 \end{frame}
 
-\begin{frame}[eyebrow=Troubleshooting]{Errors you will see, and the fix}
+\begin{frame}[eyebrow=Troubleshooting]{Common errors and fixes}
   \vskip 2mm
   \trouble{Bad state: Cannot emit new states after calling close}{An async call finished after the bloc closed. Guard it, or cancel it in \code{close()}.}
   \trouble{BlocProvider.of() called with a context that does not contain a TodoBloc}{The reading widget sits above the BlocProvider. Move BlocProvider up the tree.}
@@ -285,6 +285,6 @@ void main() {
   \trouble{Toggling a todo does nothing on screen}{The new state is \code{==} to the old one. Check that \code{copyWith} swaps the toggled item.}
 \end{frame}
 
-\closingframe{Push before you leave.}{Branch lab-5 · TodoBloc replaces TodoCubit · one passing bloc\_test in the PR}
+\closingframe{Submission}{Branch lab-5 · TodoBloc replaces TodoCubit · one passing bloc\_test in the PR}
 
 \end{document}

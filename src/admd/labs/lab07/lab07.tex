@@ -5,7 +5,7 @@
 \course{Application Development for Mobile Devices}
 \decklabel{Lab 7}
 \title{Lab test}
-\subtitle{Rules, format, and two practice specs}
+\subtitle{Rules, format, practice specs}
 \author{Dinu-Ștefan Rusu}
 \institute{FILS, Universitatea Politehnica București}
 \date{Week 14}
@@ -14,7 +14,7 @@
 
 \titleframe
 
-\begin{frame}[eyebrow=Today]{What this lab is for}
+\begin{frame}[eyebrow=Today]{Lab objectives}
   \vskip 2mm
   \begin{grid}[2]
     \cell[\faIcon{stopwatch}]{Prove four skills, once}{Build a small app from a one-page spec in ninety minutes: a screen, a Cubit, a network call, and a route.}
@@ -24,7 +24,7 @@
   \taskmeta{Time}{90 minutes}{Submit}{Push to admd-labs, branch lab-7, before time is up}
 \end{frame}
 
-\begin{frame}[eyebrow=Rules]{Individual, timed, your own machine}
+\begin{frame}[eyebrow=Rules]{Rules}
   \begin{steps}
     \item You work alone. No pair programming, no shared screens, no copying a classmate's branch.
     \item Ninety minutes, one sitting, starting when you receive the spec.
@@ -35,7 +35,7 @@
   \end{takeaway}
 \end{frame}
 
-\begin{frame}[eyebrow=Rules]{What you may and may not use}
+\begin{frame}[eyebrow=Rules]{Allowed resources}
   \begin{steps}
     \item Internet access is allowed: official docs, package pages, your own past labs.
     \item AI agents are allowed for writing code.
@@ -47,7 +47,7 @@
   \end{warning}
 \end{frame}
 
-\begin{frame}[eyebrow=Format]{One spec, four requirements}
+\begin{frame}[eyebrow=Format]{Test format}
   \vskip 2mm
   \begin{grid}[2]
     \cell[\faIcon{file-alt}]{One page, handed at the start}{An app idea and four requirements, on paper or a shared document. Nothing changes once the clock starts.}
@@ -57,7 +57,7 @@
   \muted{Every spec asks for the same four kinds of requirement, described next.}
 \end{frame}
 
-\begin{frame}[eyebrow=Format]{The four requirements, generically}
+\begin{frame}[eyebrow=Format]{Requirement types}
   \begin{grid}[2]
     \cell[\faThLarge]{A screen}{Built from the layout widgets: Row, Column, ListView, Card. No hardcoded pixel offsets.}
     \cell[\faToggleOn]{State in a Cubit}{An Equatable state class, \code{emit}, and a BlocBuilder. Not a raw setState.}
@@ -66,7 +66,7 @@
   \end{grid}
 \end{frame}
 
-\begin{frame}[eyebrow=Rubric]{7.5 points per requirement}
+\begin{frame}[eyebrow=Rubric]{Rubric}
   {\usebeamerfont{small}\begin{tabular}{@{}p{24mm}p{42mm}p{42mm}@{}}
     \toprule
     \thead{Requirement} & \thead{Full credit (7.5 p)} & \thead{Partial credit (3.75 p)} \\
@@ -81,7 +81,7 @@
   \muted{Anything not attempted scores zero.}
 \end{frame}
 
-\begin{frame}[fragile,eyebrow=Submission]{Push before the clock runs out}
+\begin{frame}[fragile,eyebrow=Submission]{Submission}
 \begin{shell}
 git checkout -b lab-7
 git push -u origin lab-7
@@ -97,7 +97,7 @@ git push -u origin lab-7
   \end{warning}
 \end{frame}
 
-\begin{frame}[eyebrow=Prepare]{How to prepare}
+\begin{frame}[eyebrow=Prepare]{Preparation}
   \vskip 2mm
   {\usebeamerfont{small}\begin{tabular}{@{}p{60mm}p{20mm}@{}}
     \toprule
@@ -163,7 +163,7 @@ git push -u origin lab-7
   \end{columns}
 \end{frame}
 
-\begin{frame}[eyebrow=Troubleshooting]{Mistakes that cost time}
+\begin{frame}[eyebrow=Troubleshooting]{Common mistakes}
   \vskip 2mm
   \trouble{Bad state: field does not exist for the class}{The JSON keys do not match the model. Print the raw response before writing fromJson.}
   \trouble{No routes matched location "/habit/3"}{The path pushed is not in the go\_router route list, or a name is misspelled.}
@@ -171,6 +171,6 @@ git push -u origin lab-7
   \trouble{setState() or emit() called after dispose()}{A response arrived after the screen closed. Check \code{mounted} before calling either.}
 \end{frame}
 
-\closingframe{Push before time runs out.}{Branch lab-7 · one pull request · nothing after the deadline}
+\closingframe{Submission}{Branch lab-7 · one pull request · nothing after the deadline}
 
 \end{document}

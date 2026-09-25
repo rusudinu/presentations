@@ -5,7 +5,7 @@
 \course{Mobile and Embedded Computing}
 \decklabel{Lab 4}
 \title{Phone sensors and a background task}
-\subtitle{Step detection, location, and a task that outlives the app}
+\subtitle{Step detection, location, background tasks}
 \author{Dinu-Ștefan Rusu}
 \institute{FILS, Universitatea Politehnica București}
 \date{Week 8}
@@ -14,7 +14,7 @@
 
 \titleframe
 
-\begin{frame}[eyebrow=Today]{What this lab is for}
+\begin{frame}[eyebrow=Today]{Lab objectives}
   \vskip 2mm
   \begin{grid}[2]
     \cell[\faIcon{shoe-prints}]{Count a step from raw motion}{Turn an accelerometer stream into a step count with a threshold and a debounce window, sampling period stated explicitly.}
@@ -24,7 +24,7 @@
   \taskmeta{Time}{2 hours}{Submit}{Push to your team repo, branch \code{lab-4}, before next lab}
 \end{frame}
 
-\begin{frame}[fragile,eyebrow=Setup]{Where your code goes}
+\begin{frame}[fragile,eyebrow=Setup]{Branch, dependencies, file layout}
   \begin{steps}
     \item Branch the team repository and add the four dependencies:
 \begin{shell}
@@ -40,7 +40,7 @@ flutter pub add workmanager shared_preferences
   \end{hint}
 \end{frame}
 
-\begin{frame}[embedded,eyebrow=Task I]{A step counter from raw acceleration}
+\begin{frame}[embedded,eyebrow=Task I]{Step counter from raw acceleration}
   \begin{columns}[T]
     \begin{column}{0.55\textwidth}
       \begin{steps}
@@ -61,7 +61,7 @@ flutter pub add workmanager shared_preferences
   \end{columns}
 \end{frame}
 
-\begin{frame}[embedded,fragile,eyebrow=Task I]{Threshold and debounce, in code}
+\begin{frame}[embedded,fragile,eyebrow=Task I]{Threshold and debounce: code}
 \begin{dart}
 accelerometerEventStream(
   samplingPeriod: SensorInterval.gameInterval,  // ~50 Hz
@@ -79,7 +79,7 @@ accelerometerEventStream(
   \muted{\code{\_baseline}, \code{\_above}, \code{\_last} are fields declared once.}
 \end{frame}
 
-\begin{frame}[eyebrow=Task II]{Location, under the right permission flow}
+\begin{frame}[eyebrow=Task II]{Location and the permission flow}
   \begin{columns}[T]
     \begin{column}{0.55\textwidth}
       \begin{steps}
@@ -100,7 +100,7 @@ accelerometerEventStream(
   \end{columns}
 \end{frame}
 
-\begin{frame}[fragile,eyebrow=Task II]{Declare the permission before you ask}
+\begin{frame}[fragile,eyebrow=Task II]{Permission declarations}
 \begin{codeblock}[language=XML]
 <!-- android/app/src/main/AndroidManifest.xml -->
 <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
@@ -131,7 +131,7 @@ Future<Position?> readOnce() async {
 \end{dart}
 \end{frame}
 
-\begin{frame}[eyebrow=Task II]{Precise or approximate, and what changes}
+\begin{frame}[eyebrow=Task II]{Precise and approximate location}
   \vskip 2mm
   \begin{columns}[T]
     \begin{column}{0.48\textwidth}
@@ -146,7 +146,7 @@ Future<Position?> readOnce() async {
   \end{takeaway}
 \end{frame}
 
-\begin{frame}[eyebrow=Task III]{A task that outlives the app}
+\begin{frame}[eyebrow=Task III]{Background task}
   \begin{columns}[T]
     \begin{column}{0.55\textwidth}
       \begin{steps}
@@ -167,7 +167,7 @@ Future<Position?> readOnce() async {
   \end{columns}
 \end{frame}
 
-\begin{frame}[fragile,eyebrow=Task III]{Write the result, then let the task end}
+\begin{frame}[fragile,eyebrow=Task III]{Background task callback}
 \begin{dart}
 const _key = 'lab4_log';
 @pragma('vm:entry-point')
@@ -203,7 +203,7 @@ Workmanager().initialize(callbackDispatcher);
   \muted{The plist identifier must match the one workmanager registers.}
 \end{frame}
 
-\begin{frame}[eyebrow=Task III]{Two platforms, two guarantees}
+\begin{frame}[eyebrow=Task III]{Background execution: Android and iOS}
   \vskip 1mm
   {\usebeamerfont{small}\begin{tabular}{@{}lp{38mm}p{38mm}@{}}
     \toprule
@@ -218,7 +218,7 @@ Workmanager().initialize(callbackDispatcher);
   \muted{For the acceptance check, leave the app closed for at least fifteen minutes on Android before you look for a new timestamp.}
 \end{frame}
 
-\begin{frame}[eyebrow=Acceptance]{What the grader will do}
+\begin{frame}[eyebrow=Acceptance]{Acceptance checks}
   \vskip 2mm
   \begin{checklist}
     \item Close the app, wait past fifteen minutes, reopen it: a list of timestamps has grown while it was closed.
@@ -231,7 +231,7 @@ Workmanager().initialize(callbackDispatcher);
   \end{takeaway}
 \end{frame}
 
-\begin{frame}[eyebrow=Troubleshooting]{Four failures you will meet}
+\begin{frame}[eyebrow=Troubleshooting]{Common errors}
   \vskip 1mm
   \trouble{Sensor stream never fires on the emulator}{The emulated accelerometer sits still by default. Use a real device, or the emulator's virtual sensors panel.}
   \trouble{The permission dialog never appears}{The manifest or the plist is missing the entry. Both must be declared before the dialog can show.}
@@ -239,6 +239,6 @@ Workmanager().initialize(callbackDispatcher);
   \trouble{The iOS task never runs at all}{The identifier is missing from, or does not match, \code{BGTaskSchedulerPermittedIdentifiers}.}
 \end{frame}
 
-\closingframe{Push before you leave.}{Branch lab-4 · one commit per task · a screenshot of the timestamp list in the PR description}
+\closingframe{Submission}{Branch lab-4 · one commit per task · a screenshot of the timestamp list in the PR description}
 
 \end{document}

@@ -5,7 +5,7 @@
 \course{Application Development for Mobile Devices}
 \decklabel{Lecture 2}
 \title{Dart and null safety}
-\subtitle{The language you will write, and the Flutter toolchain that runs it}
+\subtitle{Null safety, Dart language basics, Flutter overview, Flutter toolchain}
 \author{Dinu-Ștefan Rusu}
 \institute{FILS, Universitatea Politehnica București}
 \date{Autumn 2026}
@@ -15,15 +15,15 @@
 \titleframe
 
 \objectivesframe{
-  \cell[\faLock]{Null safety, understood}{Read \code{?}, \code{??}, \code{?.}, \code{!} and \code{late}, and know why the compiler can trust them.}
-  \cell[\faCode]{Dart you can write today}{Variables, functions, classes, collections, records and pattern matching.}
-  \cell[\faIcon{mobile-alt}]{What Flutter draws}{One Dart codebase, one renderer, and the widget catalog at a glance.}
-  \cell[\faBolt]{Run the toolchain}{Install, \code{flutter doctor}, hot reload versus hot restart, and a new project's layout.}
+  \cell[\faLock]{Null safety}{Read \code{?}, \code{??}, \code{?.}, \code{!} and \code{late}, and know why the compiler can trust them.}
+  \cell[\faCode]{Dart basics}{Variables, functions, classes, collections, records and pattern matching.}
+  \cell[\faIcon{mobile-alt}]{Flutter overview}{One Dart codebase, one renderer, and the widget catalog at a glance.}
+  \cell[\faBolt]{Flutter toolchain}{Install, \code{flutter doctor}, hot reload versus hot restart, and a new project's layout.}
 }
 
-\divider{Part 1 · Null safety}{The billion-dollar mistake, and its fix}[Why Dart and Kotlin make null part of the type]
+\divider{Part 1 · Null safety}{Null safety}[Nullable types, operators, late and required, Kotlin comparison]
 
-\begin{frame}[fragile,eyebrow=Null safety]{The billion-dollar mistake}
+\begin{frame}[fragile,eyebrow=Null safety]{Null reference errors}
   \begin{columns}[T]
     \begin{column}{0.56\textwidth}
 \begin{dart}
@@ -46,7 +46,7 @@ System.out.println(name.length());
   \note{Ask the room what a null pointer exception actually is, in their own words. Most have hit one. Point out this bug is old, well understood, and largely a solved problem in the languages this course uses.}
 \end{frame}
 
-\begin{frame}[eyebrow=Null safety]{Type errors are not security bugs}
+\begin{frame}[eyebrow=Null safety]{Limits of type safety}
   \vskip 2mm
   \begin{grid}[3]
     \cell[\faCheckCircle]{Compile-time type errors}{The compiler rejects \code{int x = 'hi'} before it ever ships. Refactoring gets safer, at no runtime cost.}
@@ -93,7 +93,7 @@ nickname ??= 'anon';
   \note{Walk through the code line by line and ask what happens if nickname is null at each point. Emphasize that every one of these operators is a decision the type system forces you to make explicit.}
 \end{frame}
 
-\begin{frame}[fragile,eyebrow=Null safety]{What sound null safety means}
+\begin{frame}[fragile,eyebrow=Null safety]{Sound null safety}
   \begin{columns}[T]
     \begin{column}{0.56\textwidth}
 \begin{dart}
@@ -117,7 +117,7 @@ String greet(String? name) {
   \note{Demo opportunity: delete the null check inside greet and show the analyzer error in the editor, then add ! to make it compile anyway. The lesson is that ! moves the failure from build time to a user's phone.}
 \end{frame}
 
-\begin{frame}[fragile,eyebrow=Null safety]{The escape hatches: late and required}
+\begin{frame}[fragile,eyebrow=Null safety]{The late and required keywords}
   \begin{columns}[T]
     \begin{column}{0.56\textwidth}
 \begin{dart}
@@ -144,7 +144,7 @@ String card({required String title}) {
   \note{Point out that both keywords let you write a non-nullable type where the value is not available yet, one for a field, one for a parameter. Both trade a small promise for a much cleaner type.}
 \end{frame}
 
-\begin{frame}[fragile,eyebrow=Null safety]{Null safety: Dart and Kotlin, side by side}
+\begin{frame}[fragile,eyebrow=Null safety]{Null safety in Dart and Kotlin}
   \begin{columns}[T]
     \begin{column}{0.48\textwidth}
       {\bfseries Dart}
@@ -178,7 +178,7 @@ fun notify(id: Int) {
   \note{This is the slide that pays off for the IoT track students who also write Kotlin. Ask if anyone has hit a NullPointerException in Kotlin interop code; the answer is usually from unannotated Java.}
 \end{frame}
 
-\divider{Part 2 · Dart}{The language you will write this semester}[Kotlin alongside it, wherever the comparison helps]
+\divider{Part 2 · Dart}{Dart language basics}[Variables, functions, classes, collections, records, pattern matching]
 
 \begin{frame}[fragile,eyebrow=Dart]{Variables: var, final, and const}
   \begin{columns}[T]
@@ -387,7 +387,7 @@ String describe(Object v) {
   \note{Compare this to a chain of if-else on runtimeType, which is what students would otherwise reach for. The compiler also warns when a switch expression is not exhaustive.}
 \end{frame}
 
-\begin{frame}[fragile,eyebrow=Dart]{Async waits until Lecture 4}
+\begin{frame}[fragile,eyebrow=Dart]{Asynchronous code preview}
   \lead{One line for now}{Dart handles a value that arrives later, with \code{Future}, \code{async} and \code{await}.}
 \begin{dart}
 Future<String> fetchName(); // arrives later
@@ -398,7 +398,7 @@ Future<String> fetchName(); // arrives later
   \note{Reassure the room that async is coming, not skipped. A Future is just a box that will hold a value later; unpacking it safely is next lecture's entire topic.}
 \end{frame}
 
-\begin{frame}[fragile,eyebrow=Dart]{Dart syntax, a quick reference}
+\begin{frame}[fragile,eyebrow=Dart]{Dart syntax reference}
   \vskip 2mm
   \begin{tabular}{@{}p{48mm}p{72mm}@{}}
     \toprule
@@ -415,7 +415,7 @@ Future<String> fetchName(); // arrives later
   \note{Use this as a one-slide anchor before moving to Kotlin. Point at each row and ask a student to say out loud what it does, without looking at the previous slides.}
 \end{frame}
 
-\begin{frame}[fragile,eyebrow=Dart]{Kotlin and Dart: the same shapes}
+\begin{frame}[fragile,eyebrow=Dart]{Kotlin and Dart compared}
   \begin{columns}[T]
     \begin{column}{0.48\textwidth}
       {\bfseries Dart}
@@ -446,9 +446,9 @@ val u = User("Ada", 36)
   \note{The same spectrum from Lecture 1 shows up again here: Kotlin/JVM ships bytecode Android's runtime compiles, Kotlin/Native compiles ahead of time for iOS, the Kotlin Multiplatform path from Lecture 1.}
 \end{frame}
 
-\divider{Part 3 · Flutter}{What Flutter actually is}[One Dart codebase, one renderer, and a build mode that changes how the code runs]
+\divider{Part 3 · Flutter}{Flutter overview}[Rendering, widget catalog, JIT and AOT, hot reload, toolchain]
 
-\begin{frame}[eyebrow=Flutter]{What Flutter is, and what it draws}
+\begin{frame}[eyebrow=Flutter]{Flutter architecture}
   \begin{columns}[T]
     \begin{column}{0.56\textwidth}
       \begin{itemize}
@@ -470,7 +470,7 @@ val u = User("Ada", 36)
   \note{Students who compared Flutter to React Native in Lecture 1 already know the trade-off: Flutter draws its own pixels instead of driving native widgets. This slide is where that fact gets its mechanism.}
 \end{frame}
 
-\begin{frame}[eyebrow=Flutter]{The widget catalog, at a glance}
+\begin{frame}[eyebrow=Flutter]{Widget catalog}
   \vskip 2mm
   \begin{grid}[3]
     \cell[\faLayerGroup]{Layout}{Container, Padding, Row, Column, Stack: how you arrange pixels.}
@@ -483,7 +483,7 @@ val u = User("Ada", 36)
   \note{This is a map, not a tutorial: point at each cell and name one widget from it that students will meet again in Lecture 3, where layout and composition get a full treatment.}
 \end{frame}
 
-\begin{frame}[fragile,eyebrow=Flutter]{Dart compiles two ways: JIT and AOT}
+\begin{frame}[fragile,eyebrow=Flutter]{JIT and AOT compilation}
   \begin{columns}[T]
     \begin{column}{0.48\textwidth}
 \begin{panel}
@@ -572,7 +572,7 @@ flutter doctor
   \note{Lab 2 walks this whole install end to end. Tell students to run flutter doctor before the lab starts, so setup problems surface with time to fix them, not during the two-hour window.}
 \end{frame}
 
-\begin{frame}[fragile,eyebrow=Flutter]{Creating and running your first app}
+\begin{frame}[fragile,eyebrow=Flutter]{Creating and running a new app}
   \begin{columns}[T]
     \begin{column}{0.56\textwidth}
 \begin{shell}
@@ -610,7 +610,7 @@ flutter run --release
   \note{Open a freshly created project side by side with this table. Students consistently ask whether they should edit android/ or ios/ directly; the honest answer for this course is almost never.}
 \end{frame}
 
-\begin{frame}[eyebrow=Flutter]{Numbers worth knowing}
+\begin{frame}[eyebrow=Flutter]{Key numbers}
   \vskip 4mm
   \begin{grid}[3]
     \bignum{1}{Dart codebase, every platform}
@@ -620,7 +620,7 @@ flutter run --release
   \note{These three numbers are the whole lecture compressed: one codebase, a fast development loop, and a build mode switch that changes how the same source actually runs.}
 \end{frame}
 
-\begin{frame}[eyebrow=Recap]{Three things to remember}
+\begin{frame}[eyebrow=Recap]{Summary}
   \vskip 2mm
   \begin{enumerate}
     \item Null is part of the type. \muted{\code{?}, \code{??}, \code{?.}, \code{!}, \code{late} and \code{required} remove a whole family of crashes.}

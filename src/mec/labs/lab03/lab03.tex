@@ -5,7 +5,7 @@
 \course{Mobile and Embedded Computing}
 \decklabel{Lab 3}
 \title{Bluetooth Low Energy}
-\subtitle{A peripheral in Go and a Flutter central}
+\subtitle{BLE peripheral in Go, Flutter scan and connect, reconnection}
 \author{Dinu-Ștefan Rusu}
 \institute{FILS, Universitatea Politehnica București}
 \date{Week 6}
@@ -14,7 +14,7 @@
 
 \titleframe
 
-\begin{frame}[eyebrow=Today]{What this lab is for}
+\begin{frame}[eyebrow=Today]{Lab objectives}
   \vskip 2mm
   \begin{grid}[2]
     \cell[\faMicrochip]{Run a peripheral}{Advertise one service with one notifying characteristic from a Go program, on an nRF52840 or ESP32-C3 board or on a Linux or Windows laptop.}
@@ -24,7 +24,7 @@
   \taskmeta{Time}{2 hours}{Submit}{Branch \code{lab-3} in the team repository, pushed before the next lab}
 \end{frame}
 
-\begin{frame}[fragile,eyebrow=Setup]{Where your code goes}
+\begin{frame}[fragile,eyebrow=Setup]{Branch, dependencies, file layout}
   \begin{steps}
     \item Branch the team repository and add the two packages:
 \begin{shell}
@@ -39,7 +39,7 @@ flutter pub add flutter_blue_plus permission_handler
   \end{warning}
 \end{frame}
 
-\begin{frame}[embedded,fragile,eyebrow=Peripheral]{Pick a peripheral, then start it}
+\begin{frame}[embedded,fragile,eyebrow=Peripheral]{Starting the peripheral}
   \begin{columns}[T]
     \begin{column}{0.52\textwidth}
 \begin{shell}
@@ -63,7 +63,7 @@ tinygo flash -target=pca10056-s140v7 .
   \end{columns}
 \end{frame}
 
-\begin{frame}[embedded,fragile,eyebrow=Reference]{The peripheral, part 1: advertise}
+\begin{frame}[embedded,fragile,eyebrow=Reference]{Peripheral, part 1: advertising}
 \begin{golang}
 package main
 import "time"
@@ -81,7 +81,7 @@ func main() {
 \end{golang}
 \end{frame}
 
-\begin{frame}[embedded,fragile,eyebrow=Reference]{The peripheral, part 2: notify}
+\begin{frame}[embedded,fragile,eyebrow=Reference]{Peripheral, part 2: notifications}
 \begin{golang}
     must(adv.Start())
     must(adapter.AddService(&bluetooth.Service{UUID: svc,
@@ -99,7 +99,7 @@ func main() {
 \end{golang}
 \end{frame}
 
-\begin{frame}[eyebrow=Task I]{Ask for the radio, then list what you find}
+\begin{frame}[eyebrow=Task I]{Permissions and device scan}
   \begin{columns}[T]
     \begin{column}{0.55\textwidth}
       \begin{steps}
@@ -121,7 +121,7 @@ func main() {
   \end{columns}
 \end{frame}
 
-\begin{frame}[fragile,eyebrow=Reference]{The two files no Dart code can replace}
+\begin{frame}[fragile,eyebrow=Reference]{Manifest and Info.plist entries}
 \begin{codeblock}
 <!-- android/app/src/main/AndroidManifest.xml, inside <manifest> -->
 <uses-permission android:name="android.permission.BLUETOOTH_SCAN"
@@ -199,7 +199,7 @@ await c.setNotifyValue(true);   // writes the descriptor for you
 \end{dart}
 \end{frame}
 
-\begin{frame}[eyebrow=Task III]{Survive a disconnect without a restart}
+\begin{frame}[eyebrow=Task III]{Reconnection after a disconnect}
   \begin{columns}[T]
     \begin{column}{0.55\textwidth}
       \begin{steps}
@@ -221,7 +221,7 @@ await c.setNotifyValue(true);   // writes the descriptor for you
   \end{columns}
 \end{frame}
 
-\begin{frame}[fragile,eyebrow=Reference]{A reconnect loop that stops when you leave}
+\begin{frame}[fragile,eyebrow=Reference]{Reconnect loop}
 \begin{dart}
 device.connectionState.listen((s) async {
   if (s != BluetoothConnectionState.disconnected) return;
@@ -247,7 +247,7 @@ Future<void> _tryConnect() async {
   \trouble{Every row in the list is unnamed}{The advertisement carries no local name, or you read the wrong field. Use platformName.}
 \end{frame}
 
-\begin{frame}[eyebrow=Troubleshooting]{Nothing arrives}
+\begin{frame}[eyebrow=Troubleshooting]{No values received}
   \vskip 2mm
   \trouble{Bad state: No element}{A UUID in the app differs from the one in the Go file, or you reused services from the previous connection.}
   \trouble{Connected, no value arrives}{setNotifyValue(true) was never called, or the listener was added after it.}
@@ -255,14 +255,14 @@ Future<void> _tryConnect() async {
   \trouble{One value arrives, then nothing}{The subscription died with the connection. Discover and subscribe again inside the reconnect path.}
 \end{frame}
 
-\begin{frame}[embedded,eyebrow=Troubleshooting]{The peripheral side}
+\begin{frame}[embedded,eyebrow=Troubleshooting]{Peripheral errors}
   \trouble{Bluetooth adapter not found}{On Linux the service is down or the radio is blocked. Start bluetoothd, unblock with rfkill, run again.}
   \trouble{It runs, nothing scans it}{macOS is central-only in this package. Use Linux, Windows, or the board.}
   \trouble{tinygo flash: unknown target}{Use your board's target: pca10056-s140v7 (nRF52840 DK) or xiao-esp32c3.}
   \trouble{Nothing works on an ESP32}{Only the ESP32-C3 and ESP32-S3 advertise on their own, through espradio. A plain ESP32 needs an HCI co-processor: use the nRF52840 or a laptop instead.}
 \end{frame}
 
-\begin{frame}[eyebrow=Submission]{What the grader will do}
+\begin{frame}[eyebrow=Submission]{Acceptance checks}
   \vskip 2mm
   \begin{columns}[T]
     \begin{column}{0.52\textwidth}
@@ -286,6 +286,6 @@ Future<void> _tryConnect() async {
   \end{columns}
 \end{frame}
 
-\closingframe{Push before you leave.}{Branch lab-3 · peripheral, scan, live value, reconnect}
+\closingframe{Submission}{Branch lab-3 · peripheral, scan, live value, reconnect}
 
 \end{document}

@@ -6,7 +6,7 @@
 \course{Mobile and Embedded Computing}
 \decklabel{Lecture 13}
 \title{Rendering and Optimization}
-\subtitle{The frame budget, the three trees, and finding the bottleneck before you fix it}
+\subtitle{Frame budget, widget trees, optimization, profiling}
 \author{Dinu-Ștefan Rusu}
 \institute{FILS, Universitatea Politehnica București}
 \date{Spring 2027}
@@ -16,15 +16,15 @@
 \titleframe
 
 \objectivesframe{
-  \cell[\faIcon{tachometer-alt}]{Spend the frame budget}{One frame is 1 \(\div\) refresh rate. See where Impeller and the raster thread spend it.}
-  \cell[\faLayerGroup]{Read the three trees}{Widget, Element and RenderObject, and how reconciliation decides what a rebuild touches.}
-  \cell[\faBolt]{Cut costs}{const constructors, builder lists, and when an offscreen buffer or a decoded image is the problem.}
-  \cell[\faIcon{search}]{Profile before you fix}{Read the DevTools frame chart, tell a UI-thread problem from a raster-thread one, and fix a real list screen.}
+  \cell[\faIcon{tachometer-alt}]{Frame budget}{One frame is 1 \(\div\) refresh rate. See where Impeller and the raster thread spend it.}
+  \cell[\faLayerGroup]{Widget, Element and RenderObject trees}{Widget, Element and RenderObject, and how reconciliation decides what a rebuild touches.}
+  \cell[\faBolt]{Optimization techniques}{const constructors, builder lists, and when an offscreen buffer or a decoded image is the problem.}
+  \cell[\faIcon{search}]{Profiling}{Read the DevTools frame chart, tell a UI-thread problem from a raster-thread one, and fix a real list screen.}
 }
 
-\divider{Part 1 \textperiodcentered\ Performance}{Two things we call performance}[The frame budget, and where the milliseconds go]
+\divider{Part 1 \textperiodcentered\ Performance}{Speed and efficiency}[Startup latency, frame budget]
 
-\begin{frame}[eyebrow=Performance]{Speed and efficiency are different problems}
+\begin{frame}[eyebrow=Performance]{Speed versus efficiency}
   \begin{columns}[T]
     \begin{column}{0.52\textwidth}
       \begin{itemize}
@@ -80,9 +80,9 @@
   \note{The old "16 ms" figure is a 60 Hz number. Say plainly that most phones students ship to in 2026 run 90 or 120 Hz, so the real budget is smaller and depends on the device in the user's hand.}
 \end{frame}
 
-\divider{Part 2 \textperiodcentered\ Rendering}{Flutter owns every pixel}[Three trees, reconciliation, and what each operation costs]
+\divider{Part 2 \textperiodcentered\ Rendering}{Flutter rendering}[Three trees, reconciliation, operation costs]
 
-\begin{frame}[eyebrow=Rendering]{Flutter owns every pixel; Impeller draws it}
+\begin{frame}[eyebrow=Rendering]{Flutter rendering and Impeller}
   \begin{columns}[T]
     \begin{column}{0.56\textwidth}
       \begin{itemize}
@@ -102,7 +102,7 @@
   \note{This is the deeper technical layer under a fact ADMD already gave students: Flutter paints its own pixels. Name Impeller by name; some tutorials online still describe Skia as current, and they predate 2023.}
 \end{frame}
 
-\begin{frame}[eyebrow=Rendering]{Shader warm-up: dead code under Impeller}
+\begin{frame}[eyebrow=Rendering]{Shader warm-up under Impeller}
   \begin{itemize}
     \item Under Skia, a shader was compiled the first time the GPU needed it, mid-frame. The classic symptom was "first-run jank": an effect that stuttered once, the first time it appeared, then never again.
     \item The workaround was shader warm-up: bundling a set of SkSL shaders and compiling them during a splash screen, before the user could trigger the expensive first frame.
@@ -114,7 +114,7 @@
   \note{Worth saying aloud: shader warm-up was a real, widely copied workaround for Skia, and it is dead code today. Anything on the internet about Flutter rendering that mentions SkSL bundles is out of date.}
 \end{frame}
 
-\begin{frame}[eyebrow=Rendering]{Three trees, three very different costs}
+\begin{frame}[eyebrow=Rendering]{The three trees and their costs}
   \muted{ADMD Lectures 3 and 5 introduced the three trees at the developer level. Here is what each one costs to touch.}
   \vskip 3mm
   \begin{grid}[3]
@@ -128,7 +128,7 @@
   \note{Rebuilding is cheap in allocation terms only. Every rebuilt widget still has to be diffed against the element tree, so a screen-wide rebuild for a single label is still wasted work, even though nothing "crashes".}
 \end{frame}
 
-\begin{frame}[eyebrow=Rendering]{StatelessWidget does not build once}
+\begin{frame}[eyebrow=Rendering]{StatelessWidget rebuilds}
   \begin{itemize}
     \item A common misconception: a \code{StatelessWidget} builds once and stays that way. It does not.
     \item It rebuilds whenever its parent rebuilds, or whenever an \code{InheritedWidget} it depends on notifies a change. "Stateless" describes what it holds, not how often \code{build()} runs.
@@ -147,7 +147,7 @@
   \note{This corrects a persistent wrong belief. Ask the room to picture a StatelessWidget as a child of a widget whose parent rebuilds every second: it rebuilds every second too, with nothing "stateless" about the frequency.}
 \end{frame}
 
-\begin{frame}[fragile,eyebrow=Rendering]{Reconciliation: runtimeType first, then key}
+\begin{frame}[fragile,eyebrow=Rendering]{Reconciliation: runtimeType and key}
   \begin{columns}[T]
     \begin{column}{0.56\textwidth}
 \begin{dart}
@@ -174,7 +174,7 @@ bool canUpdate(Widget a, Widget b) {
   \note{This one function is worth writing on the board. Everything on the next few slides, keys, const, list identity, follows from this single comparison running once per child, every rebuild.}
 \end{frame}
 
-\begin{frame}[eyebrow=Rendering]{What setState does}
+\begin{frame}[eyebrow=Rendering]{setState and dirty elements}
   \begin{columns}[T]
     \begin{column}{0.56\textwidth}
       \begin{itemize}
@@ -198,7 +198,7 @@ bool canUpdate(Widget a, Widget b) {
   \note{Pedantic but worth saying: the mutation is what matters, setState only schedules the rebuild. Doing the mutation inside the callback is a convention that keeps the two together, not a requirement of the language.}
 \end{frame}
 
-\begin{frame}[fragile,eyebrow=Rendering]{Keys: identity for things that move}
+\begin{frame}[fragile,eyebrow=Rendering]{Keys and element identity}
   \begin{columns}[T]
     \begin{column}{0.52\textwidth}
       \begin{itemize}
@@ -222,7 +222,7 @@ for (final t in todos)
   \note{Classic demo: a ListView of stateful color tiles with a shuffle button, once without keys and once with ValueKey. Without keys the colors stay put while the labels move; with keys the colors travel with their row.}
 \end{frame}
 
-\begin{frame}[eyebrow=Rendering]{GlobalKey: identity across the whole tree}
+\begin{frame}[eyebrow=Rendering]{GlobalKey and reparenting}
   \begin{columns}[T]
     \begin{column}{0.54\textwidth}
       \begin{itemize}
@@ -244,7 +244,7 @@ for (final t in todos)
   \note{Ask for an example from a student's own project: the usual answer is "to get a form's validation state from a button outside the form", which is exactly the case a GlobalKey exists for.}
 \end{frame}
 
-\begin{frame}[eyebrow=Rendering]{What each operation costs}
+\begin{frame}[eyebrow=Rendering]{Cost of tree operations}
   \vskip 1mm
   {\usebeamerfont{small}\begin{tabular}{@{}p{36mm}p{24mm}p{64mm}@{}}
     \toprule
@@ -262,9 +262,9 @@ for (final t in todos)
   \note{Say the word out loud: O(N squared) is quadratic, not exponential. Exponential would be 2 to the N. The distinction matters the moment a student reasons about scale on the exam.}
 \end{frame}
 
-\divider{Part 3 \textperiodcentered\ Optimization}{Small changes, large effects}[const, builder lists, offscreen buffers, and images]
+\divider{Part 3 \textperiodcentered\ Optimization}{Optimization techniques}[const, builder lists, offscreen buffers, and images]
 
-\begin{frame}[fragile,eyebrow=Optimization]{const constructors, and what they save}
+\begin{frame}[fragile,eyebrow=Optimization]{const constructors}
   \begin{columns}[T]
     \begin{column}{0.56\textwidth}
 \begin{dart}
@@ -294,7 +294,7 @@ const Padding(
   \note{The mechanism is worth spelling out: identical(old, new) is true for two const instances, so the element returns without descending at all. Nothing below a skipped const subtree is even visited.}
 \end{frame}
 
-\begin{frame}[fragile,eyebrow=Optimization]{Lists: build what is on screen, nothing else}
+\begin{frame}[fragile,eyebrow=Optimization]{Lazy lists with ListView.builder}
   \muted{The eager alternative, \code{ListView(children: ...)}, builds every child up front.}
   \begin{columns}[T]
     \begin{column}{0.56\textwidth}
@@ -323,7 +323,7 @@ ListView.builder(
   \note{This connects to Lecture 2: heavy parsing of the data feeding a list, CSV or JSON, never belongs on the UI isolate either. compute() moves it off, ListView.builder keeps the build itself cheap.}
 \end{frame}
 
-\begin{frame}[eyebrow=Optimization]{Offscreen buffers: when a layer helps and hurts}
+\begin{frame}[eyebrow=Optimization]{Offscreen buffers and saveLayer}
   \begin{columns}[T]
     \begin{column}{0.54\textwidth}
       \textbf{Opacity and ClipRRect can force a saveLayer:}
@@ -346,7 +346,7 @@ ListView.builder(
   \note{The mirror image is RepaintBoundary, covered next: it deliberately creates a layer so a repaint inside does not spread outward. Opacity and ClipRRect create a layer as a side effect nobody asked for.}
 \end{frame}
 
-\begin{frame}[eyebrow=Optimization]{RepaintBoundary: the mirror image}
+\begin{frame}[eyebrow=Optimization]{RepaintBoundary}
   \begin{columns}[T]
     \begin{column}{0.56\textwidth}
       \begin{itemize}
@@ -367,7 +367,7 @@ ListView.builder(
   \note{If a student asks how to check the effect, DevTools has a "Highlight Repaints" overlay that flashes any region that repaints, which makes an unwanted spread visible immediately.}
 \end{frame}
 
-\begin{frame}[eyebrow=Optimization]{Images and memory: the decoding cost}
+\begin{frame}[eyebrow=Optimization]{Image decoding and memory}
   \begin{itemize}
     \item Decoding an image allocates a full bitmap at its native pixel dimensions, not at the size it is displayed on screen.
     \item A large photo decoded to fill a small avatar still allocates the full decoded bitmap first, then Flutter scales it down for display.
@@ -406,9 +406,9 @@ precacheImage(
   \note{precacheImage is worth demonstrating on a page transition: without it, the first frame of the new page stalls on decode; with it called during the transition, the image is already ready.}
 \end{frame}
 
-\divider{Part 4 \textperiodcentered\ Profiling}{Find the bottleneck first}[The DevTools performance view, and a before-and-after example]
+\divider{Part 4 \textperiodcentered\ Profiling}{Profiling}[DevTools performance view, before-and-after example]
 
-\begin{frame}[fragile,eyebrow=Profiling]{Profile a real build, not a debug one}
+\begin{frame}[fragile,eyebrow=Profiling]{Profile mode builds}
 \begin{shell}
 # Debug builds are JIT and assert-heavy.
 # Never quote a debug-mode number.
@@ -424,7 +424,7 @@ flutter run --profile        # on a real device
   \note{Emphasize this every time a student proposes a fix without a trace: ask what the DevTools frame chart showed before they made the change. Usually nobody looked yet.}
 \end{frame}
 
-\begin{frame}[eyebrow=Profiling]{The frame chart: one bar per frame}
+\begin{frame}[eyebrow=Profiling]{The DevTools frame chart}
   \begin{itemize}
     \item The Performance view's timeline draws one bar per frame, split into a UI-thread segment and a raster-thread segment.
     \item A bar taller than the budget line, 8.3 ms at 120 Hz, marks a janky frame. The timeline scrolls as the app runs, so a scroll gesture that jumps the line is easy to spot.
@@ -436,7 +436,7 @@ flutter run --profile        # on a real device
   \note{Turn on "Track widget builds" in the same view before demoing this: it highlights exactly which widgets rebuilt for the selected frame, which turns "something rebuilt" into "this specific widget rebuilt".}
 \end{frame}
 
-\begin{frame}[eyebrow=Profiling]{Which half of the bar: UI or raster}
+\begin{frame}[eyebrow=Profiling]{UI thread versus raster thread}
   \vskip 1mm
   {\usebeamerfont{small}\begin{tabular}{@{}p{44mm}p{80mm}@{}}
     \toprule
@@ -454,7 +454,7 @@ flutter run --profile        # on a real device
   \note{Some Flutter documentation still calls the raster thread the "GPU thread"; both names refer to the same segment. Janky frames also carry a red overlay in the chart, which is the fastest thing to scan for.}
 \end{frame}
 
-\begin{frame}[fragile,eyebrow=Profiling]{Before: a list screen that drops frames}
+\begin{frame}[fragile,eyebrow=Profiling]{Example: a list screen that drops frames}
   \begin{columns}[T]
     \begin{column}{0.52\textwidth}
 \begin{dart}
@@ -483,7 +483,7 @@ ListView(children: users.map((u) =>
   \note{This is a composite of realistic mistakes, not one bug: eager list construction, an unnecessary Opacity wrapper, and undersized decoding. Ask the room to name the fix for each before advancing.}
 \end{frame}
 
-\begin{frame}[fragile,eyebrow=Profiling]{After: the fix, and what moved}
+\begin{frame}[fragile,eyebrow=Profiling]{Example: the fix and its effect}
   \begin{columns}[T]
     \begin{column}{0.52\textwidth}
 \begin{dart}
@@ -510,7 +510,7 @@ ListView.builder(
   \note{Point out that no single change here was exotic. All three are on this lecture's slides. The skill this lecture actually teaches is reading the frame chart well enough to know which one to reach for.}
 \end{frame}
 
-\begin{frame}[eyebrow=Recap]{Three things to remember}
+\begin{frame}[eyebrow=Recap]{Summary}
   \vskip 2mm
   \begin{enumerate}
     \item One frame budget is 1 divided by refresh rate. \muted{8.3 ms at 120 Hz, not a fixed 16 ms; the budget itself moves with the display.}

@@ -15,15 +15,15 @@
 \titleframe
 
 \objectivesframe{
-  \cell[\faBoxOpen]{Produce a release build}{Debug, profile and release, flavors, icons, and a version number the stores accept.}
-  \cell[\faKey]{Sign it correctly}{Android keystores and Play App Signing, iOS certificates and provisioning profiles.}
-  \cell[\faRocket]{Deliver it}{Play Console and App Store Connect, internal testing and TestFlight, GitHub Actions and fastlane.}
-  \cell[\faBell]{Push to a device}{FCM tokens, the three app states, and what a notification payload may carry.}
+  \cell[\faBoxOpen]{Release builds}{Debug, profile and release, flavors, icons, and a version number the stores accept.}
+  \cell[\faKey]{App signing}{Android keystores and Play App Signing, iOS certificates and provisioning profiles.}
+  \cell[\faRocket]{Store delivery and CI/CD}{Play Console and App Store Connect, internal testing and TestFlight, GitHub Actions and fastlane.}
+  \cell[\faBell]{Push notifications}{FCM tokens, the three app states, and what a notification payload may carry.}
 }
 
-\divider{Part 1 · Building}{Making an installable build}[Build modes, flavors, icons, and version numbers]
+\divider{Part 1 · Building}{Release builds}[Build modes, flavors, icons, and version numbers]
 
-\begin{frame}[eyebrow=Building]{Three build modes, three purposes}
+\begin{frame}[eyebrow=Building]{Build modes}
   \vskip 2mm
   \begin{grid}[3]
     \cell[\faBug]{Debug}{JIT compiled, assertions on, hot reload, service extensions, a debug banner. Large and slow on purpose. Never measure performance here.}
@@ -38,7 +38,7 @@
   \note{Ask which mode they have been running all semester. Then say that everything they measured in DevTools in Lecture 5 was measured in profile mode for exactly this reason.}
 \end{frame}
 
-\begin{frame}[fragile,eyebrow=Building]{The artifacts each store wants}
+\begin{frame}[fragile,eyebrow=Building]{Store build artifacts}
   \begin{columns}[T]
     \begin{column}{0.52\textwidth}
 \begin{shell}
@@ -61,7 +61,7 @@ flutter build ipa --release
   \note{Ask who has ever installed an APK by hand. Then point out that Play has not accepted a plain APK for a new app in years. The split APKs are for the lab and for testing on a device you hold.}
 \end{frame}
 
-\begin{frame}[fragile,eyebrow=Building]{Flavors: one codebase, several apps}
+\begin{frame}[fragile,eyebrow=Building]{Flavors}
   \begin{columns}[T]
     \begin{column}{0.54\textwidth}
 \begin{shell}
@@ -139,7 +139,7 @@ flutter build appbundle \
   \note{This is the single most common wasted hour in a first release. Show the pubspec line and say the plus sign separates the two values. Ask what happens when two engineers release from their laptops on the same day.}
 \end{frame}
 
-\divider{Part 2 · Signing}{Proving the update is yours}[Keystores, Play App Signing, certificates and profiles]
+\divider{Part 2 · Signing}{App signing}[Keystores, Play App Signing, certificates and profiles]
 
 \begin{frame}[fragile,eyebrow=Signing]{The Android keystore}
   \begin{columns}[T]
@@ -180,7 +180,7 @@ keyPassword=...
   \note{Draw the two keys on the board: upload key at the door, app signing key on the package. Students confuse them constantly.}
 \end{frame}
 
-\begin{frame}[eyebrow=Signing]{iOS: four things that must agree}
+\begin{frame}[eyebrow=Signing]{iOS certificates and provisioning profiles}
   {\usebeamerfont{small}\begin{tabular}{@{}lp{56mm}p{30mm}@{}}
     \toprule
     \thead{Piece} & \thead{What it is} & \thead{Where it lives} \\
@@ -199,7 +199,7 @@ keyPassword=...
   \note{This table is the answer to almost every iOS signing error message. Tell students to read the error and ask which of the four rows disagrees with the others.}
 \end{frame}
 
-\begin{frame}[eyebrow=Signing]{What never goes into the repository}
+\begin{frame}[eyebrow=Signing]{Keeping secrets out of the repository}
   \vskip 2mm
   \begin{columns}[T]
     \begin{column}{0.48\textwidth}
@@ -218,7 +218,7 @@ keyPassword=...
   \note{Mention that a bot scanning new public commits is faster than any of us. Ask the room to check their own lab repository for a stray key before the lab test.}
 \end{frame}
 
-\divider{Part 3 · Stores}{Getting past review}[Play Console, App Store Connect, test tracks, and privacy]
+\divider{Part 3 · Stores}{Store submission and review}[Play Console, App Store Connect, test tracks, and privacy]
 
 \begin{frame}[eyebrow=Stores]{Google Play Console: the first release}
   \vskip 1mm
@@ -248,7 +248,7 @@ keyPassword=...
   \note{Say that Apple's review is a human reading your notes and tapping through the app. Everything you would tell a new tester belongs in the review notes field. Membership costs 99 dollars a year, and since April 2026 every upload must be built against the iOS 26 SDK, which means Xcode 26 or newer.}
 \end{frame}
 
-\begin{frame}[eyebrow=Stores]{Test tracks before anyone real sees it}
+\begin{frame}[eyebrow=Stores]{Test tracks}
   \vskip 1mm
   {\usebeamerfont{small}\begin{tabular}{@{}llp{40mm}p{40mm}@{}}
     \toprule
@@ -268,7 +268,7 @@ keyPassword=...
   \note{Point out that TestFlight builds expire after 90 days, so a beta is not a distribution channel, and that it allows 100 internal testers and up to 10,000 external ones. A personal Play account registered after November 2023 must also hold 12 testers on closed testing for 14 continuous days before it may publish to production. Internal testing on Play is the fastest loop you have.}
 \end{frame}
 
-\begin{frame}[eyebrow=Stores]{Why apps get rejected}
+\begin{frame}[eyebrow=Stores]{Common rejection reasons}
   \vskip 1mm
   \begin{grid}[3]
     \cell[\faBug]{It crashed for the reviewer}{The most common reason. Test the exact build you submitted.}
@@ -297,9 +297,9 @@ keyPassword=...
   \note{Connect this back to Lecture 11 on permissions. The new part here is that the store now asks you to write down, in public, what Lecture 9 and Lecture 12 actually send off the device.}
 \end{frame}
 
-\divider{Part 4 · Automation}{Nobody releases from a laptop}[GitHub Actions, fastlane, Codemagic, and code push]
+\divider{Part 4 · Automation}{Release automation}[GitHub Actions, fastlane, Codemagic, and code push]
 
-\begin{frame}[eyebrow=Automation]{What a release pipeline does}
+\begin{frame}[eyebrow=Automation]{Release pipeline stages}
   \vskip 2mm
   \begin{grid}[3]
     \cell[\faCheckCircle]{On every pull request}{Format check, \code{flutter analyze}, unit and widget tests. Merging is blocked while any of them is red.}
@@ -372,7 +372,7 @@ jobs:
   \note{Say that both save the same thing: the twenty manual clicks between a green build and a build in testers' hands. Pick one, write it once, forget it.}
 \end{frame}
 
-\begin{frame}[eyebrow=Automation]{Code push, in one slide}
+\begin{frame}[eyebrow=Automation]{Code push}
   \begin{columns}[T]
     \begin{column}{0.5\textwidth}
       \lead{Shorebird patches Dart code on installed apps.}{You publish a patch, the app downloads it, and the fix is live on the next launch without a store review.}
@@ -388,9 +388,9 @@ jobs:
   \note{Frame the trade-off honestly: hours instead of days for a critical fix, at the price of another moving part. Most teams never need it.}
 \end{frame}
 
-\divider{Part 5 · Push}{Waking an app that is closed}[FCM, APNs, tokens, and the three app states]
+\divider{Part 5 · Push}{Push notifications}[FCM, APNs, tokens, and the three app states]
 
-\begin{frame}[eyebrow=Push]{How a push actually arrives}
+\begin{frame}[eyebrow=Push]{Push delivery path}
   \vskip 2mm
   \begin{grid}[3]
     \cell[\faServer]{Your backend decides}{It calls the FCM HTTP v1 API with a service account credential. The app never sends a push, because the app cannot hold that key.}
@@ -476,7 +476,7 @@ final m = await fm.getInitialMessage();
   \note{Make them test all three by hand: app open, app backgrounded, app force stopped. Almost every push bug reported in the labs is one of the three cases never being tried. Name flutter\_local\_notifications as the package that draws the foreground notification.}
 \end{frame}
 
-\begin{frame}[eyebrow=Push]{Asking for permission, and what to send}
+\begin{frame}[eyebrow=Push]{Notification permission and content}
   \begin{columns}[T]
     \begin{column}{0.48\textwidth}
       \lead{You get one prompt.}{iOS has always required permission, and Android 13 added POST\_NOTIFICATIONS. A denial is final until the user opens system settings.}
@@ -493,7 +493,7 @@ final m = await fm.getInitialMessage();
   \note{Ask the room how many have disabled notifications for an app this month, and why. That answer is the design brief for this slide.}
 \end{frame}
 
-\begin{frame}[eyebrow=Checklist]{Before you ship}
+\begin{frame}[eyebrow=Checklist]{Release checklist}
   \vskip 2mm
   \begin{columns}[T]
     \begin{column}{0.48\textwidth}
@@ -516,7 +516,7 @@ final m = await fm.getInitialMessage();
   \note{Suggest they copy this into the pull request template of their own project. A release checklist is the cheapest quality tool that exists.}
 \end{frame}
 
-\begin{frame}[eyebrow=Course recap]{Fourteen weeks in one table}
+\begin{frame}[eyebrow=Course recap]{Course overview}
   \vskip 1mm
   \begin{columns}[T]
     \begin{column}{0.48\textwidth}
@@ -553,7 +553,7 @@ final m = await fm.getInitialMessage();
   \note{Walk the table quickly and name the lab that used each week. The point is that the todo app in their repository touched every row.}
 \end{frame}
 
-\begin{frame}[eyebrow=Lab test]{The lab test and your grade}
+\begin{frame}[eyebrow=Lab test]{Lab test and grading}
   \begin{columns}[T]
     \begin{column}{0.5\textwidth}
       \lead{Lab 7 is the practical test.}{Individual, 90 minutes, your own laptop, internet allowed. Agents are allowed, and you must be able to explain every line you submit.}
@@ -580,7 +580,7 @@ final m = await fm.getInitialMessage();
   \note{Read the four requirements out loud and name the lab that taught each one. Then say the honest preparation advice: rebuild Lab 5 from an empty project in an hour, and the test is straightforward.}
 \end{frame}
 
-\begin{frame}[eyebrow=Recap]{Three things to remember}
+\begin{frame}[eyebrow=Recap]{Summary}
   \vskip 2mm
   \begin{enumerate}
     \item A release includes signing, versioning, store forms and review. \muted{Together they take longer than the compile.}

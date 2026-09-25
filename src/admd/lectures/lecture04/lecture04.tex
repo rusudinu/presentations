@@ -5,7 +5,7 @@
 \course{Application Development for Mobile Devices}
 \decklabel{Lecture 4}
 \title{Async Dart and agent-assisted coding}
-\subtitle{Futures, Streams, and coding with an agent in the loop}
+\subtitle{Futures, Streams, heavy computation, agent-assisted coding}
 \author{Dinu-Ștefan Rusu}
 \institute{FILS, Universitatea Politehnica București}
 \date{Autumn 2026}
@@ -15,16 +15,16 @@
 \titleframe
 
 \objectivesframe{
-  \cell[\faBolt]{Await without blocking}{Futures, async/await, and try/catch/finally around every network or database call.}
+  \cell[\faBolt]{Futures and async/await}{Futures, async/await, and try/catch/finally around every network or database call.}
   \cell[\faIcon{stream}]{Streams in the UI}{FutureBuilder and StreamBuilder turn asynchronous values into widgets that rebuild on their own.}
-  \cell[\faIcon{tachometer-alt}]{Escape heavy work}{Recognize CPU-bound code that freezes the UI, and move it off the main thread with compute().}
-  \cell[\faIcon{robot}]{Work with an agent}{Prompt it with real context, then review its output like any other pull request.}
+  \cell[\faIcon{tachometer-alt}]{Heavy computation}{Recognize CPU-bound code that freezes the UI, and move it off the main thread with compute().}
+  \cell[\faIcon{robot}]{Agent-assisted coding}{Prompt it with real context, then review its output like any other pull request.}
 }
 \note{This lecture has two halves: the async tools you need for the lab app, and how to work with a coding agent for the rest of the course. Ask who has already used an agentic CLI or an IDE assistant; most hands go up, and that is the point of the second half.}
 
-\divider{Part 1 · Async Dart}{One thread, many things waiting}[Futures, await, and error handling]
+\divider{Part 1 · Async Dart}{Asynchronous Dart}[Futures, await, and error handling]
 
-\begin{frame}[eyebrow=Async]{One thread runs your whole UI}
+\begin{frame}[eyebrow=Async]{The UI thread}
   \vskip 2mm
   \begin{itemize}
     \item Every build, every layout pass and every gesture handler runs on the same thread as your Dart code.
@@ -37,7 +37,7 @@
   \note{This is a one-line pointer, not a detour: the full event loop and microtask model is MEC Lecture 2 next semester. Here the only point is why the rest of this section matters.}
 \end{frame}
 
-\begin{frame}[fragile,eyebrow=Async]{A Future is one value, later}
+\begin{frame}[fragile,eyebrow=Async]{Futures}
   \begin{columns}[T]
     \begin{column}{0.55\textwidth}
 \begin{dart}
@@ -62,7 +62,7 @@ void main() {
   \note{Run this live and ask the room to predict the print order. Most will guess wrong the first time: fetchName().then(print) registers a callback and returns immediately, so the second print runs first.}
 \end{frame}
 
-\begin{frame}[fragile,eyebrow=Async]{async and await: suspending without blocking}
+\begin{frame}[fragile,eyebrow=Async]{async and await}
   \begin{columns}[T]
     \begin{column}{0.55\textwidth}
 \begin{dart}
@@ -85,7 +85,7 @@ Future<void> refresh(String id) async {
   \note{Point out that async marks the function, await marks the pause. A common early mistake is awaiting inside a function that is not itself marked async: that is a compile error, not a warning.}
 \end{frame}
 
-\begin{frame}[fragile,eyebrow=Async]{Sequential awaits, or all at once}
+\begin{frame}[fragile,eyebrow=Async]{Sequential and concurrent awaits}
   \begin{columns}[T]
     \begin{column}{0.55\textwidth}
 \begin{dart}
@@ -108,7 +108,7 @@ final results = await Future.wait([
   \note{Ask why anyone would ever choose the sequential form: sometimes the second call needs data from the first. Future.wait only helps when the calls are genuinely independent.}
 \end{frame}
 
-\begin{frame}[eyebrow=Async]{What happens when an awaited call fails}
+\begin{frame}[eyebrow=Async]{Errors in awaited calls}
   \vskip 2mm
   \begin{itemize}
     \item A failure inside async code does not throw at the call site. It completes the Future with an error instead.
@@ -147,9 +147,9 @@ Future<void> refresh(String id) async {
   \note{Demo turning off Wi-Fi mid-request and show the DioException path firing. Then remove the mounted check, pop the screen mid-request, and show the setState-after-dispose error it produces.}
 \end{frame}
 
-\divider{Part 2 · Streams and heavier work}{When one value is not enough}[Streams, FutureBuilder, StreamBuilder, and compute()]
+\divider{Part 2 · Streams and heavier work}{Streams and heavy computation}[Streams, FutureBuilder, StreamBuilder, and compute()]
 
-\begin{frame}[fragile,eyebrow=Streams]{Streams: many values, over time}
+\begin{frame}[fragile,eyebrow=Streams]{Streams}
   \begin{columns}[T]
     \begin{column}{0.55\textwidth}
 \begin{dart}
@@ -176,7 +176,7 @@ Stream<int> ticker() async* {
   \note{The syntax mirrors async/await deliberately: async* marks a generator function, yield emits one value instead of returning one. Point at the WebSocket lecture and the sensor-feed lecture as where Streams come back.}
 \end{frame}
 
-\begin{frame}[eyebrow=Streams]{Where these Futures and Streams come from}
+\begin{frame}[eyebrow=Streams]{Sources of Futures and Streams}
   \vskip 2mm
   \begin{itemize}
     \item HTTP calls through dio or http return a Future. \muted{Lecture 7, networking.}
@@ -187,7 +187,7 @@ Stream<int> ticker() async* {
   \note{This slide is a map forward, not new material: every async source the students will meet later in the course is either a Future or a Stream under the hood. Point out that showDialog also returns a Future, which surprises people.}
 \end{frame}
 
-\begin{frame}[fragile,eyebrow=Streams]{FutureBuilder: showing a Future in the tree}
+\begin{frame}[fragile,eyebrow=Streams]{FutureBuilder}
 \begin{dart}
 FutureBuilder<User>(
   future: _userFuture,
@@ -205,7 +205,7 @@ FutureBuilder<User>(
   \note{FutureBuilder subscribes to the Future you give it and rebuilds exactly once per state change: waiting, then either data or error. It does not call the Future for you; the next slide is about the mistake that follows from forgetting that.}
 \end{frame}
 
-\begin{frame}[fragile,eyebrow=Streams]{Do not rebuild the Future on every build}
+\begin{frame}[fragile,eyebrow=Streams]{Creating the Future outside build}
   \begin{columns}[T]
     \begin{column}{0.48\textwidth}
       \lead{Recreated every build}{}
@@ -241,7 +241,7 @@ class _ProfilePageState
   \note{This is the single most common FutureBuilder bug in student code. Ask the room to spot why the left version refetches: build() runs on every parent rebuild, and fetchUser() is called fresh each time it does.}
 \end{frame}
 
-\begin{frame}[fragile,eyebrow=Streams]{StreamBuilder: showing a Stream in the tree}
+\begin{frame}[fragile,eyebrow=Streams]{StreamBuilder}
 \begin{dart}
 StreamBuilder<int>(
   stream: ticker(),
@@ -259,7 +259,7 @@ StreamBuilder<int>(
   \note{The same recreate-on-every-build mistake applies to Stream-valued expressions passed to stream:, for the same reason. Store the Stream once, the same way as the Future on the previous slide.}
 \end{frame}
 
-\begin{frame}[eyebrow=Streams]{Putting it together: load once, then stay live}
+\begin{frame}[eyebrow=Streams]{Combining a Future and a Stream}
   \vskip 2mm
   \begin{itemize}
     \item Load what already exists with a Future: chat history, a cached list, the first page of results.
@@ -273,7 +273,7 @@ StreamBuilder<int>(
   \note{Use the Lab 6 live screen as the concrete example: it loads an initial state, then a WebSocket stream keeps it current. This slide is the mental model that lab depends on.}
 \end{frame}
 
-\begin{frame}[eyebrow=Streams]{FutureBuilder vs StreamBuilder, at a glance}
+\begin{frame}[eyebrow=Streams]{FutureBuilder vs StreamBuilder}
   \vskip 1mm
   {\usebeamerfont{small}\begin{tabular}{@{}lp{42mm}p{42mm}@{}}
     \toprule
@@ -289,7 +289,7 @@ StreamBuilder<int>(
   \note{The snapshot API is deliberately identical between the two widgets, which is why the mistakes and the fixes on the last two slides transfer directly from one to the other.}
 \end{frame}
 
-\begin{frame}[fragile,eyebrow=Streams]{Async is not parallel}
+\begin{frame}[fragile,eyebrow=Streams]{Asynchrony and parallelism}
 \begin{dart}
 // This function is async. It still freezes the UI.
 Future<int> sumTo(int n) async {
@@ -307,7 +307,7 @@ Future<int> sumTo(int n) async {
   \note{Typical offenders in a Flutter app: decoding a large JSON payload, resizing an image, encrypting or compressing data, sorting a very large list. All of them are CPU work, not I/O, and async does nothing for them.}
 \end{frame}
 
-\begin{frame}[fragile,eyebrow=Streams]{compute(): the one-call escape for heavy work}
+\begin{frame}[fragile,eyebrow=Streams]{compute() for heavy work}
 \begin{dart}
 // Must be a top-level or static function.
 List<Photo> parsePhotos(String body) {
@@ -325,7 +325,7 @@ Future<List<Photo>> fetchPhotos() async {
   \note{It costs a few milliseconds to spawn an isolate and the payload is copied both ways, so compute() is for real work, not for a two-millisecond calculation. This is the one call an app developer needs; the mechanism underneath is next semester.}
 \end{frame}
 
-\begin{frame}[eyebrow=Streams]{Rule of thumb: await or compute()}
+\begin{frame}[eyebrow=Streams]{Choosing between await and compute()}
   \vskip 2mm
   \begin{itemize}
     \item Waiting on a network call, a disk read, a timer or a database calls for \code{await}. Something else is doing the work; your thread stays free to keep drawing frames.
@@ -339,9 +339,9 @@ Future<List<Photo>> fetchPhotos() async {
   \note{This closes Part 1: two tools, await for waiting and compute() for working. Everything past this point in the async model, spawning isolates by hand and the Go comparison, is explicitly out of scope until MEC Lecture 2.}
 \end{frame}
 
-\divider{Part 3 · Agent-assisted coding}{Coding with an agent in the loop}[The 2026 tool landscape, and the review discipline it requires]
+\divider{Part 3 · Agent-assisted coding}{Agent-assisted coding}[Tools, MCP, prompting, code review, lab rules]
 
-\begin{frame}[eyebrow=Agents]{The 2026 tool landscape}
+\begin{frame}[eyebrow=Agents]{AI coding tools in 2026}
   \vskip 2mm
   \begin{grid}[3]
     \cell[\faIcon{terminal}]{Agentic CLIs}{Claude Code, Codex CLI, Gemini CLI: they run in your repository, edit files and run your tests.}
@@ -354,7 +354,7 @@ Future<List<Photo>> fetchPhotos() async {
   \note{Ask which of these the room already uses; the point is the taxonomy, not the brand names. Four different workflows carry four different review burdens: a CLI edits your files directly, a review bot only comments.}
 \end{frame}
 
-\begin{frame}[eyebrow=Agents]{MCP: how an agent reaches your tools}
+\begin{frame}[eyebrow=Agents]{Model Context Protocol (MCP)}
   \vskip 2mm
   \begin{itemize}
     \item MCP, the Model Context Protocol, is how an agent calls real tools instead of only generating text.
@@ -366,7 +366,7 @@ Future<List<Photo>> fetchPhotos() async {
   \note{Keep this concrete: an agentic CLI in the lab can genuinely run git commands and delete files if asked to, which is why the review habit on the next slides is not optional. The specification is revised often; the stable core is tools, resources and prompts.}
 \end{frame}
 
-\begin{frame}[eyebrow=Agents]{What agents are good at}
+\begin{frame}[eyebrow=Agents]{Agent strengths}
   \vskip 2mm
   \begin{itemize}
     \item Boilerplate: scaffolding, data classes, test fixtures, glue code.
@@ -378,7 +378,7 @@ Future<List<Photo>> fetchPhotos() async {
   \note{Ask for a show of hands on which of these the room has actually used an agent for. Boilerplate and explaining stack traces are usually the two everyone recognizes.}
 \end{frame}
 
-\begin{frame}[eyebrow=Agents]{Where agents cost you}
+\begin{frame}[eyebrow=Agents]{Agent weaknesses}
   \vskip 2mm
   \begin{itemize}
     \item Plausible but wrong APIs: Flutter's surface moves fast.
@@ -393,7 +393,7 @@ Future<List<Photo>> fetchPhotos() async {
   \note{This is the slide to slow down on. Every item here has shown up in real student pull requests: a hardcoded Firebase key, a plausible method that does not exist, a refactor that silently drops an edge case.}
 \end{frame}
 
-\begin{frame}[eyebrow=Agents]{Where this bites, specifically in Flutter}
+\begin{frame}[eyebrow=Agents]{Common agent mistakes in Flutter}
   \vskip 2mm
   \begin{itemize}
     \item An agent trained on older material may suggest \code{google\_generative\_ai} when \code{firebase\_ai} is the current path. \muted{Lecture 12.}
@@ -406,7 +406,7 @@ Future<List<Photo>> fetchPhotos() async {
   \note{These are not hypothetical: each one has been the actual root cause of a bug in a student submission in a previous run of this course. Naming them concretely is more useful than the general warning on the previous slide.}
 \end{frame}
 
-\begin{frame}[fragile,eyebrow=Agents]{Prompting: give it context}
+\begin{frame}[fragile,eyebrow=Agents]{Prompting with context}
   \begin{columns}[T]
     \begin{column}{0.47\textwidth}
       \begin{itemize}
@@ -437,7 +437,7 @@ where possible. Add a widget test.
   \note{The weak prompt and the better prompt ask for the same feature. The difference is entirely in what the agent is told about the codebase it is editing: files, conventions, and the shape of the expected output.}
 \end{frame}
 
-\begin{frame}[eyebrow=Agents]{Review it like any other pull request}
+\begin{frame}[eyebrow=Agents]{Reviewing agent-generated code}
   \vskip 2mm
   \begin{grid}[3]
     \cell[\faIcon{eye}]{Read every line}{If you cannot explain it in review, you cannot ship it, or defend it at the practical test.}
@@ -450,7 +450,7 @@ where possible. Add a widget test.
   \note{Tie this back to Lecture 1: every lab runs on the branch, pull request, review loop. Agent-generated code makes review more important, not less, because the volume of code goes up.}
 \end{frame}
 
-\begin{frame}[eyebrow=Agents]{Using agents in this course's labs: the rules}
+\begin{frame}[eyebrow=Agents]{Rules for agent use in the labs}
   \vskip 1mm
   {\usebeamerfont{small}\begin{tabular}{@{}lp{92mm}@{}}
     \toprule
@@ -465,7 +465,7 @@ where possible. Add a widget test.
   \note{These four rules are graded, not optional. If a student cannot explain a line during a lab check, the grading assumes they do not understand it and marks it accordingly.}
 \end{frame}
 
-\begin{frame}[fragile,eyebrow=Agents]{What citing an agent in a pull request looks like}
+\begin{frame}[fragile,eyebrow=Agents]{Citing an agent in a pull request}
 \begin{codeblock}
 ## What changed
 Added pagination to the feed screen.
@@ -482,7 +482,7 @@ and added the empty-state case myself.
   \note{Contrast this with a one-line "used AI" note, which tells a grader nothing. The bar is: another student could read this description and know exactly which lines to look at first.}
 \end{frame}
 
-\begin{frame}[eyebrow=Recap]{Three things to remember}
+\begin{frame}[eyebrow=Recap]{Summary}
   \vskip 2mm
   \begin{enumerate}
     \item await is not a thread. \muted{It suspends one function and frees the event loop until the Future completes.}

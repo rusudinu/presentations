@@ -6,7 +6,7 @@
 \course{Mobile and Embedded Computing}
 \decklabel{Lecture 10}
 \title{Backends for mobile}
-\subtitle{Serverless, a VPS, and Go}
+\subtitle{Serverless, VPS hosting, Go backends, API design}
 \author{Dinu-Ștefan Rusu}
 \institute{FILS, Universitatea Politehnica București}
 \date{Spring 2027}
@@ -16,13 +16,13 @@
 \titleframe
 
 \objectivesframe{
-  \cell[\faIcon{code-branch}]{Split client and server}{What must run on a machine you control, and why the client is untrusted input.}
-  \cell[\faCloud]{Choose serverless or a VPS}{Cold starts, scaling and cost shape, and the case where each one wins.}
-  \cell[\faIcon{plug}]{Design an API for mobile}{Pagination, versioning, conditional requests, compression and rate limits.}
-  \cell[\faServer]{Ship a Go backend}{A minimal Docker image, a systemd unit, environment variables, health checks and logs.}
+  \cell[\faIcon{code-branch}]{Client and server responsibilities}{What must run on a machine you control, and why the client is untrusted input.}
+  \cell[\faCloud]{Serverless versus a VPS}{Cold starts, scaling and cost shape, and the case where each one wins.}
+  \cell[\faIcon{plug}]{API design for mobile}{Pagination, versioning, conditional requests, compression and rate limits.}
+  \cell[\faServer]{Go backend deployment}{A minimal Docker image, a systemd unit, environment variables, health checks and logs.}
 }
 
-\divider{Part 1 \textperiodcentered\ Server and client}{Where does the code run?}[The same feature costs different things on either side of the wire]
+\divider{Part 1 \textperiodcentered\ Server and client}{Client versus server placement}
 
 \begin{frame}[eyebrow=Server and client]{Server-side and client-side execution}
   \begin{columns}[T]
@@ -49,7 +49,7 @@
   \note{Ask the room where they would put: a password strength check (both), a price calculation (server), a dark-mode toggle (client), whether a coupon is still valid (server, always). The client copy is a courtesy; the server copy is the rule.}
 \end{frame}
 
-\begin{frame}[eyebrow=Server and client]{The client is untrusted input}
+\begin{frame}[eyebrow=Server and client]{Untrusted client input}
   \begin{columns}[T]
     \begin{column}{0.58\textwidth}
       \begin{itemize}
@@ -71,7 +71,7 @@
   \note{An Application Programming Interface (API) key is the clearest example: ship it inside the app and every user has it within a day of release. The rule is simple: if leaking it would hurt, it does not belong on the client.}
 \end{frame}
 
-\divider{Part 2 \textperiodcentered\ Where the server runs}{Serverless vs a VPS}[Two cost shapes, two failure modes, and two different sets of operational work]
+\divider{Part 2 \textperiodcentered\ Where the server runs}{Serverless versus a VPS}[Cost, failure modes, operational work]
 
 \begin{frame}[eyebrow=Serverless]{Serverless: functions as a service}
   \begin{columns}[T]
@@ -118,7 +118,7 @@
   \note{Numbers are orders of magnitude, not benchmarks. Tell students to measure their own p99 on the platform they picked. Cold-start cost is unusually a language choice: almost nothing else about a small backend depends on the runtime.}
 \end{frame}
 
-\begin{frame}[eyebrow=VPS]{VPS: renting the whole machine}
+\begin{frame}[eyebrow=VPS]{Virtual private servers}
   \begin{columns}[T]
     \begin{column}{0.6\textwidth}
       \begin{itemize}
@@ -142,7 +142,7 @@
   \note{A floating IP, an address you can repoint at a fresh box during an upgrade, is worth mentioning: it allows replacing a machine without changing DNS. Hetzner and DigitalOcean both offer it.}
 \end{frame}
 
-\begin{frame}[eyebrow=Serverless vs VPS]{The same backend, two cost shapes}
+\begin{frame}[eyebrow=Serverless vs VPS]{Serverless and VPS cost comparison}
   {\fontsize{8}{9.5}\selectfont\renewcommand\arraystretch{1.0}
   \begin{tabular}{@{}lp{42mm}p{42mm}@{}}
     \toprule
@@ -164,7 +164,7 @@
   \note{This table is the one slide worth photographing. Every project team will face this choice for the backend in Lab 5 and Lab 6, and the honest answer for a semester project is usually one small VPS.}
 \end{frame}
 
-\begin{frame}[eyebrow=Serverless]{Writing code that survives a FaaS runtime}
+\begin{frame}[eyebrow=Serverless]{Writing code for a FaaS runtime}
   \begin{grid}[3]
     \cell[\faIcon{box}]{Ship a small package}{Every megabyte and import adds cold-start time. Trim dependencies first.}
     \cell[\faIcon{sync-alt}]{Initialize outside the handler}{Database pools and HTTP clients belong at module scope, reused by warm invocations.}
@@ -176,7 +176,7 @@
   \note{Every one of these is a bug students will eventually hit: a handler that opens a new database connection per call, or stores a counter in a global variable that resets on the next cold start.}
 \end{frame}
 
-\begin{frame}[eyebrow=VPS]{Running a box you will not regret}
+\begin{frame}[eyebrow=VPS]{Operating a VPS}
   \vskip 2mm
   \begin{grid}[3]
     \cell[\faIcon{terminal}]{Rebuild it from a script}{A Dockerfile plus one provisioning script. The machine should be reproducible, never hand-tuned.}
@@ -189,9 +189,9 @@
   \note{Ask who has ever restored a backup they took. Almost nobody has, which is the point of the fifth cell: an untested backup is a hope, not a plan.}
 \end{frame}
 
-\divider{Part 3 \textperiodcentered\ Go backends}{A backend that fits in one binary}[One static binary, milliseconds to start, deployable anywhere]
+\divider{Part 3 \textperiodcentered\ Go backends}{Go backends}[Static binaries, fast startup, cross-compilation]
 
-\begin{frame}[fragile,eyebrow=Go backends]{Why Go for a small mobile backend}
+\begin{frame}[fragile,eyebrow=Go backends]{Go for small mobile backends}
   \begin{columns}[T]
     \begin{column}{0.6\textwidth}
       \lead{One static binary.}{One executable: no runtime, no dependency folder.}
@@ -217,7 +217,7 @@ ssh root@vps \
   \note{Cross-compilation is the detail students forget: the same laptop that runs Flutter builds a Linux server binary and a Raspberry Pi binary with one environment variable each, no cross-compiler toolchain to install.}
 \end{frame}
 
-\begin{frame}[fragile,eyebrow=Go backends]{A handler, and the Dart call that hits it}
+\begin{frame}[fragile,eyebrow=Go backends]{Go handler and Dart client call}
   \begin{columns}[T]
     \begin{column}{0.52\textwidth}
       {\bfseries Go: standard library only}\par
@@ -279,9 +279,9 @@ final res = await dio.post(
   \note{The winner is whichever attempt replies first; the loser is simply canceled, not an error. Ask which methods are safe to hedge: GET freely, POST only behind an idempotency key the server remembers.}
 \end{frame}
 
-\divider{Part 4 \textperiodcentered\ API design for a mobile client}{Design decisions clients feel}[Pagination, versioning, conditional requests, compression, and rate limits]
+\divider{Part 4 \textperiodcentered\ API design for a mobile client}{API design for mobile clients}[Pagination, versioning, conditional requests, compression, and rate limits]
 
-\begin{frame}[fragile,eyebrow=API design]{Pagination with cursors, not page numbers}
+\begin{frame}[fragile,eyebrow=API design]{Cursor-based pagination}
   \begin{columns}[T]
     \begin{column}{0.56\textwidth}
       \begin{itemize}
@@ -306,7 +306,7 @@ type Page struct {
   \note{Ask what happens to page two of an offset query if a row is deleted from page one while the user is still scrolling. Every item after it shifts up by one, and the user sees a duplicate or a skip.}
 \end{frame}
 
-\begin{frame}[eyebrow=API design]{Versioning: give clients time to update}
+\begin{frame}[eyebrow=API design]{API versioning}
   \vskip 1mm
   \begin{itemize}
     \item A mobile client cannot be forced to update. Old app versions can stay installed for years, so the server must keep serving them.
@@ -342,7 +342,7 @@ type Page struct {
   \note{This is the same idea Lecture 9 used for optimistic concurrency in the sync engine, applied at the transport layer instead of inside the database.}
 \end{frame}
 
-\begin{frame}[eyebrow=API design]{Compression: fewer bytes on a metered radio}
+\begin{frame}[eyebrow=API design]{Response compression}
   \vskip 1mm
   \begin{itemize}
     \item A phone often pays for every byte in time, battery, and sometimes money. Compression trades a little CPU time for fewer bytes on the radio.
@@ -356,7 +356,7 @@ type Page struct {
   \note{Brotli, requested as br in Accept-Encoding, compresses text slightly better than gzip and is supported by most modern HTTP stacks, but gzip alone already covers most of the gain for a small API.}
 \end{frame}
 
-\begin{frame}[eyebrow=API design]{Rate limits: protecting the server from its clients}
+\begin{frame}[eyebrow=API design]{Rate limiting}
   \vskip 1mm
   \begin{itemize}
     \item A rate limit caps how many requests one client, one API key, or one IP address may make in a window, so one runaway client or a retry storm cannot take the service down for everyone else.
@@ -369,7 +369,7 @@ type Page struct {
   \note{Connect a rate limit back to the retry and hedge slides: a client that retries without jitter against a rate-limited endpoint produces the exact thundering herd from Part 3.}
 \end{frame}
 
-\divider{Part 5 \textperiodcentered\ Deploying and operating}{Shipping the binary and keeping it healthy}[A Docker image, Cloud Run, systemd, secrets, health checks, and logs]
+\divider{Part 5 \textperiodcentered\ Deploying and operating}{Deployment and operations}[Docker, Cloud Run, systemd, secrets, health checks, logs]
 
 \begin{frame}[fragile,eyebrow=Deploying]{A minimal Dockerfile for a Go binary}
 \begin{codeblock}
@@ -388,7 +388,7 @@ ENTRYPOINT ["/server"]
   \note{Ask why the final image has no shell. It means an attacker who compromises the process cannot exec into a shell to look around, because there is no shell binary in the image at all.}
 \end{frame}
 
-\begin{frame}[fragile,eyebrow=Deploying]{The same image, deployed to Cloud Run}
+\begin{frame}[fragile,eyebrow=Deploying]{Deploying to Cloud Run}
   \begin{itemize}
     \item \code{gcloud run deploy} builds and deploys the container behind a managed load balancer. Nobody patches the machine.
     \item Concurrency, instances, memory, and CPU are flags, not hand-provisioned infrastructure.
@@ -475,7 +475,7 @@ http.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
   \note{The distinction matters most under database failure: the process itself is fine, so liveness should stay green while readiness goes red and the load balancer quietly stops sending it traffic.}
 \end{frame}
 
-\begin{frame}[fragile,eyebrow=Deploying]{Structured logs: fields, not sentences}
+\begin{frame}[fragile,eyebrow=Deploying]{Structured logging}
   \begin{columns}[T]
     \begin{column}{0.58\textwidth}
       \begin{itemize}
@@ -499,7 +499,7 @@ logger.Info("reading saved",
   \note{Log the boring successful requests too, not just the errors: status code, duration, and device identifier on every call is what tells you the baseline changed before it becomes an outage.}
 \end{frame}
 
-\begin{frame}[eyebrow=Deploying]{What the project backend needs}
+\begin{frame}[eyebrow=Deploying]{Project backend requirements}
   \vskip 1mm
   \begin{itemize}
     \item Lab 5's sync server is this lecture in miniature: a small Go program, an in-memory list with a version per row, one endpoint that accepts offline writes and returns what changed since a cursor.
@@ -513,7 +513,7 @@ logger.Info("reading saved",
   \note{Reassure the room: nobody needs Kubernetes for this project. One VPS, one binary, one systemd unit, and the checklist from this lecture is a complete, defensible backend.}
 \end{frame}
 
-\begin{frame}[eyebrow=Recap]{Three things to remember}
+\begin{frame}[eyebrow=Recap]{Summary}
   \vskip 2mm
   \begin{enumerate}
     \item The client is untrusted input. \muted{Every rule that matters is checked again on the server.}

@@ -5,7 +5,7 @@
 \course{Mobile and Embedded Computing}
 \decklabel{Lab 2}
 \title{A sensor reading over MQTT}
-\subtitle{I2C in TinyGo, MQTT in the middle, a live value in Flutter}
+\subtitle{I2C sensor in TinyGo, MQTT publishing, live value in Flutter}
 \author{Dinu-Ștefan Rusu}
 \institute{FILS, Universitatea Politehnica București}
 \date{Week 4}
@@ -14,7 +14,7 @@
 
 \titleframe
 
-\begin{frame}[eyebrow=Today]{What this lab is for}
+\begin{frame}[eyebrow=Today]{Lab objectives}
   \vskip 2mm
   \begin{grid}[2]
     \cell[\faMicrochip]{Read a sensor and publish it}{Drive an I2C sensor from TinyGo with a driver from the TinyGo drivers repository, then publish the reading as JSON to your Mosquitto broker every two seconds.}
@@ -24,7 +24,7 @@
   \taskmeta{Time}{2 hours}{Submit}{Push to your team repo, branch \code{lab-2}, before next lab}
 \end{frame}
 
-\begin{frame}[embedded,eyebrow=Setup]{Three set-ups, one contract}
+\begin{frame}[embedded,eyebrow=Setup]{Hardware setups and message contract}
   \vskip 1mm
   \begin{grid}[2]
     \cell[\faWifi]{ESP32-C3 or ESP32-S3}{Wi-Fi comes from the espradio package. The board publishes to the broker itself.}
@@ -36,7 +36,7 @@
   \muted{The broker is the Mosquitto you installed in Lab 1. Start it before anything else.}
 \end{frame}
 
-\begin{frame}[fragile,eyebrow=Setup]{Where your code goes}
+\begin{frame}[fragile,eyebrow=Setup]{Branch, dependencies, file layout}
   \begin{steps}
     \item Branch the team repository and add the dependencies:
 \begin{shell}
@@ -73,7 +73,7 @@ cd ../app && flutter pub add mqtt_client
   \end{columns}
 \end{frame}
 
-\begin{frame}[embedded,fragile,eyebrow=Task I]{The shape of the sensor loop}
+\begin{frame}[embedded,fragile,eyebrow=Task I]{Sensor loop}
   \begin{columns}[T]
     \begin{column}{0.55\textwidth}
 \begin{golang}
@@ -101,7 +101,7 @@ for {
   \end{columns}
 \end{frame}
 
-\begin{frame}[embedded,fragile,eyebrow=Task I]{No board, or no sensor}
+\begin{frame}[embedded,fragile,eyebrow=Task I]{Simulated reading without a sensor}
   \vskip 1mm
 \begin{golang}
 // Same program, one line swapped. Everything downstream stays identical.
@@ -144,7 +144,7 @@ seq++
   \end{columns}
 \end{frame}
 
-\begin{frame}[embedded,fragile,eyebrow=Task II]{Joining the network and the broker}
+\begin{frame}[embedded,fragile,eyebrow=Task II]{Wi-Fi and broker connection}
   \begin{columns}[T]
     \begin{column}{0.55\textwidth}
 \begin{golang}
@@ -172,7 +172,7 @@ c.Connect(ctx, conn, &v)
   \end{columns}
 \end{frame}
 
-\begin{frame}[embedded,fragile,eyebrow=Task II]{The topic and the payload}
+\begin{frame}[embedded,fragile,eyebrow=Task II]{Topic and payload}
   \vskip 1mm
 \begin{golang}
 topic := "course/" + team + "/reading"          // one team, one topic
@@ -196,7 +196,7 @@ time.Sleep(2 * time.Second)
   \end{columns}
 \end{frame}
 
-\begin{frame}[embedded,fragile,eyebrow=Task II]{A Pico without Wi-Fi: the laptop bridge}
+\begin{frame}[embedded,fragile,eyebrow=Task II]{Pico without Wi-Fi: laptop bridge}
   \vskip 1mm
 \begin{shell}
 # macOS: stty -f <port> 115200      Linux: stty -F <port> 115200
@@ -253,7 +253,7 @@ c.updates!.listen((events) {
   \muted{\code{10.0.2.2} is your machine from the Android emulator. A real phone uses the laptop's address.}
 \end{frame}
 
-\begin{frame}[fragile,eyebrow=Task III]{Render it, and come back after a drop}
+\begin{frame}[fragile,eyebrow=Task III]{Rendering and reconnecting}
 \begin{dart}
 BlocBuilder<ReadingBloc, ReadingState>(
   builder: (ctx, s) => Text(s.label),   // 'waiting' or '21.4 C'
@@ -271,7 +271,7 @@ void _scheduleReconnect() async {
   \muted{Two clients with the same id disconnect each other, which looks like a broken network.}
 \end{frame}
 
-\begin{frame}[fragile,eyebrow=Acceptance]{What the grader will do}
+\begin{frame}[fragile,eyebrow=Acceptance]{Acceptance checks}
   \vskip 1mm
 \begin{shell}
 mosquitto_sub -h localhost -q 1 -t 'course/+/reading' -v
@@ -295,7 +295,7 @@ mosquitto_sub -h localhost -q 1 -t 'course/+/reading' -v
   \end{columns}
 \end{frame}
 
-\begin{frame}[eyebrow=Troubleshooting]{Five failures you will meet}
+\begin{frame}[eyebrow=Troubleshooting]{Common errors}
   \trouble{Connected() is false}{Wrong I2C address: scan the bus, 0x76 or 0x77.}
   \trouble{The bus scan prints nothing}{Nothing acknowledged. Check supply, ground, and the two I2C pins.}
   \trouble{Error: Connection refused}{Nothing listens on 1883. Start Mosquitto, bind the network address.}
@@ -303,6 +303,6 @@ mosquitto_sub -h localhost -q 1 -t 'course/+/reading' -v
   \trouble{CLEARTEXT not permitted}{Android blocks a plain broker. Set usesCleartextTraffic true in the manifest.}
 \end{frame}
 
-\closingframe{Push before you leave.}{Branch lab-2 · one commit per task · your topic in the README}
+\closingframe{Submission}{Branch lab-2 · one commit per task · your topic in the README}
 
 \end{document}

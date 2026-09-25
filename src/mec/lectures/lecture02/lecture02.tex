@@ -16,15 +16,15 @@
 \titleframe
 
 \objectivesframe{
-  \cell[\faClock]{Respect the frame budget}{One frame is 1 \(\div\) refresh rate. Blocking the UI thread past that costs a dropped frame, not a crash.}
-  \cell[\faIcon{random}]{Move CPU work off the UI thread}{compute() for a one-shot call, Isolate.spawn for a worker that lives longer or streams results back.}
-  \cell[\faIcon{share-alt}]{Write goroutines and channels}{Go's concurrency primitives: go func(), typed channels, and select, on the server side of the same stack.}
-  \cell[\faIcon{exchange-alt}]{Compare the two models}{Dart isolates copy messages between heaps. Goroutines share one heap and rely on channels for discipline.}
+  \cell[\faClock]{Frame budget}{One frame is 1 \(\div\) refresh rate. Blocking the UI thread past that costs a dropped frame, not a crash.}
+  \cell[\faIcon{random}]{Isolates for CPU work}{compute() for a one-shot call, Isolate.spawn for a worker that lives longer or streams results back.}
+  \cell[\faIcon{share-alt}]{Goroutines and channels}{Go's concurrency primitives: go func(), typed channels, and select, on the server side of the same stack.}
+  \cell[\faIcon{exchange-alt}]{Concurrency model comparison}{Dart isolates copy messages between heaps. Goroutines share one heap and rely on channels for discipline.}
 }
 
-\divider{Part 1 \textperiodcentered\ Foundations}{The frame budget and the event loop}[One thread, one queue, and what running on it costs]
+\divider{Part 1 \textperiodcentered\ Foundations}{The frame budget and the event loop}[Event loop, microtasks, futures, and streams]
 
-\begin{frame}[eyebrow=Foundations]{One frame budget \(=\) 1 \(\div\) refresh rate}
+\begin{frame}[eyebrow=Foundations]{Frame budget}
   \vskip 2mm
   \begin{grid}[3]
     \bignum{16.7 ms}{60 Hz: older devices, power-saving mode}
@@ -64,7 +64,7 @@
   \note{Draw the loop on the board if the room looks unconvinced: one event, drain every microtask, then the next event, in that strict order. This is also why a synchronous exception inside a callback can starve the frame: nothing else gets a turn until that callback returns.}
 \end{frame}
 
-\begin{frame}[fragile,eyebrow=Foundations]{Futures and async/await: a refresher}
+\begin{frame}[fragile,eyebrow=Foundations]{Futures and async/await}
   \begin{columns}[T]
     \begin{column}{0.56\textwidth}
 \begin{dart}
@@ -90,7 +90,7 @@ Future<void> refresh() async {
   \note{This is deliberately short. ADMD Lecture 4 already taught Future, async, await and error handling in depth. The only new point worth making here is the connection to the event loop: await is what hands control back to the loop covered on the previous slide.}
 \end{frame}
 
-\begin{frame}[fragile,eyebrow=Foundations]{Streams: many values, over time}
+\begin{frame}[fragile,eyebrow=Foundations]{Streams}
   \begin{columns}[T]
     \begin{column}{0.56\textwidth}
 \begin{dart}
@@ -117,7 +117,7 @@ Stream<int> ticker() async* {
   \note{Point out that async* and yield are to Stream what async and return are to Future. The consumer side, await for, is also just sugar over the same event loop: it still processes one event and drains microtasks before the next.}
 \end{frame}
 
-\begin{frame}[fragile,eyebrow=Foundations]{Async is not parallel}
+\begin{frame}[fragile,eyebrow=Foundations]{Asynchrony versus parallelism}
   \begin{columns}[T]
     \begin{column}{0.56\textwidth}
 \begin{dart}
@@ -146,9 +146,9 @@ Future<int> sumTo(int n) async {
   \note{This is the slide that motivates the whole next section. Ask the room to spot why sumTo is misleading: it is marked async, but the keyword changes nothing about how the loop body executes. The fix is not a better await, it is moving the loop to an isolate.}
 \end{frame}
 
-\divider{Part 2 \textperiodcentered\ Isolates}{Moving CPU work off the UI thread}[A second heap, not a second thread inside yours]
+\divider{Part 2 \textperiodcentered\ Isolates}{CPU-bound work in isolates}
 
-\begin{frame}[fragile,eyebrow=Isolates]{compute(): the one-call isolate}
+\begin{frame}[fragile,eyebrow=Isolates]{compute()}
   \begin{columns}[T]
     \begin{column}{0.56\textwidth}
 \begin{dart}
@@ -204,7 +204,7 @@ void _worker(List msg) {
   \note{Use spawn over compute() when the worker is long-lived or streams several results back instead of one. Point out that the worker function only ever sees what arrived in msg: it has no access to any variable from the isolate that spawned it.}
 \end{frame}
 
-\begin{frame}[eyebrow=Isolates]{Async vs isolates, precisely}
+\begin{frame}[eyebrow=Isolates]{Async versus isolates}
   \vskip 1mm
   {\usebeamerfont{small}\begin{tabular}{@{}p{22mm}p{54mm}p{54mm}@{}}
     \toprule
@@ -226,7 +226,7 @@ void _worker(List msg) {
 
 \divider{Part 3 \textperiodcentered\ Goroutines}{Go's concurrency model}[Shared memory, channels, and one goroutine per request]
 
-\begin{frame}[fragile,eyebrow=Goroutines]{Why Go for the server side of this stack}
+\begin{frame}[fragile,eyebrow=Goroutines]{Go on the server side}
   \begin{columns}[T]
     \begin{column}{0.56\textwidth}
       \begin{itemize}
@@ -250,7 +250,7 @@ ssh root@vps 'systemctl restart api'
   \note{This is a preview, not the full backend picture: Lecture 10 covers serverless versus a VPS and deploying Go in depth. Here the point is narrower: Go's standard library gives you a working concurrent server before you write a single goroutine yourself.}
 \end{frame}
 
-\begin{frame}[eyebrow=Goroutines]{Same stack, a different runtime}
+\begin{frame}[eyebrow=Goroutines]{Phone and server runtimes}
   \vskip 2mm
   \begin{grid}[2]
     \cell[\faIcon{mobile-alt}]{On the phone}{One thread owns the UI, and it has a frame budget to protect. Concurrency exists to keep that one thread free.}
@@ -291,7 +291,7 @@ func handleReading(w http.ResponseWriter,
   \note{Live demo if time allows: go run the handler, then fire two curl requests back to back and log the goroutine id inside the handler to show they differ. The framework did nothing special; this is the default behavior of net/http.}
 \end{frame}
 
-\begin{frame}[fragile,eyebrow=Goroutines]{Goroutines: cheap, runtime-scheduled}
+\begin{frame}[fragile,eyebrow=Goroutines]{Goroutines}
   \begin{columns}[T]
     \begin{column}{0.56\textwidth}
 \begin{golang}
@@ -321,7 +321,7 @@ func worker(id int) {
   \note{The Sleep here is a placeholder, not a pattern: main exiting kills every goroutine still running, sleeping is just a way to give them a chance to print before that happens. The next slide replaces it with the correct tool.}
 \end{frame}
 
-\begin{frame}[fragile,eyebrow=Goroutines]{Waiting for many goroutines: sync.WaitGroup}
+\begin{frame}[fragile,eyebrow=Goroutines]{sync.WaitGroup}
   \begin{columns}[T]
     \begin{column}{0.56\textwidth}
 \begin{golang}
@@ -349,7 +349,7 @@ wg.Wait()
   \note{WaitGroup answers only one question: has everyone finished. It carries no data back. The next few slides cover channels, which is how goroutines actually exchange values while they run.}
 \end{frame}
 
-\begin{frame}[fragile,eyebrow=Goroutines]{Channels: typed, synchronized queues}
+\begin{frame}[fragile,eyebrow=Goroutines]{Channels}
   \begin{columns}[T]
     \begin{column}{0.56\textwidth}
 \begin{golang}
@@ -417,7 +417,7 @@ ch <- 4 // buffer full: blocks
   \note{This is the honest cost of Go's model. A data race here is a real, silent bug: two goroutines touching the same map with no synchronization can corrupt it without ever panicking. The race detector is not optional in a codebase with real concurrency; run it in CI.}
 \end{frame}
 
-\begin{frame}[fragile,eyebrow=Goroutines]{select: waiting on multiple channels}
+\begin{frame}[fragile,eyebrow=Goroutines]{The select statement}
   \begin{columns}[T]
     \begin{column}{0.56\textwidth}
 \begin{golang}
@@ -467,7 +467,7 @@ default:
   \note{Point out that this timeout pattern is idiomatic Go: there is no separate Future.timeout call, the same select statement that multiplexes channels also expresses a deadline. It is one primitive doing both jobs.}
 \end{frame}
 
-\divider{Part 4 \textperiodcentered\ Compared}{Producer and consumer, Dart and Go}[Same shape, opposite guarantee]
+\divider{Part 4 \textperiodcentered\ Compared}{Producer and consumer in Dart and Go}
 
 \begin{frame}[fragile,eyebrow=Compared]{Producer/consumer in Dart}
 \begin{dart}
@@ -527,7 +527,7 @@ for item := range ch { // consumer
   \note{Go's slogan is a convention, not an enforced rule: nothing stops a goroutine from reaching across the shared heap instead of using the channel. Dart's separate heaps make that mistake impossible to write, at the cost of copying every message.}
 \end{frame}
 
-\begin{frame}[eyebrow=Compared]{What each model buys you: phone vs server}
+\begin{frame}[eyebrow=Compared]{Concurrency on the phone and the server}
   \vskip 2mm
   \begin{grid}[2]
     \cell[\faIcon{mobile-alt}]{On the phone}{Protect one frame budget. Anything over a few milliseconds of CPU work moves to an isolate; you spawn only as many as the work actually needs.}
@@ -539,7 +539,7 @@ for item := range ch { // consumer
   \note{Close the comparison by asking the room: if a mobile screen needed to serve a thousand simultaneous callers, would isolates be the right tool? No: that is exactly the server-side problem Go was built for, and it is why the course teaches both.}
 \end{frame}
 
-\begin{frame}[eyebrow=Recap]{Three things to remember}
+\begin{frame}[eyebrow=Recap]{Summary}
   \vskip 2mm
   \begin{enumerate}
     \item One frame budget is 1 divided by refresh rate. \muted{The event loop runs one thing at a time and drains every microtask before the next event.}

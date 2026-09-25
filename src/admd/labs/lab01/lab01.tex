@@ -15,7 +15,7 @@
 
 \titleframe
 
-\begin{frame}[eyebrow=Today]{What this lab is for}
+\begin{frame}[eyebrow=Today]{Lab objectives}
   \vskip 2mm
   \begin{grid}[2]
     \cell[\faWrench]{Install a working toolchain}{Flutter and Dart on your laptop, with flutter doctor reporting no blocking issues.}
@@ -37,7 +37,7 @@
   \end{takeaway}
 \end{frame}
 
-\begin{frame}[eyebrow=Grading]{How you earn points}
+\begin{frame}[eyebrow=Grading]{Grading}
   {\usebeamerfont{small}
   \begin{tabular}[t]{lp{6cm}r}
     \thead{Work} & \thead{Description} & \thead{Points} \\
@@ -82,7 +82,7 @@ flutter doctor -v
   \end{columns}
 \end{frame}
 
-\begin{frame}[eyebrow=Task I]{Set up your environment}
+\begin{frame}[eyebrow=Task I]{Environment setup}
   \begin{columns}[T]
     \begin{column}{0.55\textwidth}
       \begin{steps}
@@ -105,7 +105,7 @@ flutter doctor -v
   \end{columns}
 \end{frame}
 
-\begin{frame}[eyebrow=Task II]{Run the default app}
+\begin{frame}[eyebrow=Task II]{Running the default app}
   \begin{columns}[T]
     \begin{column}{0.55\textwidth}
       \begin{steps}
@@ -129,7 +129,7 @@ flutter doctor -v
   \end{columns}
 \end{frame}
 
-\begin{frame}[fragile,eyebrow=Troubleshooting]{When flutter doctor fails}
+\begin{frame}[fragile,eyebrow=Troubleshooting]{flutter doctor errors}
   \trouble{cmdline-tools missing}{Android Studio > SDK Manager > SDK Tools > Android SDK Command-line Tools. Install, then run \code{flutter doctor} again.}
   \trouble{License unknown}{Run \code{flutter doctor --android-licenses} and answer \code{y} to all prompts.}
   \trouble{Unable to locate SDK}{Open Android Studio once. The SDK downloads on first launch. On Mac, accept the Xcode license first.}
@@ -153,7 +153,7 @@ flutter doctor -v
   \end{steps}
 \end{frame}
 
-\begin{frame}[fragile,eyebrow=GitHub]{Push your first pull request}
+\begin{frame}[fragile,eyebrow=GitHub]{First pull request}
   \begin{columns}[T]
     \begin{column}{0.55\textwidth}
 \begin{shell}
@@ -171,6 +171,6 @@ git push -u origin lab-1
   \end{columns}
 \end{frame}
 
-\closingframe{Before you leave}{Push to branch \code{lab-1} with a screenshot and one commit}
+\closingframe{Submission}{Push to branch \code{lab-1} with a screenshot and one commit}
 
 \end{document}

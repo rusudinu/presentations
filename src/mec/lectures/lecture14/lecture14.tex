@@ -5,7 +5,7 @@
 \course{Mobile and Embedded Computing}
 \decklabel{Lecture 14}
 \title{Compilation, energy, and exam preparation}
-\subtitle{Where machine code comes from, what it costs in battery, and how the semester is graded}
+\subtitle{Compilation, energy, exam preparation, project defense}
 \author{Dinu-Ștefan Rusu}
 \institute{FILS, Universitatea Politehnica București}
 \date{Spring 2027}
@@ -15,16 +15,16 @@
 \titleframe
 
 \objectivesframe{
-  \cell[\faCode]{Read the spectrum}{Interpretation, just-in-time and ahead-of-time compilation, and what each one trades away.}
-  \cell[\faToggleOn]{Explain the build modes}{Why Dart ships two compilers, what Android's runtime does, and why iOS allows no choice.}
-  \cell[\faBolt]{Spend energy on purpose}{Race to idle, thermal throttling, and the duty cycle that decides a device's battery life.}
-  \cell[\faGraduationCap]{Prepare for the exam}{The exam format, what to revise per lecture, the project defense, and the concept presentation.}
+  \cell[\faCode]{Compilation strategies}{Interpretation, just-in-time and ahead-of-time compilation, and what each one trades away.}
+  \cell[\faToggleOn]{Build modes}{Why Dart ships two compilers, what Android's runtime does, and why iOS allows no choice.}
+  \cell[\faBolt]{Energy use}{Race to idle, thermal throttling, and the duty cycle that decides a device's battery life.}
+  \cell[\faGraduationCap]{Exam preparation}{The exam format, what to revise per lecture, the project defense, and the concept presentation.}
 }
 
 % =====================================================================
-\divider{Part 1 · Compilation}{From source to instructions}[Interpretation, JIT, AOT, and the phone in between]
+\divider{Part 1 · Compilation}{Compilation strategies}[Interpretation, JIT, AOT, mobile runtimes]
 
-\begin{frame}[eyebrow=Compilation]{Three ways to turn code into instructions}
+\begin{frame}[eyebrow=Compilation]{Interpretation, JIT and AOT}
   \vskip 2mm
   {\usebeamerfont{small}
   \begin{tabular}{@{}lp{36mm}p{36mm}p{36mm}@{}}
@@ -63,7 +63,7 @@
   \note{Draw the three boxes on the board and put both toolchains through them. Students who have seen LLVM in Computer Architecture will recognize the middle box. The useful idea is that the intermediate representation is where optimization happens in both cases.}
 \end{frame}
 
-\begin{frame}[fragile,eyebrow=Compilation]{Dart uses both, through build modes}
+\begin{frame}[fragile,eyebrow=Compilation]{Dart build modes}
   \vskip 2mm
   \begin{columns}[T]
     \begin{column}{0.55\textwidth}
@@ -90,7 +90,7 @@ flutter build appbundle --release
   \note{Run the three commands live if the room has a device attached. The habit to build is that any performance claim must name the build mode it was measured in.}
 \end{frame}
 
-\begin{frame}[eyebrow=Compilation]{Why a JIT can beat an ahead-of-time compiler}
+\begin{frame}[eyebrow=Compilation]{JIT advantages over AOT}
   \vskip 2mm
   \begin{columns}[T]
     \begin{column}{0.54\textwidth}
@@ -112,7 +112,7 @@ flutter build appbundle --release
   \note{This slide answers the question students always ask after the previous one: if ahead-of-time is so good, why does anything still use a JIT. Speculation on observed types is the honest answer, and the guard-and-deoptimize mechanism is worth two minutes.}
 \end{frame}
 
-\begin{frame}[eyebrow=Compilation]{Android: a hybrid, arrived at slowly}
+\begin{frame}[eyebrow=Compilation]{Android runtime evolution}
   \vskip 2mm
   {\usebeamerfont{small}
   \begin{tabular}{@{}lp{24mm}p{78mm}@{}}
@@ -131,7 +131,7 @@ flutter build appbundle --release
   \note{Baseline profiles are the part worth remembering, because they are something an app author controls. Note that a Flutter release build is already native code, so the profile question mostly concerns the Kotlin and Java side of the app.}
 \end{frame}
 
-\begin{frame}[eyebrow=Compilation]{iOS: write XOR execute leaves no choice}
+\begin{frame}[eyebrow=Compilation]{iOS and write XOR execute}
   \vskip 2mm
   \begin{columns}[T]
     \begin{column}{0.52\textwidth}
@@ -151,7 +151,7 @@ flutter build appbundle --release
   \note{Write XOR execute deserves a whiteboard sketch: a page with a W bit and an X bit, and the two states the kernel will allow. Ask the room why a browser is allowed to break the rule and an app store app is not.}
 \end{frame}
 
-\begin{frame}[eyebrow=Compilation]{Where cross-platform runtimes stand in 2026}
+\begin{frame}[eyebrow=Compilation]{Cross-platform runtimes in 2026}
   \vskip 2mm
   \begin{columns}[T]
     \begin{column}{0.47\textwidth}
@@ -184,7 +184,7 @@ flutter build appbundle --release
   \note{Ask the room for the common thread before revealing it: every item spends the developer's machine once so that every user's device does not spend it on every launch. That is the whole design principle of this part of the lecture.}
 \end{frame}
 
-\begin{frame}[eyebrow=Compilation]{Cold start: from the tap to the first frame}
+\begin{frame}[eyebrow=Compilation]{Cold start sequence}
   \vskip 2mm
   \begin{columns}[T]
     \begin{column}{0.50\textwidth}
@@ -208,9 +208,9 @@ flutter build appbundle --release
 \end{frame}
 
 % =====================================================================
-\divider{Part 2 · Energy}{Energy at the platform level}[Race to idle, heat, and the duty cycle that decides battery life]
+\divider{Part 2 · Energy}{Energy at the platform level}[Race to idle, thermal throttling, duty cycles]
 
-\begin{frame}[eyebrow=Energy]{Race to idle: finish fast, then sleep}
+\begin{frame}[eyebrow=Energy]{Race to idle}
   \vskip 2mm
   \begin{grid}[3]
     \cell[\faIcon{bed}]{Idle is a real state}{A modern SoC has deep low-power states, but only when nothing keeps a core awake.}
@@ -225,7 +225,7 @@ flutter build appbundle --release
   \note{Give the concrete example of an animation left running behind a modal: it is invisible, it produces nothing, and it keeps the GPU and one core awake for as long as the screen is on.}
 \end{frame}
 
-\begin{frame}[eyebrow=Energy]{Energy problems come back as speed problems}
+\begin{frame}[eyebrow=Energy]{Thermal throttling}
   \vskip 2mm
   \begin{columns}[T]
     \begin{column}{0.54\textwidth}
@@ -246,7 +246,7 @@ flutter build appbundle --release
   \note{Students who measure only the first ten seconds of a scenario report numbers nobody can reproduce. Ask each project team how warm their device was when they took their measured claim.}
 \end{frame}
 
-\begin{frame}[eyebrow=Energy]{What compilation costs in battery}
+\begin{frame}[eyebrow=Energy]{Energy cost of compilation}
   \vskip 2mm
   \begin{grid}[3]
     \cell[\faBolt]{A run-time compiler}{Every cycle it spends is a cycle the user's battery pays for, and it spends them again on every cold start.}
@@ -260,7 +260,7 @@ flutter build appbundle --release
   \note{This is the hinge of the lecture. Say plainly that the industry trend is not JIT versus AOT as camps, but a steady migration of work toward build time, and that the reason is energy rather than elegance.}
 \end{frame}
 
-\begin{frame}[embedded,eyebrow=Energy]{Wake, send, sleep: energy at the device level}
+\begin{frame}[embedded,eyebrow=Energy]{Duty cycling at the device level}
   \vskip 1mm
   \begin{columns}[T]
     \begin{column}{0.52\textwidth}
@@ -284,7 +284,7 @@ flutter build appbundle --release
   \note{Shorten the active window or lengthen the period: everything else is noise. Ask the teams whose device is battery powered what their period is, and whether they chose it or inherited it from an example.}
 \end{frame}
 
-\begin{frame}[eyebrow=Energy]{Measuring a number you can defend}
+\begin{frame}[eyebrow=Energy]{Measurement methodology}
   \vskip 3mm
   \begin{grid}[3]
     \cell[\faIcon{ruler}]{What}{Average current on the board, energy per sync, frame build time, payload size, or publish-to-display latency.}
@@ -299,7 +299,7 @@ flutter build appbundle --release
 \end{frame}
 
 % =====================================================================
-\divider{Part 3 · Exam preparation}{What the exam asks}[The format, a revision plan per lecture, and worked examples]
+\divider{Part 3 · Exam preparation}{Exam preparation}[Format, revision plan, example questions]
 
 \begin{frame}[eyebrow=Exam]{The exam format}
   \vskip 2mm
@@ -334,7 +334,7 @@ flutter build appbundle --release
   \note{Show the grid on the projector while you explain it. The all-or-nothing rule surprises students every year, so state it twice and give the example of a question where four of five options are correct.}
 \end{frame}
 
-\begin{frame}[eyebrow=Exam]{What to revise, Lectures 1 to 7}
+\begin{frame}[eyebrow=Exam]{Revision topics, Lectures 1 to 7}
   \vskip 2mm
   {\usebeamerfont{small}
   \begin{tabular}{@{}llp{92mm}@{}}
@@ -355,7 +355,7 @@ flutter build appbundle --release
   \note{Tell students to work through this table with the decks open, one row per sitting. The rightmost column is deliberately phrased as the things a question can be built from.}
 \end{frame}
 
-\begin{frame}[eyebrow=Exam]{What to revise, Lectures 8 to 14}
+\begin{frame}[eyebrow=Exam]{Revision topics, Lectures 8 to 14}
   \vskip 2mm
   {\usebeamerfont{small}
   \begin{tabular}{@{}llp{92mm}@{}}
@@ -377,7 +377,7 @@ flutter build appbundle --release
   \note{Point out that Lectures 8 and 9 carry the most calculation-style questions, and Lectures 4 and 5 the most rule-recall questions. Both kinds are on the paper.}
 \end{frame}
 
-\begin{frame}[eyebrow=Exam]{Numbers worth carrying into the exam}
+\begin{frame}[eyebrow=Exam]{Key numbers for the exam}
   \vskip 2mm
   \begin{grid}[3]
     \bignum{1/rate}{the frame budget: 8.3 ms at 120 Hz, 16.7 ms at 60 Hz}
@@ -390,7 +390,7 @@ flutter build appbundle --release
   \note{Read these out and have the room say what each one is for. Any number on this slide can appear inside a calculation question, so the units matter as much as the values.}
 \end{frame}
 
-\begin{frame}[eyebrow=Exam]{Rules that are easy to get wrong}
+\begin{frame}[eyebrow=Exam]{Common mistakes}
   \vskip 2mm
   \begin{grid}[3]
     \cell[\faServer]{Safe is not idempotent}{GET is both. PUT and DELETE are idempotent but not safe, because they change state.}
@@ -403,7 +403,7 @@ flutter build appbundle --release
   \note{These six are the most common wrong answers in past papers. Ask for the counterexample to each one instead of reading the cell out loud.}
 \end{frame}
 
-\begin{frame}[eyebrow=Exam]{Statements that used to be true}
+\begin{frame}[eyebrow=Exam]{Outdated statements}
   \vskip 2mm
   \begin{grid}[3]
     \cell[\faIcon{paint-brush}]{"Skia draws Flutter"}{Impeller draws on iOS, Android and desktop. Skia is left for the web and old Android.}
@@ -499,7 +499,7 @@ flutter build appbundle --release
 % =====================================================================
 \divider{Part 4 · Defense}{Defense and presentation}[Project milestones, the defense rubric, and the concept presentation]
 
-\begin{frame}[eyebrow=Project]{Milestones: where you should already be}
+\begin{frame}[eyebrow=Project]{Project milestones}
   \vskip 1mm
   {\usebeamerfont{small}
   \begin{tabular}{@{}lp{96mm}@{}}
@@ -521,7 +521,7 @@ flutter build appbundle --release
   \note{Ask each team which milestone they are actually on, out loud, in front of the others. Teams that are two milestones behind at this point need the plan for the remaining sessions written down today.}
 \end{frame}
 
-\begin{frame}[eyebrow=Project]{What the defense checks}
+\begin{frame}[eyebrow=Project]{Defense rubric}
   \vskip 1mm
   {\usebeamerfont{small}
   \begin{tabular}{@{}lp{88mm}@{}}
@@ -541,7 +541,7 @@ flutter build appbundle --release
   \note{Say explicitly that every member answers questions about the part they wrote. A team where one person can explain everything and the others cannot is the case the rubric is designed to catch.}
 \end{frame}
 
-\begin{frame}[eyebrow=Project]{What a good demo shows}
+\begin{frame}[eyebrow=Project]{Demo guidelines}
   \vskip 2mm
   \begin{grid}[3]
     \cell[\faMobile]{Start cold}{Launch the app in front of the room, not a screen that has been open for an hour.}
@@ -576,7 +576,7 @@ flutter build appbundle --release
 \end{frame}
 
 % =====================================================================
-\begin{frame}[eyebrow=Recap]{Three things to remember}
+\begin{frame}[eyebrow=Recap]{Summary}
   \vskip 2mm
   \begin{enumerate}
     \item Every runtime decides when to translate. \muted{Every platform kept moving that moment earlier.}

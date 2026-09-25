@@ -5,7 +5,7 @@
 \course{Application Development for Mobile Devices}
 \decklabel{Lecture 9}
 \title{Observability and local storage}
-\subtitle{Seeing what a phone you do not own is doing, and where its data lives}
+\subtitle{Analytics, crash reporting, alerts, local storage, and app lifecycle}
 \author{Dinu-Ștefan Rusu}
 \institute{FILS, Universitatea Politehnica București}
 \date{Autumn 2026}
@@ -15,15 +15,15 @@
 \titleframe
 
 \objectivesframe{
-  \cell[\faChartLine]{See the app in production}{Log the events, traces and crash reports that describe a device you will never touch.}
-  \cell[\faBell]{Alert on the right number}{Crash-free users per version, p95 instead of the average, and alerts that have an owner.}
-  \cell[\faDatabase]{Store data on the device}{Preferences, secure storage, a SQL database, files, and a cache with a time to live.}
-  \cell[\faLock]{Keep secrets out of plain text}{What belongs in the keychain, what belongs on the server, and what to clear on sign-out.}
+  \cell[\faChartLine]{Production monitoring}{Log the events, traces and crash reports that describe a device you will never touch.}
+  \cell[\faBell]{Metrics and alerting}{Crash-free users per version, p95 instead of the average, and alerts that have an owner.}
+  \cell[\faDatabase]{Local storage}{Preferences, secure storage, a SQL database, files, and a cache with a time to live.}
+  \cell[\faLock]{Secure storage}{What belongs in the keychain, what belongs on the server, and what to clear on sign-out.}
 }
 
-\divider{Part 1 · Observability}{You cannot debug a phone you do not own}[Events, metrics, crashes, alerts]
+\divider{Part 1 · Observability}{Observability}[Events, metrics, crashes, alerts]
 
-\begin{frame}[eyebrow=Observability]{Why this is harder on a phone}
+\begin{frame}[eyebrow=Observability]{Mobile observability challenges}
   \vskip 2mm
   \begin{itemize}
     \item The code runs on hardware you have never seen: thousands of Android models, several OS versions, networks that drop mid-request, devices throttled in a pocket.
@@ -36,7 +36,7 @@
   \note{Ask the room how they would find a bug that only happens on one Android model in one country. Every answer they give needs data the app has to send on its own. That is the whole argument for this section.}
 \end{frame}
 
-\begin{frame}[eyebrow=Observability]{Four layers of signal}
+\begin{frame}[eyebrow=Observability]{Types of observability signals}
   \vskip 2mm
   \begin{grid}[2]
     \cell[\faChartBar]{Events}{What users did. Named actions read as a funnel, delayed by hours.}
@@ -74,7 +74,7 @@ await analytics.logEvent(
   \note{Say that in Flutter this is a plain Dart API with a Map of parameters. Students who saw the Android version of this will expect a Bundle and a context, and there is neither.}
 \end{frame}
 
-\begin{frame}[eyebrow=Observability]{Naming events, and what never goes in one}
+\begin{frame}[eyebrow=Observability]{Event naming and personal data}
   \vskip 2mm
   \begin{itemize}
     \item Name events for the funnel you want to read later. \code{checkout\_started}, then \code{payment\_submitted}, then \code{purchase\_complete} is a chart. Three unrelated names are not.
@@ -105,7 +105,7 @@ void main() async {
   \note{Point out that the two handlers cover two different worlds: the framework catches build and layout errors, and everything in a Future or a Zone outside it lands in the platform dispatcher. Missing the second one is why teams believe their app never crashes.}
 \end{frame}
 
-\begin{frame}[fragile,eyebrow=Observability]{Errors you already caught}
+\begin{frame}[fragile,eyebrow=Observability]{Reporting caught errors}
   \begin{columns}[T]
     \begin{column}{0.54\textwidth}
 \begin{dart}
@@ -130,7 +130,7 @@ crash.setUserIdentifier(hashedId);
   \note{Ask who has written an empty catch block this semester. Everyone has. Show that one recordError line turns that silence into a searchable issue with a stack trace.}
 \end{frame}
 
-\begin{frame}[eyebrow=Observability]{Crash-free users: the number to watch}
+\begin{frame}[eyebrow=Observability]{Crash-free users}
   \vskip 3mm
   \begin{grid}[3]
     \bignum{99.9\%}{crash-free sessions, the number vendors like to quote}
@@ -148,7 +148,7 @@ crash.setUserIdentifier(hashedId);
   \note{Do the arithmetic out loud on the room's own numbers: at 99.5 percent and 400 thousand installs, two thousand people hit a crash. Sorting issues by users affected rather than crash count follows from that.}
 \end{frame}
 
-\begin{frame}[eyebrow=Observability]{Latency: read p95, not the average}
+\begin{frame}[eyebrow=Observability]{Latency percentiles}
   \vskip 1mm
   {\usebeamerfont{small}\begin{tabular}{@{}lp{95mm}@{}}
     \toprule
@@ -188,7 +188,7 @@ await t.stop();
   \note{Ask which two paths in the lab app deserve a trace. Usually it is the first screen load and the one network call. That is enough: instrumenting everything produces noise nobody reads.}
 \end{frame}
 
-\begin{frame}[eyebrow=Observability]{Which alerts are worth firing}
+\begin{frame}[eyebrow=Observability]{Alerting guidelines}
   \vskip 1mm
   {\usebeamerfont{small}\begin{tabular}{@{}lp{46mm}p{54mm}@{}}
     \toprule
@@ -205,7 +205,7 @@ await t.stop();
   \note{The last row is the important one. Teams fail at alerting by adding alerts, not by missing them. Ask the room what they currently ignore in their own inbox and why.}
 \end{frame}
 
-\begin{frame}[eyebrow=Observability]{One incident, end to end}
+\begin{frame}[eyebrow=Observability]{Incident walkthrough}
   \vskip 1mm
   \muted{Four minutes after a ten percent rollout of a new checkout.}
   \vskip 3mm
@@ -221,9 +221,9 @@ await t.stop();
   \note{Walk this backwards as well. Without the event nobody would have looked, without the trace they would have blamed the client, without the crash report there would be no stack. Each layer alone is not enough.}
 \end{frame}
 
-\divider{Part 2 · Local storage}{Where the data lives when the network does not}[Preferences, secrets, a database, files, a cache]
+\divider{Part 2 · Local storage}{Local storage}[Preferences, secrets, a database, files, a cache]
 
-\begin{frame}[eyebrow=Storage]{What to store where}
+\begin{frame}[eyebrow=Storage]{Storage options}
   \vskip 1mm
   {\usebeamerfont{small}\begin{tabular}{@{}lp{44mm}p{52mm}@{}}
     \toprule
@@ -298,7 +298,7 @@ await storage.deleteAll();  // sign out
   \note{Mention that secure storage is slower than preferences and that calling it on every request is a real performance bug. Also mention that the Android behavior on a device backup differs, so treat it as best effort, not as a vault.}
 \end{frame}
 
-\begin{frame}[eyebrow=Storage]{What must never be stored in plain text}
+\begin{frame}[eyebrow=Storage]{Sensitive data}
   \begin{columns}[T]
     \begin{column}{0.54\textwidth}
       \vskip 1mm
@@ -340,7 +340,7 @@ final todos = rows.map(Todo.fromMap).toList();
   \note{Point at the two weaknesses before showing Drift: the SQL is unchecked until it runs, and every row comes back as an untyped map you have to convert by hand.}
 \end{frame}
 
-\begin{frame}[fragile,eyebrow=Storage]{The same table in Drift}
+\begin{frame}[fragile,eyebrow=Storage]{Drift table definition}
 \begin{dart}
 class Todos extends Table {
   TextColumn get id => text()();
@@ -358,7 +358,7 @@ class AppDb extends _$AppDb {
   \note{Say plainly which one to pick: sqflite when the app has two tables and no queries worth naming, Drift as soon as the schema has relations or the queries repeat.}
 \end{frame}
 
-\begin{frame}[fragile,eyebrow=Storage]{A query you can watch}
+\begin{frame}[fragile,eyebrow=Storage]{Watched queries in Drift}
   \begin{columns}[T]
     \begin{column}{0.54\textwidth}
 \begin{dart}
@@ -403,7 +403,7 @@ final tmp = await getTemporaryDirectory();
   \note{The stored-path bug is worth naming out loud. It passes every test on a simulator and breaks for real users after the first update, which makes it very hard to reproduce.}
 \end{frame}
 
-\begin{frame}[eyebrow=Storage]{Which directory, and what may be deleted}
+\begin{frame}[eyebrow=Storage]{App directories and cleanup}
   \vskip 1mm
   {\usebeamerfont{small}\begin{tabular}{@{}lp{22mm}p{54mm}@{}}
     \toprule
@@ -419,7 +419,7 @@ final tmp = await getTemporaryDirectory();
   \note{Ask where a downloaded invoice PDF goes and where a thumbnail goes. The answers are different, and the reason is who owns the file rather than how big it is.}
 \end{frame}
 
-\begin{frame}[fragile,eyebrow=Storage]{An in-memory cache with a time to live}
+\begin{frame}[fragile,eyebrow=Storage]{In-memory cache with TTL}
 \begin{dart}
 class Cached<T> {
   Cached(this.value) : at = DateTime.now();
@@ -438,7 +438,7 @@ Feed? readFeed(String key, Duration ttl) {
   \note{Ask what a sensible time to live is for a news feed, for a user profile and for a currency rate. The three answers differ by orders of magnitude, which is why the duration is a parameter and not a constant.}
 \end{frame}
 
-\begin{frame}[eyebrow=Storage]{The repository decides where to read}
+\begin{frame}[eyebrow=Storage]{Repository read strategy}
   \vskip 2mm
   \begin{enumerate}
     \item Return the cached value if it is still fresh. \muted{No await, no disk, no network, no spinner.}
@@ -453,9 +453,9 @@ Feed? readFeed(String key, Duration ttl) {
   \note{This is the slide that connects Lectures 6, 7 and 9. Draw the three arrows on the board and ask where an error from the network is allowed to surface.}
 \end{frame}
 
-\divider{Part 3 · Lifecycle}{The app is not always in front}[Save at the last moment you can still count on]
+\divider{Part 3 · Lifecycle}{App lifecycle}
 
-\begin{frame}[eyebrow=Lifecycle]{The lifecycle states}
+\begin{frame}[eyebrow=Lifecycle]{Lifecycle states}
   \vskip 2mm
   \begin{grid}[2]
     \cell[\faPlay]{resumed}{Visible and taking input. The only state in which animations and camera work belong.}
@@ -488,7 +488,7 @@ class _HomeState extends State<Home> with WidgetsBindingObserver {
   \note{Keep the save short: the app is being backgrounded and a long write may not finish. Point out that this callback is not a place for a network call. Write to the database, and let the sync happen the next time the app is in front.}
 \end{frame}
 
-\begin{frame}[eyebrow=Lifecycle]{A storage checklist before you ship}
+\begin{frame}[eyebrow=Lifecycle]{Storage checklist}
   \vskip 2mm
   \begin{checklist}
     \item No password, token or key in preferences, in a file, or in a log line.
@@ -503,7 +503,7 @@ class _HomeState extends State<Home> with WidgetsBindingObserver {
   \note{Give the room two minutes to check the lab app against this list. The last item is the one that fails most often, because the app was only ever run on a fast connection.}
 \end{frame}
 
-\begin{frame}[eyebrow=Recap]{Three things to remember}
+\begin{frame}[eyebrow=Recap]{Summary}
   \vskip 2mm
   \begin{enumerate}
     \item The app has to report on itself. \muted{Events, metrics, crashes and alerts, because you own none of the devices it runs on.}
@@ -513,7 +513,7 @@ class _HomeState extends State<Home> with WidgetsBindingObserver {
   \note{Close the loop with the incident slide: the flag limited the damage, but the crash report was what named the line to fix. Then hand over to the reading list.}
 \end{frame}
 
-\begin{frame}[eyebrow=Next]{What to do this week}
+\begin{frame}[eyebrow=Next]{Tasks for this week}
   \begin{columns}[T]
     \begin{column}{0.52\textwidth}
       \kv{This week}{}

@@ -15,15 +15,15 @@
 \titleframe
 
 \objectivesframe{
-  \cell[\faPalette]{One theme, two modes}{Build the app's colors and type once with ThemeData, and get dark mode for free.}
-  \cell[\faKeyboard]{Forms that behave}{Validators, focus order, keyboard types, and error messages a user can act on.}
-  \cell[\faUniversalAccess]{Reachable by everyone}{Semantics, contrast, tap targets, text scaling, and localized strings.}
-  \cell[\faVial]{Tests you trust}{Unit, widget, bloc, golden and integration tests, all running on every pull request.}
+  \cell[\faPalette]{Theming and dark mode}{Build the app's colors and type once with ThemeData, and get dark mode for free.}
+  \cell[\faKeyboard]{Forms}{Validators, focus order, keyboard types, and error messages a user can act on.}
+  \cell[\faUniversalAccess]{Accessibility and localization}{Semantics, contrast, tap targets, text scaling, and localized strings.}
+  \cell[\faVial]{Testing}{Unit, widget, bloc, golden and integration tests, all running on every pull request.}
 }
 
-\divider{Part 1 · Theming}{Making it look like one app}[ThemeData, Material 3, dark mode, and responsive layout]
+\divider{Part 1 · Theming}{Theming}[ThemeData, Material 3, dark mode, and responsive layout]
 
-\begin{frame}[fragile,eyebrow=Theming]{Colors do not belong inside widgets}
+\begin{frame}[fragile,eyebrow=Theming]{Hard-coded colors}
   \begin{columns}[T]
     \begin{column}{0.55\textwidth}
 \begin{dart}
@@ -65,7 +65,7 @@ final tt = Theme.of(context).textTheme;
   \note{Point at the seed: it is the only color the designer picks. Show that the generated palette is not the seed repeated, it is a set of tones. Say the theme lives in one file, for example lib/theme/app\_theme.dart. Mention that Material has moved into the separate material\_ui package, that the in-SDK library is deprecated from the November 2026 release, and that dart fix performs the migration.}
 \end{frame}
 
-\begin{frame}[eyebrow=Theming]{The color roles you will actually use}
+\begin{frame}[eyebrow=Theming]{Common color roles}
   \vskip 1mm
   \begin{tabular}{@{}lp{62mm}l@{}}
     \toprule
@@ -84,7 +84,7 @@ final tt = Theme.of(context).textTheme;
   \note{Stress the on-pair rule, because it is the single habit that prevents unreadable text in dark mode. Ask the room which role a delete button uses. The answer is error, not a red hex code.}
 \end{frame}
 
-\begin{frame}[fragile,eyebrow=Theming]{Dark mode is a second ThemeData}
+\begin{frame}[fragile,eyebrow=Theming]{Dark mode}
 \begin{dart}
 MaterialApp(
   theme: appTheme(Brightness.light),
@@ -121,7 +121,7 @@ ThemeData(
   \note{Component themes are how you stop copying the same button style. Set the minimum button height here once and the tap-target rule from Part 4 is satisfied everywhere. Mention that a custom font is declared in pubspec.yaml under flutter: fonts.}
 \end{frame}
 
-\begin{frame}[fragile,eyebrow=Layout]{MediaQuery: what the window is doing}
+\begin{frame}[fragile,eyebrow=Layout]{MediaQuery}
   \begin{columns}[T]
     \begin{column}{0.55\textwidth}
 \begin{dart}
@@ -162,9 +162,9 @@ SafeArea(child: body);  // keeps content clear of notch and gestures
   \note{MediaQuery describes the window, LayoutBuilder describes the box this widget was actually handed. Inside a side panel they disagree, and LayoutBuilder is the one that is right. Show the app in a resized desktop window if the emulator allows it.}
 \end{frame}
 
-\divider{Part 2 · Forms}{Getting data out of a person}[Form, TextFormField, validators, focus, and error display]
+\divider{Part 2 · Forms}{Forms}[Form, TextFormField, validators, focus, and error display]
 
-\begin{frame}[fragile,eyebrow=Forms]{The shape of a Flutter form}
+\begin{frame}[fragile,eyebrow=Forms]{Flutter form structure}
 \begin{dart}
 final _formKey = GlobalKey<FormState>();
 
@@ -182,7 +182,7 @@ if (_formKey.currentState!.validate()) await _signIn();
   \note{Explain that GlobalKey is the exception to the rule that you do not reach into other widgets. Point out autovalidateMode: onUserInteraction, which avoids showing errors on an empty form the user has not touched yet.}
 \end{frame}
 
-\begin{frame}[fragile,eyebrow=Forms]{Validators that say what to fix}
+\begin{frame}[fragile,eyebrow=Forms]{Form validation}
   \begin{columns}[T]
     \begin{column}{0.55\textwidth}
 \begin{dart}
@@ -226,7 +226,7 @@ A controller and a FocusNode belong to your State object, and leak if forgotten.
   \note{Every controller and every FocusNode you create must be disposed, or the State leak shows up in DevTools memory. Demonstrate the difference between TextInputAction.next and done on a real keyboard: it is a two-line change that people notice immediately.}
 \end{frame}
 
-\begin{frame}[eyebrow=Forms]{Errors people can act on}
+\begin{frame}[eyebrow=Forms]{Error display}
   \vskip 2mm
   \begin{grid}[3]
     \cell[\faExclamationCircle]{Errors under the field}{The message sits where the mistake is.}
@@ -239,9 +239,9 @@ A controller and a FocusNode belong to your State object, and leak if forgotten.
   \note{These six rules cost about twenty lines and separate a student project from a shipped app. Ask which one they have personally been annoyed by this week.}
 \end{frame}
 
-\divider{Part 3 · Motion}{Animation you get for free}[Implicit animations, Hero, and knowing when to stop]
+\divider{Part 3 · Motion}{Implicit animations}[Implicit animations, Hero, duration, reduced motion]
 
-\begin{frame}[eyebrow=Motion]{The implicit animation family}
+\begin{frame}[eyebrow=Motion]{Implicit animation widgets}
   \vskip 2mm
   \begin{grid}[3]
     \cell[\faExpand]{AnimatedContainer}{Change size, color, padding or decoration and it tweens between old and new.}
@@ -254,7 +254,7 @@ A controller and a FocusNode belong to your State object, and leak if forgotten.
   \note{The rule of thumb: if the animation runs because a value changed, it is implicit. If it runs because time passed, it is explicit. Most product animation is the first kind, which is why you rarely need an AnimationController. Say that explicit animations, driven by a controller and a ticker, are for motion you must repeat or reverse.}
 \end{frame}
 
-\begin{frame}[fragile,eyebrow=Motion]{Two widgets, one state change}
+\begin{frame}[fragile,eyebrow=Motion]{AnimatedContainer and AnimatedSwitcher}
 \begin{dart}
 const d = Duration(milliseconds: 200);   // one place, whole app
 AnimatedContainer(
@@ -273,7 +273,7 @@ AnimatedSwitcher(duration: d,
   \note{Remove the ValueKey from the AnimatedSwitcher children live and show that nothing animates: Flutter sees the same widget type and reuses the element. That single detail is the most common bug report about AnimatedSwitcher.}
 \end{frame}
 
-\begin{frame}[fragile,eyebrow=Motion]{Hero: one element across two routes}
+\begin{frame}[fragile,eyebrow=Motion]{Hero transitions}
   \begin{columns}[T]
     \begin{column}{0.55\textwidth}
 \begin{dart}
@@ -298,7 +298,7 @@ Hero(tag: 'todo-${todo.id}', child: big);
   \note{Hero needs no controller and no duration: it borrows the route transition. Show it with a thumbnail that becomes a header image. Warn that text inside a Hero can flash unstyled unless it sits under a Material widget.}
 \end{frame}
 
-\begin{frame}[fragile,eyebrow=Motion]{When to stop animating}
+\begin{frame}[fragile,eyebrow=Motion]{Animation duration and reduced motion}
 \begin{dart}
 if (MediaQuery.disableAnimationsOf(context)) return child;
 \end{dart}
@@ -320,7 +320,7 @@ Never block input until it ends.
 
 \divider{Part 4 · Reach}{Accessibility and localization}[Semantics, contrast, tap targets, text scaling, ARB files]
 
-\begin{frame}[eyebrow=Access]{Six things that lock people out}
+\begin{frame}[eyebrow=Access]{Common accessibility barriers}
   \vskip 2mm
   \begin{grid}[3]
     \cell[\faVolumeUp]{Unlabeled controls}{An icon button with no label is announced as "button" and nothing else by TalkBack and VoiceOver.}
@@ -333,7 +333,7 @@ Never block input until it ends.
   \note{Turn TalkBack on for thirty seconds in the lecture and navigate one screen. It is the fastest way to make this section concrete. Say that accessibility work is also plain quality work: it fixes bugs sighted users hit too.}
 \end{frame}
 
-\begin{frame}[fragile,eyebrow=Access]{Semantics: what the screen reader says}
+\begin{frame}[fragile,eyebrow=Access]{Semantics and screen readers}
   \begin{columns}[T]
     \begin{column}{0.55\textwidth}
 \begin{dart}
@@ -360,7 +360,7 @@ Semantics(
   \note{Point out that tooltip on an IconButton gives you a semantic label for free, so there is no excuse for an unlabeled icon. Open the Semantics debugger in DevTools to show the tree the reader actually walks.}
 \end{frame}
 
-\begin{frame}[eyebrow=Access]{Contrast, targets, and text that grows}
+\begin{frame}[eyebrow=Access]{Contrast, tap targets, and text scaling}
   \vskip 1mm
   \begin{tabular}{@{}lp{30mm}p{60mm}@{}}
     \toprule
@@ -379,7 +379,7 @@ Semantics(
   \note{The two contrast numbers come from WCAG level AA and every serious design review uses them. Note that Material's own components already meet the 48 dp target, so the failures are almost always custom widgets.}
 \end{frame}
 
-\begin{frame}[fragile,eyebrow=Locale]{Strings live in ARB files, not in widgets}
+\begin{frame}[fragile,eyebrow=Locale]{Localized strings in ARB files}
 \begin{yaml}
 # pubspec.yaml
 flutter:
@@ -395,7 +395,7 @@ output-localization-file: app_localizations.dart
   \note{ARB is a JSON file of key and message pairs, one per locale. The generated class means a missing or misspelled key is a compile error, not a blank label at runtime. Say that translators are given the ARB file, never the source.}
 \end{frame}
 
-\begin{frame}[fragile,eyebrow=Locale]{Plurals, dates, and right to left}
+\begin{frame}[fragile,eyebrow=Locale]{Plurals, dates, and right-to-left layout}
 \begin{codeblock}
 // lib/l10n/app_en.arb
 "todoCount": "{count, plural, =0{No todos} =1{1 todo} other{{count} todos}}",
@@ -413,9 +413,9 @@ padding: const EdgeInsetsDirectional.only(start: 16),
   \note{Show what "1 todos" looks like and why string concatenation cannot be translated: word order changes between languages. For right to left, wrap a screen in Directionality with rtl and watch which paddings stay on the wrong side.}
 \end{frame}
 
-\divider{Part 5 · Testing}{Proving it still works}[Unit, widget, bloc, golden and integration tests]
+\divider{Part 5 · Testing}{Testing}[Unit, widget, bloc, golden and integration tests]
 
-\begin{frame}[eyebrow=Testing]{The pyramid, and what each layer buys}
+\begin{frame}[eyebrow=Testing]{The testing pyramid}
   \vskip 1mm
   {\usebeamerfont{small}\begin{tabular}{@{}llp{20mm}p{52mm}@{}}
     \toprule
@@ -435,7 +435,7 @@ padding: const EdgeInsetsDirectional.only(start: 16),
   \note{Ask how many have written a test for a UI before. Usually nobody. Say the goal is not coverage as a number, it is that a refactor tomorrow tells you within a minute whether it broke something.}
 \end{frame}
 
-\begin{frame}[fragile,eyebrow=Testing]{Unit tests: the cheapest ones first}
+\begin{frame}[fragile,eyebrow=Testing]{Unit tests}
 \begin{dart}
 // test/validators_test.dart
 void main() {
@@ -472,7 +472,7 @@ testWidgets('adding a todo shows it in the list', (tester) async {
   \note{There is no device and no screen here: the widget tree is built in memory, which is why these run in milliseconds. Say that find.byKey is the stable choice, because visible text changes when the app is localized.}
 \end{frame}
 
-\begin{frame}[fragile,eyebrow=Testing]{pump, pumpAndSettle, and the trap}
+\begin{frame}[fragile,eyebrow=Testing]{pump and pumpAndSettle}
   \begin{columns}[T]
     \begin{column}{0.55\textwidth}
 \begin{dart}
@@ -497,7 +497,7 @@ await tester.pumpAndSettle();
   \note{The hanging test with a CircularProgressIndicator on screen is the single most common failure students hit. Show it once, then show the fix. Also mention tester.pumpWidget wraps a MaterialApp because most widgets need Directionality and a Theme.}
 \end{frame}
 
-\begin{frame}[fragile,eyebrow=Testing]{Faking the outside world with mocktail}
+\begin{frame}[fragile,eyebrow=Testing]{Mocking with mocktail}
 \begin{dart}
 class MockTodoRepository extends Mock implements TodoRepository {}
 
@@ -516,7 +516,7 @@ test('the cubit asks the repository once', () async {
   \note{A test that calls the real network is not a test, it is a flaky report about someone else's server. Explain that mocktail needs no code generation, which is why it is preferred here over the older alternative. Mention registerFallbackValue when an argument matcher is used on a custom type.}
 \end{frame}
 
-\begin{frame}[fragile,eyebrow=Testing]{Testing a bloc: back to Lecture 6}
+\begin{frame}[fragile,eyebrow=Testing]{Bloc tests}
 \begin{dart}
 blocTest<TodoBloc, TodoState>(
   'emits loading then loaded when TodosRequested is added',
@@ -534,7 +534,7 @@ blocTest<TodoBloc, TodoState>(
   \note{Tie this back to the state design rules from Lecture 6. A bloc test is a description of a feature in three lines: given this, when that event arrives, these states come out. It also documents the feature better than a comment.}
 \end{frame}
 
-\begin{frame}[fragile,eyebrow=Testing]{Golden tests: the pixels themselves}
+\begin{frame}[fragile,eyebrow=Testing]{Golden tests}
 \begin{dart}
 testWidgets('TodoTile matches its golden', (tester) async {
   await tester.pumpWidget(wrap(const TodoTile(title: 'Buy milk')));
@@ -552,7 +552,7 @@ testWidgets('TodoTile matches its golden', (tester) async {
   \note{Warn that goldens are only stable because the test environment uses a fixed test font, not the system font. Keep goldens for small reusable widgets. A golden of a whole screen fails on every unrelated change and gets ignored.}
 \end{frame}
 
-\begin{frame}[fragile,eyebrow=Testing]{integration\_test, and running all of it in CI}
+\begin{frame}[fragile,eyebrow=Testing]{integration\_test and CI}
 \begin{shell}
 flutter analyze
 flutter test                        # unit, widget, bloc, golden
@@ -566,7 +566,7 @@ flutter test integration_test       # on a booted device or emulator
   \note{Say that the CI job for this course runs the first two commands on every pull request. Integration tests need a device, so they usually run on a schedule rather than on every push. The integration\_test package comes from the SDK: add it under dev\_dependencies as integration\_test with sdk: flutter, never from pub.dev.}
 \end{frame}
 
-\begin{frame}[eyebrow=Recap]{Three things to remember}
+\begin{frame}[eyebrow=Recap]{Summary}
   \vskip 2mm
   \begin{enumerate}
     \item Declare colors and type once. \muted{A widget that reads a role instead of a hex value already supports dark mode, large text and a rebrand.}

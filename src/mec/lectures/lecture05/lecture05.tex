@@ -15,16 +15,16 @@
 \titleframe
 
 \objectivesframe{
-  \cell[\faBluetoothB]{Read the link}{Advertising, scanning, GAP roles, connection parameters and MTU, and what each costs in energy.}
-  \cell[\faDatabase]{Model with GATT}{Services, characteristics, descriptors and UUIDs, and when to read, write, notify or indicate.}
-  \cell[\faLock]{Ask for the radio}{Android 12 and later runtime permissions, the iOS usage string, and the background limits on both.}
-  \cell[\faMicrochip]{Build both sides}{A Flutter central with flutter\_blue\_plus and a Go peripheral with one notifying characteristic.}
+  \cell[\faBluetoothB]{The BLE link}{Advertising, scanning, GAP roles, connection parameters and MTU, and what each costs in energy.}
+  \cell[\faDatabase]{GATT data model}{Services, characteristics, descriptors and UUIDs, and when to read, write, notify or indicate.}
+  \cell[\faLock]{Bluetooth permissions}{Android 12 and later runtime permissions, the iOS usage string, and the background limits on both.}
+  \cell[\faMicrochip]{Central and peripheral}{A Flutter central with flutter\_blue\_plus and a Go peripheral with one notifying characteristic.}
 }
 
 % =====================================================================
-\divider{Part 1 · The link}{Two radios, one name}[Advertising, scanning, connecting, and the parameters that cost power]
+\divider{Part 1 · The link}{Advertising and connection}[Advertising, scanning, connecting, and power parameters]
 
-\begin{frame}[eyebrow=The link]{Classic Bluetooth and BLE are different radios}
+\begin{frame}[eyebrow=The link]{Classic Bluetooth and BLE}
   \vskip 1mm
   {\usebeamerfont{small}\begin{tabular}{@{}lp{44mm}p{48mm}@{}}
     \toprule
@@ -42,7 +42,7 @@
   \note{Ask who has tried to pair an HC-05 module with a Flutter app. That is Classic serial and it will never work with this plugin. Name the failure early so nobody loses an afternoon to it in Lab 3.}
 \end{frame}
 
-\begin{frame}[eyebrow=The link]{Why BLE fits a sensor}
+\begin{frame}[eyebrow=The link]{BLE for sensors}
   \vskip 2mm
   \begin{grid}[3]
     \cell[\faBolt]{The radio is off}{A BLE device sleeps almost all the time. It wakes, sends a few bytes, and goes back down.}
@@ -55,7 +55,7 @@
   \note{The point of this slide is the duty cycle, not the peak rate. Energy is average current times time, and BLE wins by making both terms small. Tie it back to the wake, send, sleep loop from Lecture 3.}
 \end{frame}
 
-\begin{frame}[eyebrow=GAP]{GAP: four roles, two that matter}
+\begin{frame}[eyebrow=GAP]{GAP roles}
   \vskip 2mm
   \begin{columns}[T]
     \begin{column}{0.48\textwidth}
@@ -75,7 +75,7 @@
   \note{Draw the asymmetry on the board. Students expect a symmetric socket and BLE is not that. Note that a phone can act as a peripheral on both platforms, but flutter\_blue\_plus does not do it, which is why the lab uses Go for that side.}
 \end{frame}
 
-\begin{frame}[eyebrow=GAP]{Advertising: the peripheral talks first}
+\begin{frame}[eyebrow=GAP]{Advertising}
   \vskip 3mm
   \begin{grid}[2]
     \cell[\faSatelliteDish]{What goes out}{A short packet on the three advertising channels, repeated at an interval you pick, from about 20 ms to about 10 s.}
@@ -106,7 +106,7 @@
   \note{A scan window inside a scan interval sets the duty cycle, and a window equal to the interval means the receiver never turns off. Point out that an unfiltered scan in a crowded room delivers hundreds of results per second and will visibly drop frames.}
 \end{frame}
 
-\begin{frame}[eyebrow=Connection]{Connection parameters decide the power bill}
+\begin{frame}[eyebrow=Connection]{Connection parameters}
   \vskip 2mm
   {\usebeamerfont{small}\begin{tabular}{@{}lp{24mm}p{58mm}@{}}
     \toprule
@@ -123,7 +123,7 @@
   \note{Work one example out loud: an interval of one second with a latency of four means the peripheral must answer at most every five seconds, but still replies at once when the central writes. Warn that a supervision timeout shorter than interval times latency is invalid.}
 \end{frame}
 
-\begin{frame}[eyebrow=Connection]{MTU: how much fits in one packet}
+\begin{frame}[eyebrow=Connection]{MTU and packet size}
   \vskip 3mm
   \begin{grid}[3]
     \bignum{23 B}{default ATT MTU, negotiated at connection time}
@@ -139,9 +139,9 @@
 \end{frame}
 
 % =====================================================================
-\divider{Part 2 · GATT}{Data as a tree of attributes}[Services, characteristics, descriptors, UUIDs, and the four operations]
+\divider{Part 2 · GATT}{Services and characteristics}[Services, characteristics, descriptors, UUIDs, and the four operations]
 
-\begin{frame}[eyebrow=GATT]{GATT is a tree of attributes}
+\begin{frame}[eyebrow=GATT]{GATT structure}
   \begin{columns}[T]
     \begin{column}{0.50\textwidth}
       \lead{Service}{A named group of related values. A device exposes several: yours, plus battery and device info.}
@@ -162,7 +162,7 @@
   \note{Draw the three levels on the board while you talk. Stress that discovery must be repeated after every reconnect, because that is the bug students hit in Lab 3 when they cache a characteristic object and reuse it.}
 \end{frame}
 
-\begin{frame}[eyebrow=GATT]{UUIDs: 16 bits or 128}
+\begin{frame}[eyebrow=GATT]{16-bit and 128-bit UUIDs}
   \vskip 3mm
   \begin{grid}[2]
     \cell[\faDatabase]{Adopted, 16-bit}{Numbers assigned by the Bluetooth SIG for standard services: \code{0x180D} heart rate, \code{0x180F} battery.}
@@ -192,7 +192,7 @@
   \note{Notify and indicate both require the central to subscribe first, and indications are confirmed one at a time, so they cannot carry a fast stream. Ask which one a step counter needs and which one a low-battery warning needs.}
 \end{frame}
 
-\begin{frame}[eyebrow=GATT]{A heart-rate sensor, drawn out}
+\begin{frame}[eyebrow=GATT]{Heart-rate service example}
   \vskip 2mm
   {\usebeamerfont{small}\begin{tabular}{@{}llp{20mm}p{42mm}@{}}
     \toprule
@@ -211,9 +211,9 @@
 \end{frame}
 
 % =====================================================================
-\divider{Part 3 · Security}{Pairing, bonding, and what is encrypted}[Association models, security levels, and private addresses]
+\divider{Part 3 · Security}{Pairing, bonding, and encryption}[Association models, security levels, and private addresses]
 
-\begin{frame}[eyebrow=Security]{Pairing, bonding, and what they buy}
+\begin{frame}[eyebrow=Security]{Pairing and bonding}
   \vskip 3mm
   \begin{grid}[3]
     \cell[\faLock]{Pairing}{The two devices agree on keys and turn on link-layer encryption. It lasts until the link drops.}
@@ -243,7 +243,7 @@
   \note{Security levels run from one to four: no security, encryption after unauthenticated pairing, encryption after authenticated pairing, and authenticated pairing with the modern key exchange. This is the honest answer to the question of whether BLE is secure.}
 \end{frame}
 
-\begin{frame}[eyebrow=Security]{Addresses, privacy, and what is encrypted}
+\begin{frame}[eyebrow=Security]{Addresses, privacy, and encryption}
   \vskip 2mm
   \begin{columns}[T]
     \begin{column}{0.50\textwidth}
@@ -263,9 +263,9 @@
 \end{frame}
 
 % =====================================================================
-\divider{Part 4 · The phone}{Asking for the radio}[Android and iOS permissions, and flutter\_blue\_plus end to end]
+\divider{Part 4 · The phone}{Bluetooth on the phone}[Android and iOS permissions, flutter\_blue\_plus]
 
-\begin{frame}[eyebrow=Permissions]{Permissions: two steps, both mandatory}
+\begin{frame}[eyebrow=Permissions]{Build-time and runtime permissions}
   \vskip 2mm
   \begin{columns}[T]
     \begin{column}{0.54\textwidth}
@@ -285,7 +285,7 @@
   \note{ADMD Lecture 8 covered the general permission flow and permission\_handler, so refer to it and stay on the Bluetooth specifics here. Say that the merged manifest under build is the file that actually ships.}
 \end{frame}
 
-\begin{frame}[fragile,eyebrow=Permissions]{Android: the manifest entries}
+\begin{frame}[fragile,eyebrow=Permissions]{Android manifest entries}
 \begin{codeblock}
 <!-- android/app/src/main/AndroidManifest.xml -->
 <uses-feature android:name="android.hardware.bluetooth_le"
@@ -305,7 +305,7 @@
   \note{Walk the two blocks separately. The lower one exists only for old phones, and maxSdkVersion is what stops a modern phone from ever asking for location. Show the merged manifest under build to prove that plugins add lines of their own.}
 \end{frame}
 
-\begin{frame}[eyebrow=Permissions]{Android: neverForLocation and the scan story}
+\begin{frame}[eyebrow=Permissions]{Android Bluetooth permissions by version}
   \vskip 2mm
   {\usebeamerfont{small}\begin{tabular}{@{}lp{46mm}p{34mm}@{}}
     \toprule
@@ -360,7 +360,7 @@ await FlutterBluePlus.startScan(
   \note{This is the only stream in the plugin that can emit an error, so onError is not optional here. Point at the adapter-state await: it is what makes the code work on a cold start, while Bluetooth is still coming up.}
 \end{frame}
 
-\begin{frame}[fragile,eyebrow=Flutter]{Connect, then discover}
+\begin{frame}[fragile,eyebrow=Flutter]{Connection and service discovery}
   \vskip 1mm
 \begin{dart}
 final sub = device.connectionState.listen((s) {
@@ -379,7 +379,7 @@ final services = await device.discoverServices();
   \note{Subscribe to the connection state before connecting, so the first disconnect is not missed. Show the disconnect reason code during the demo: a timeout, a user action and a peripheral-initiated close each want a different response.}
 \end{frame}
 
-\begin{frame}[fragile,eyebrow=Flutter]{Subscribe to a characteristic}
+\begin{frame}[fragile,eyebrow=Flutter]{Subscribing to a characteristic}
   \vskip 1mm
 \begin{dart}
 final c = services
@@ -398,7 +398,7 @@ await c.setNotifyValue(true);   // writes the CCCD for you
   \note{onValueReceived fires on a notification and on an explicit read. lastValueStream also fires on your own writes and replays the last value, which suits a toggle and confuses a sensor. Remind them BLE values are little-endian by convention.}
 \end{frame}
 
-\begin{frame}[fragile,eyebrow=Flutter]{Disconnect, and reconnect on purpose}
+\begin{frame}[fragile,eyebrow=Flutter]{Disconnection and reconnection}
   \vskip 1mm
 \begin{dart}
 await device.disconnect();
@@ -417,9 +417,9 @@ await d.discoverServices();
 \end{frame}
 
 % =====================================================================
-\divider{Part 5 · The peripheral}{The other side, written in Go}[tinygo.org/x/bluetooth, the two lab set-ups, and how to size a characteristic]
+\divider{Part 5 · The peripheral}{BLE peripherals in Go}[tinygo.org/x/bluetooth, lab set-ups, characteristic design]
 
-\begin{frame}[embedded,eyebrow=Peripheral]{What tinygo.org/x/bluetooth supports}
+\begin{frame}[embedded,eyebrow=Peripheral]{tinygo.org/x/bluetooth support}
   \vskip 2mm
   {\usebeamerfont{small}\begin{tabular}{@{}lp{28mm}p{20mm}p{28mm}@{}}
     \toprule
@@ -477,7 +477,7 @@ for i := uint8(0); ; i++ {
   \note{Handle is filled in by AddService, and flags combine for a characteristic that is both readable and notifying. The counter is deliberate: it makes a dropped notification obvious in the Flutter list. Swap in a real sensor only once the path works.}
 \end{frame}
 
-\begin{frame}[embedded,eyebrow=Lab 3]{Two set-ups for Lab 3}
+\begin{frame}[embedded,eyebrow=Lab 3]{Lab 3 set-ups}
   \vskip 2mm
   \begin{columns}[T]
     \begin{column}{0.48\textwidth}
@@ -497,7 +497,7 @@ for i := uint8(0); ; i++ {
   \note{Say plainly that a project device streaming over BLE needs one of these two paths, and that a team already committed to an ESP32 over MQTT does not have to switch. Lab 3 is about the protocol, not about the board.}
 \end{frame}
 
-\begin{frame}[embedded,eyebrow=Design]{Design the service, not just the code}
+\begin{frame}[embedded,eyebrow=Design]{Service design}
   \vskip 2mm
   \begin{grid}[3]
     \cell[\faLayerGroup]{Keep the value small}{Fit one reading in twenty bytes. Scaled integers beat a JSON string.}
@@ -513,7 +513,7 @@ for i := uint8(0); ; i++ {
 % =====================================================================
 \colorlet{upbAccent}{upbBlue}
 
-\begin{frame}[eyebrow=Recap]{Three things to remember}
+\begin{frame}[eyebrow=Recap]{Summary}
   \vskip 2mm
   \begin{enumerate}
     \item The central owns the timing. \muted{Connection interval, peripheral latency and MTU decide latency and battery life.}

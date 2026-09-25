@@ -5,7 +5,7 @@
 \course{Mobile and Embedded Computing}
 \decklabel{Lecture 7}
 \title{Background execution and power management}
-\subtitle{What the system allows in the background, and what it costs}
+\subtitle{App lifecycle, background execution, and energy}
 \author{Dinu-Ștefan Rusu}
 \institute{FILS, Universitatea Politehnica București}
 \date{Spring 2027}
@@ -15,14 +15,14 @@
 \titleframe
 
 \objectivesframe{
-  \cell[\faIcon{power-off}]{Read the states}{Foreground, background, suspended and killed on Android and iOS, and what your process keeps.}
-  \cell[\faIcon{moon}]{Schedule work that runs}{Doze, standby buckets, foreground services, WorkManager and BGTaskScheduler.}
-  \cell[\faIcon{mobile-alt}]{Do it from Flutter}{The workmanager plugin, background isolates, push wakes, and the limits you cannot argue with.}
-  \cell[\faIcon{battery-half}]{Spend battery on purpose}{Where the milliamp-hours go, the radio tail, batching, and how to measure the result.}
+  \cell[\faIcon{power-off}]{App states}{Foreground, background, suspended and killed on Android and iOS, and what your process keeps.}
+  \cell[\faIcon{moon}]{Background scheduling}{Doze, standby buckets, foreground services, WorkManager and BGTaskScheduler.}
+  \cell[\faIcon{mobile-alt}]{Background work in Flutter}{The workmanager plugin, background isolates, push wakes, and the limits you cannot argue with.}
+  \cell[\faIcon{battery-half}]{Energy budgeting}{Where the milliamp-hours go, the radio tail, batching, and how to measure the result.}
 }
 
 % =====================================================================
-\divider{Part 1 · Lifecycle}{Your process is a loan}[App states, suspension, and what the system kills first]
+\divider{Part 1 · Lifecycle}{App lifecycle}[App states, suspension, and process termination]
 
 \begin{frame}[eyebrow=Lifecycle]{Foreground, background, and not running}
   \vskip 2mm
@@ -38,7 +38,7 @@
   \note{Open by asking who has shipped an app that stopped syncing overnight. This is the lecture that explains why. Stress that the third box is the normal case, not the exception: on a phone with many apps installed, being killed is routine.}
 \end{frame}
 
-\begin{frame}[eyebrow=Lifecycle]{Android: process importance decides your fate}
+\begin{frame}[eyebrow=Lifecycle]{Android process importance}
   \vskip 2mm
   {\usebeamerfont{small}\begin{tabular}{@{}lll@{}}
     \toprule
@@ -58,7 +58,7 @@
   \note{Make the point that there is no kill callback for a cached process. The last moment you are guaranteed is onPause and onStop, which is what Flutter surfaces as the inactive and paused lifecycle states.}
 \end{frame}
 
-\begin{frame}[eyebrow=Lifecycle]{iOS: five states, suspension in the middle}
+\begin{frame}[eyebrow=Lifecycle]{iOS app states}
   \vskip 1mm
   {\usebeamerfont{small}\begin{tabular}{@{}ll@{}}
     \toprule
@@ -79,7 +79,7 @@
   \note{The key difference from Android is that iOS suspends first and asks questions later. On Android a process can keep a thread running until it is killed. On iOS the process is frozen while still resident, so a timer you started simply does not fire.}
 \end{frame}
 
-\begin{frame}[eyebrow=Lifecycle]{What the system kills, and when}
+\begin{frame}[eyebrow=Lifecycle]{Causes of process termination}
   \vskip 2mm
   \begin{grid}[3]
     \cell[\faIcon{memory}]{Memory pressure}{The most common cause. A large photo cache makes you an easy target.}
@@ -92,7 +92,7 @@
   \note{Point at the third cell: on iOS a force quit is a signal from the user that they do not want the app running, and the system honors it for silent push and background refresh. Users who complain that sync stopped are often the ones who swipe every app away.}
 \end{frame}
 
-\begin{frame}[fragile,eyebrow=Lifecycle]{Reading the lifecycle from Flutter}
+\begin{frame}[fragile,eyebrow=Lifecycle]{Lifecycle events in Flutter}
   \begin{columns}[T]
     \begin{column}{0.58\textwidth}
 \begin{dart}
@@ -121,9 +121,9 @@ void didChangeAppLifecycleState(
 \end{frame}
 
 % =====================================================================
-\divider{Part 2 · Android}{The rules Android enforces}[Doze, buckets, foreground services, WorkManager, alarms]
+\divider{Part 2 · Android}{Android background restrictions}[Doze, buckets, foreground services, WorkManager, alarms]
 
-\begin{frame}[eyebrow=Android]{Doze: the device itself goes to sleep}
+\begin{frame}[eyebrow=Android]{Doze mode}
   \begin{columns}[T]
     \begin{column}{0.54\textwidth}
       \vskip 1mm
@@ -177,7 +177,7 @@ void didChangeAppLifecycleState(
   \note{For the project this is the right tool for a live MQTT or BLE session that must survive the screen turning off. Make clear it is not the right tool for periodic sync, which is what the next slide is for. Since Android 15 the data sync and media processing types are also capped at about six hours in any 24-hour period, so a permanent connection cannot be parked there either.}
 \end{frame}
 
-\begin{frame}[eyebrow=Android]{WorkManager: the default answer}
+\begin{frame}[eyebrow=Android]{WorkManager}
   \begin{columns}[T]
     \begin{column}{0.50\textwidth}
       \vskip 1mm
@@ -201,7 +201,7 @@ void didChangeAppLifecycleState(
   \note{Draw the contrast with a plain background thread: WorkManager is a request to the operating system, recorded in a database, not a thread you own. That is exactly why it survives a reboot and why you cannot control when it runs.}
 \end{frame}
 
-\begin{frame}[eyebrow=Android]{Exact alarms: only when the clock is the point}
+\begin{frame}[eyebrow=Android]{Exact alarms}
   \begin{columns}[T]
     \begin{column}{0.54\textwidth}
       \vskip 1mm
@@ -221,7 +221,7 @@ void didChangeAppLifecycleState(
   \note{Give the concrete example: a medication reminder at eight in the morning is an exact alarm, a step count upload is not. Students reach for alarms because they are the only API that looks precise, and that instinct is what these restrictions exist to correct.}
 \end{frame}
 
-\begin{frame}[eyebrow=Android]{Battery exemptions, and why not to ask}
+\begin{frame}[eyebrow=Android]{Battery optimization exemptions}
   \vskip 2mm
   \begin{grid}[3]
     \cell[\faIcon{unlock}]{What it does}{Taking your app out of battery optimization lifts App Standby and most Doze limits on your jobs.}
@@ -235,9 +235,9 @@ void didChangeAppLifecycleState(
 \end{frame}
 
 % =====================================================================
-\divider{Part 3 · iOS}{A scheduler that decides}[Background modes, the short window, BGTaskScheduler, silent push]
+\divider{Part 3 · iOS}{iOS background execution}[Background modes, background time, BGTaskScheduler, silent push]
 
-\begin{frame}[eyebrow=iOS]{The background modes you declare}
+\begin{frame}[eyebrow=iOS]{Background modes}
   \vskip 2mm
   \begin{grid}[3]
     \cell[\faIcon{sync-alt}]{Fetch and processing}{Short refreshes, and longer maintenance work.}
@@ -253,7 +253,7 @@ void didChangeAppLifecycleState(
   \note{Each mode is an entry in the app's property list. Location is the only one that can relaunch a terminated app, which is why it is the strongest wake source. Silent audio played only to stay alive is a rejection, and Bluetooth scanning in the background is slower and coarser than in the foreground.}
 \end{frame}
 
-\begin{frame}[eyebrow=iOS]{The thirty-second rule}
+\begin{frame}[eyebrow=iOS]{Background time limit}
   \begin{columns}[T]
     \begin{column}{0.54\textwidth}
       \vskip 1mm
@@ -293,7 +293,7 @@ void didChangeAppLifecycleState(
   \note{You register an identifier before launch finishes, submit a request, set an expiration handler, mark the task complete, and submit the next request yourself. Warn them that these tasks are hard to test: a debugger-attached launch behaves differently from a real device on a normal day. Xcode has a debugger command that forces a task to run.}
 \end{frame}
 
-\begin{frame}[eyebrow=iOS]{Silent push: a wake, not a delivery}
+\begin{frame}[eyebrow=iOS]{Silent push notifications}
   \begin{columns}[T]
     \begin{column}{0.54\textwidth}
       \vskip 1mm
@@ -313,7 +313,7 @@ void didChangeAppLifecycleState(
   \note{This is the design rule for the project: the push says that there is news, and the app decides what to fetch. Teams that put the payload in the push discover that a share of their messages never arrives and the data is gone with them.}
 \end{frame}
 
-\begin{frame}[eyebrow=iOS]{The two platforms, side by side}
+\begin{frame}[eyebrow=iOS]{Android and iOS compared}
   \vskip 1mm
   {\usebeamerfont{small}\begin{tabular}{@{}lll@{}}
     \toprule
@@ -335,7 +335,7 @@ void didChangeAppLifecycleState(
 \end{frame}
 
 % =====================================================================
-\divider{Part 4 · Flutter}{Background work from Dart}[Plugins, background isolates, push wakes, and hard limits]
+\divider{Part 4 · Flutter}{Background work in Flutter}[Plugins, background isolates, push wakes, and limits]
 
 \begin{frame}[fragile,eyebrow=Flutter]{The workmanager plugin}
   \begin{columns}[T]
@@ -365,7 +365,7 @@ Workmanager().registerPeriodicTask('sync',
   \note{Point at the pragma. Without it the tree shaker removes a function that nothing in Dart calls, the debug build works, and the release build silently never runs the task. This is the most common bug with this plugin.}
 \end{frame}
 
-\begin{frame}[eyebrow=Flutter]{A background isolate is a different world}
+\begin{frame}[eyebrow=Flutter]{Background isolates}
   \vskip 2mm
   \begin{grid}[3]
     \cell[\faIcon{layer-group}]{No widgets, no context}{There is no UI, no navigator and no BuildContext. Anything that touches the tree will throw.}
@@ -378,7 +378,7 @@ Workmanager().registerPeriodicTask('sync',
   \note{Refer back to the isolates lecture: isolates share nothing, so the database is the only honest channel between the two. Students expect the background callback to see their repository singleton and are surprised when it is null.}
 \end{frame}
 
-\begin{frame}[eyebrow=Flutter]{flutter\_background\_service: a service you own}
+\begin{frame}[eyebrow=Flutter]{flutter\_background\_service}
   \begin{columns}[T]
     \begin{column}{0.54\textwidth}
       \vskip 1mm
@@ -446,7 +446,7 @@ FirebaseMessaging
   \note{Lecture 6 covered the permission flow itself. Here the point is the trade: background location is the most powerful wake source on both platforms and the most expensive one, in battery and in user trust.}
 \end{frame}
 
-\begin{frame}[eyebrow=Flutter]{What you cannot do in the background}
+\begin{frame}[eyebrow=Flutter]{Background execution limits}
   \vskip 2mm
   \begin{grid}[3]
     \cell[\faIcon{plug}]{Hold a socket open}{A WebSocket or MQTT session does not survive suspension, nor Doze on Android.}
@@ -460,9 +460,9 @@ FirebaseMessaging
 \end{frame}
 
 % =====================================================================
-\divider{Part 5 · Energy}{Battery as a design constraint}[Screen, silicon and radio, and which one dominates the drain]
+\divider{Part 5 · Energy}{Battery as a design constraint}[Screen, silicon, and radio]
 
-\begin{frame}[embedded,eyebrow=Energy]{Where the milliamp-hours actually go}
+\begin{frame}[embedded,eyebrow=Energy]{Power consumption by component}
   \vskip 2mm
   \begin{grid}[3]
     \cell[\faIcon{mobile-alt}]{The screen}{On an OLED panel a black pixel is unlit, so dark mode saves energy. On an LCD the backlight is on regardless.}
@@ -475,7 +475,7 @@ FirebaseMessaging
   \note{Ask which of the three they would optimize first. Most say the CPU. The answer is almost always the radio, which is the next slide. Note that the dark mode advice depends on the panel, so check before promising a saving.}
 \end{frame}
 
-\begin{frame}[embedded,eyebrow=Energy]{The radio tail: why chatty apps drain batteries}
+\begin{frame}[embedded,eyebrow=Energy]{The radio tail}
   \begin{columns}[T]
     \begin{column}{0.53\textwidth}
       \vskip 1mm
@@ -499,7 +499,7 @@ FirebaseMessaging
   \note{This is the same optimization as the wake, send, sleep loop on the microcontroller from Lecture 3. On a phone it saves battery over an afternoon. On a coin cell it decides whether the device runs for a week or a year.}
 \end{frame}
 
-\begin{frame}[embedded,eyebrow=Energy]{Wakelocks: holding the chip awake}
+\begin{frame}[embedded,eyebrow=Energy]{Wakelocks}
   \begin{columns}[T]
     \begin{column}{0.54\textwidth}
       \vskip 1mm
@@ -519,7 +519,7 @@ FirebaseMessaging
   \note{A power timeline draws held wakelocks as bars, which makes a leak obvious. Mention that a wakelock does not defeat Doze: the system ignores it once the device is idle, which surprises people.}
 \end{frame}
 
-\begin{frame}[fragile,eyebrow=Energy]{Measuring instead of guessing}
+\begin{frame}[fragile,eyebrow=Energy]{Energy measurement}
   \begin{columns}[T]
     \begin{column}{0.52\textwidth}
 \begin{shell}
@@ -547,7 +547,7 @@ adb bugreport report.zip
   \note{Demonstrate the force-idle command if there is a device on the desk. It turns a bug that takes a night to reproduce into one that takes ten seconds. The standby bucket command answers most reports of the form "it works on my phone".}
 \end{frame}
 
-\begin{frame}[eyebrow=Energy]{A sync task that survives sleep}
+\begin{frame}[eyebrow=Energy]{Background sync task design}
   \vskip 1mm
   \begin{checklist}
     \item Writes go to the local database and an outbox in one transaction, so nothing depends on the sync running.
@@ -562,7 +562,7 @@ adb bugreport report.zip
   \note{Walk through the list once and tell students it is the acceptance criteria for the lab, written as a design. The fourth and fifth items are where most submissions fail, because they were tested only with the app in the foreground.}
 \end{frame}
 
-\begin{frame}[eyebrow=Recap]{Three things to remember}
+\begin{frame}[eyebrow=Recap]{Summary}
   \vskip 2mm
   \begin{enumerate}
     \item Background execution is granted by the system. \muted{Declare a reason, accept a budget, and expect to be killed.}

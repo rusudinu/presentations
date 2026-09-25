@@ -15,15 +15,15 @@
 \titleframe
 
 \objectivesframe{
-  \cell[\faBalanceScale]{On-device or cloud}{The variables that decide it: latency, privacy, offline behavior, cost per call, capability ceiling.}
+  \cell[\faBalanceScale]{On-device versus cloud inference}{The variables that decide it: latency, privacy, offline behavior, cost per call, capability ceiling.}
   \cell[\faMicrochip]{ML Kit and LiteRT}{Real Dart for text and barcodes, plus your own quantized model through tflite\_flutter.}
-  \cell[\faKey]{Where the key lives}{Why a key inside an app binary is public, and the two architectures that fix it.}
-  \cell[\faIcon{wave-square}]{LLMs in a real UI}{Streaming answers from a large language model, timeouts, token cost, and validating output you cannot trust.}
+  \cell[\faKey]{API key placement}{Why a key inside an app binary is public, and the two architectures that fix it.}
+  \cell[\faIcon{wave-square}]{LLM integration in the UI}{Streaming answers from a large language model, timeouts, token cost, and validating output you cannot trust.}
 }
 
-\divider{Part 1 · The decision}{On the device, or on someone else's GPU}[Five variables: latency, privacy, offline, cost, capability ceiling]
+\divider{Part 1 · The decision}{On-device versus cloud inference}[Latency, privacy, offline use, cost, capability ceiling]
 
-\begin{frame}[eyebrow=Decision]{Three different things called AI in the app}
+\begin{frame}[eyebrow=Decision]{Kinds of AI in a mobile app}
   \vskip 2mm
   \begin{grid}[3]
     \cell[\faCamera]{Classic on-device ML}{A fixed-purpose machine learning (ML) model runs locally: read text, find a barcode, locate a face. Milliseconds, offline, nothing leaves the phone.}
@@ -38,7 +38,7 @@
   \note{Ask the room to name an app that already does one of these three. The boundary between them, not the labels, is where most of the design work sits.}
 \end{frame}
 
-\begin{frame}[eyebrow=Decision]{On-device vs cloud, variable by variable}
+\begin{frame}[eyebrow=Decision]{On-device versus cloud comparison}
   \vskip 1mm
   {\usebeamerfont{small}\renewcommand{\arraystretch}{1.05}\begin{tabular}{@{}lp{4.6cm}p{4.6cm}@{}}
     \toprule
@@ -59,7 +59,7 @@
   \note{Walk the room through one row at a time and ask which column they would pick for a banking app versus a game. The capability row is the only one that ever argues for cloud.}
 \end{frame}
 
-\begin{frame}[eyebrow=Decision]{Will the model even fit on the phone}
+\begin{frame}[eyebrow=Decision]{Model size and device memory}
   \vskip 2mm
   \begin{grid}[3]
     \bignum{28 GB}{7 billion parameters at float32, 4 bytes each}
@@ -74,7 +74,7 @@
   \note{Do the arithmetic out loud: seven billion parameters times four bytes is 28 gigabytes. Then ask what a flagship phone actually has. The size class that fits is small and quantized, not a shrunken laptop model.}
 \end{frame}
 
-\begin{frame}[eyebrow=Decision]{The pattern that ships: hybrid}
+\begin{frame}[eyebrow=Decision]{Hybrid architecture}
   \vskip 2mm
   \begin{columns}[T]
     \begin{column}{0.46\textwidth}
@@ -94,7 +94,7 @@
   \note{Ask for an example from an app the room uses daily. This is the same escalation shape as retry with backoff from the networking lecture: try the cheap path first, pay for the expensive one only on failure.}
 \end{frame}
 
-\begin{frame}[eyebrow=Decision]{Know your escalation rate}
+\begin{frame}[eyebrow=Decision]{Escalation rate}
   \vskip 2mm
   \begin{grid}[2]
     \cell[\faIcon{search}]{Detect locally, understand remotely}{A face or object detector finds the region; you upload a small crop instead of a full-resolution frame.}
@@ -105,9 +105,9 @@
   \note{Ask what happens to the privacy story if most requests silently escalate to the cloud. The escalation rate is the one number worth remembering here, not the diagram.}
 \end{frame}
 
-\divider{Part 2 · On the device}{ML Kit, LiteRT, and making a model fit}[The problems already solved, and then your own]
+\divider{Part 2 · On the device}{ML Kit, LiteRT, and quantization}
 
-\begin{frame}[eyebrow=On-device ML]{Google ML Kit: the everyday building blocks}
+\begin{frame}[eyebrow=On-device ML]{Google ML Kit APIs}
   \vskip 2mm
   \begin{grid}[3]
     \cell[\faIcon{font}]{Text recognition}{google\_mlkit\_text\_recognition reads Latin, Chinese, Japanese, Korean and Devanagari script, as blocks of lines of elements.}
@@ -119,7 +119,7 @@
   \note{Ask which of these three the room has already used in a personal project. The detection-versus-recognition line on face detection matters legally, not only technically.}
 \end{frame}
 
-\begin{frame}[eyebrow=On-device ML]{More ML Kit, and how you add it}
+\begin{frame}[eyebrow=On-device ML]{More ML Kit APIs and setup}
   \vskip 2mm
   \begin{grid}[3]
     \cell[\faIcon{language}]{Language ID and translation}{google\_mlkit\_language\_id and google\_mlkit\_translation ship per-language-pair models the device downloads once and keeps.}
@@ -133,7 +133,7 @@
   \note{The umbrella package trades convenience for binary size. A common mistake is importing google\_ml\_kit for one feature and shipping every model with it.}
 \end{frame}
 
-\begin{frame}[fragile,eyebrow=On-device ML]{Reading text from an image, end to end}
+\begin{frame}[fragile,eyebrow=On-device ML]{Text recognition from an image}
   \begin{columns}[T]
     \begin{column}{0.53\textwidth}
 \begin{dart}
@@ -186,7 +186,7 @@ Future<void> onFrame(CameraImage f) async {
   \note{Get the sensor rotation wrong and detection silently returns nothing, with no error at all. Stop the stream and close the scanner in dispose, and again when the app backgrounds: continuous inference drains the battery.}
 \end{frame}
 
-\begin{frame}[eyebrow=On-device ML]{On-device generative AI is a capability}
+\begin{frame}[eyebrow=On-device ML]{On-device generative AI availability}
   \begin{columns}[T]
     \begin{column}{0.56\textwidth}
       \muted{The step past classification: a small language model on the phone's own neural processing unit (NPU) can summarize a thread, proofread a message, or rewrite a paragraph.}
@@ -208,7 +208,7 @@ Future<void> onFrame(CameraImage f) async {
   \note{This is gated on the hardware and operating system, not on your app: the platform downloads and shares the model between every app instead of you shipping it. Naming specific phone models in a lecture is a bug, because the list is out of date within a year.}
 \end{frame}
 
-\begin{frame}[eyebrow=Custom models]{Your own model: LiteRT, formerly TensorFlow Lite}
+\begin{frame}[eyebrow=Custom models]{Custom models with LiteRT}
   \begin{columns}[T]
     \begin{column}{0.55\textwidth}
       \muted{ML Kit covers the problems Google already solved. When the task is yours, such as grading a weld, you bring your own model.}
@@ -232,7 +232,7 @@ Future<void> onFrame(CameraImage f) async {
   \note{Mobile and Embedded Computing revisits the cost side of this in depth. The point here is only the shape: a fixed graph, a runtime, and a hardware-dependent fallback.}
 \end{frame}
 
-\begin{frame}[fragile,eyebrow=Custom models]{tflite\_flutter: load, run, get off the UI isolate}
+\begin{frame}[fragile,eyebrow=Custom models]{tflite\_flutter: loading, inference, isolates}
   \begin{columns}[T]
     \begin{column}{0.56\textwidth}
 \begin{dart}
@@ -262,7 +262,7 @@ Future<List<double>> classify(
   \note{An int8 model expects int8 input, with a scale and a zero point traveling alongside the tensor. getInputTensors tells you the shape; guessing does not.}
 \end{frame}
 
-\begin{frame}[eyebrow=Custom models]{Quantization: shrinking the model to fit}
+\begin{frame}[eyebrow=Custom models]{Quantization}
   \vskip 3mm
   {\usebeamerfont{small}\begin{tabular}{@{}lccc@{}}
     \toprule
@@ -281,9 +281,9 @@ Future<List<double>> classify(
   \note{Firebase custom model hosting used to own the download-and-version problem, but Firebase machine learning shuts down in June 2027, so plan on your own bucket plus a version check.}
 \end{frame}
 
-\divider{Part 3 · Cloud LLMs}{Calling a model you do not host}[Where the key lives decides the architecture]
+\divider{Part 3 · Cloud LLMs}{Cloud LLM APIs}[API key placement, backend proxy, Firebase AI Logic]
 
-\begin{frame}[fragile,eyebrow=Cloud LLMs]{The prototyping trap: a key inside the app}
+\begin{frame}[fragile,eyebrow=Cloud LLMs]{API key embedded in the app}
   \begin{columns}[T]
     \begin{column}{0.54\textwidth}
 \begin{dart}
@@ -311,7 +311,7 @@ final res = await model.generateContent(
   \note{This is fine for one afternoon on an emulator. It stops being fine the moment the build leaves your machine, which for a student project is the moment it reaches a pull request.}
 \end{frame}
 
-\begin{frame}[fragile,eyebrow=Cloud LLMs]{A key in a binary is a published key}
+\begin{frame}[fragile,eyebrow=Cloud LLMs]{Extracting a key from an app binary}
   \begin{columns}[T]
     \begin{column}{0.54\textwidth}
 \begin{shell}
@@ -340,7 +340,7 @@ AIzaSyD-EXAMPLE_KEY_xxxxxxxxxx
   \note{If you have a spare device, run this live on your own release build once. It takes about a minute and convinces a room far better than the sentence does.}
 \end{frame}
 
-\begin{frame}[eyebrow=Cloud LLMs]{Shape A: your backend proxies the call}
+\begin{frame}[eyebrow=Cloud LLMs]{Option A: backend proxy}
   \vskip 3mm
   \begin{enumerate}
     \item Flutter app. \muted{Sends the user's ID token, never a key.}
@@ -354,7 +354,7 @@ AIzaSyD-EXAMPLE_KEY_xxxxxxxxxx
   \note{This is the same backend shape as the authentication lecture: the app never holds a long-lived secret, only a short-lived token proving it belongs to a signed-in user.}
 \end{frame}
 
-\begin{frame}[eyebrow=Cloud LLMs]{Shape B: Firebase AI Logic and App Check}
+\begin{frame}[eyebrow=Cloud LLMs]{Option B: Firebase AI Logic and App Check}
   \vskip 3mm
   \begin{enumerate}
     \item Flutter app. \muted{Uses firebase\_ai, with no key to pass.}
@@ -369,7 +369,7 @@ AIzaSyD-EXAMPLE_KEY_xxxxxxxxxx
   \note{Activation on its own only measures traffic; enforcement is the step that turns away requests without a valid App Check token. For AI Logic that step now happens automatically, so a build with no real attestation provider is refused.}
 \end{frame}
 
-\begin{frame}[fragile,eyebrow=Cloud LLMs]{firebase\_ai: the call with no key in it}
+\begin{frame}[fragile,eyebrow=Cloud LLMs]{firebase\_ai with App Check}
   \begin{columns}[T]
     \begin{column}{0.56\textwidth}
 \begin{dart}
@@ -397,7 +397,7 @@ final model = FirebaseAI.googleAI()
   \note{maxOutputTokens is a cost control, not a style preference. temperature low and a narrow systemInstruction are the cheapest steering available, and both run before any validation code of yours does.}
 \end{frame}
 
-\begin{frame}[fragile,eyebrow=Cloud LLMs]{Stream the answer, do not freeze the screen}
+\begin{frame}[fragile,eyebrow=Cloud LLMs]{Streaming responses}
   \begin{columns}[T]
     \begin{column}{0.52\textwidth}
 \begin{dart}
@@ -423,9 +423,9 @@ Stream<String> ask(String prompt) async* {
   \note{A canceled request has still paid for the radio wake-up. Nothing here causes jank unless work happens inside the builder itself.}
 \end{frame}
 
-\divider{Part 4 · Engineering reality}{Cost, failure, and answers that are wrong}[Three areas to get right before you ship]
+\divider{Part 4 · Engineering reality}{Cost, failures, and incorrect output}
 
-\begin{frame}[eyebrow=Engineering reality]{Tokens: the unit you are billed in}
+\begin{frame}[eyebrow=Engineering reality]{Tokens and billing}
   \vskip 3mm
   \begin{grid}[3]
     \bignum{About 4}{characters per token, for English prose}
@@ -440,7 +440,7 @@ Stream<String> ask(String prompt) async* {
   \note{Do the arithmetic: resending full chat history every turn means turn n pays for all n previous turns again, so n turns cost on the order of n squared messages.}
 \end{frame}
 
-\begin{frame}[eyebrow=Engineering reality]{The failures you will actually see}
+\begin{frame}[eyebrow=Engineering reality]{Common failure modes}
   \vskip 1mm
   {\usebeamerfont{small}\renewcommand{\arraystretch}{1.05}\begin{tabular}{@{}lp{4.0cm}p{4.6cm}@{}}
     \toprule
@@ -461,7 +461,7 @@ Stream<String> ask(String prompt) async* {
   \note{Ask which of these five the room has already seen from an ordinary REST API. Only the safety-block row is new; the rest is the same failure taxonomy as any HTTP client.}
 \end{frame}
 
-\begin{frame}[fragile,eyebrow=Engineering reality]{Models produce plausible wrong answers}
+\begin{frame}[fragile,eyebrow=Engineering reality]{Output validation}
   \begin{columns}[T]
     \begin{column}{0.52\textwidth}
       \lead{Not a bug you can prompt away.}{A model returns a likely continuation, not a true one.}
@@ -484,7 +484,7 @@ responseSchema: Schema.object(properties: {
   \note{A schema is a constraint, not a guarantee: the model can still return a value inside the schema that is wrong. Validation still has to happen after parsing.}
 \end{frame}
 
-\begin{frame}[eyebrow=Recap]{Three things to remember}
+\begin{frame}[eyebrow=Recap]{Summary}
   \vskip 2mm
   \begin{enumerate}
     \item On-device or cloud is an architecture decision. \muted{Latency, privacy, offline behavior, cost and capability ceiling.}

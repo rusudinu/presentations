@@ -5,7 +5,7 @@
 \course{Mobile and Embedded Computing}
 \decklabel{Lab 6}
 \title{gRPC: a Go server and a Dart client}
-\subtitle{One unary call, one stream, a deadline, and a cancel}
+\subtitle{gRPC unary call, server stream, deadlines, cancellation}
 \author{Dinu-Ștefan Rusu}
 \institute{FILS, Universitatea Politehnica București}
 \date{Week 12}
@@ -14,7 +14,7 @@
 
 \titleframe
 
-\begin{frame}[eyebrow=Today]{What this lab is for}
+\begin{frame}[eyebrow=Today]{Lab objectives}
   \vskip 2mm
   \begin{grid}[2]
     \cell[\faServer]{Call a Go server once}{Generate a Dart client from a .proto file, call a unary RPC with a deadline, and read back a DeadlineExceeded status when the server is slow.}
@@ -40,7 +40,7 @@ dart pub global activate protoc_plugin
   \end{hint}
 \end{frame}
 
-\begin{frame}[fragile,eyebrow=Setup]{Where your code goes}
+\begin{frame}[fragile,eyebrow=Setup]{Branch and file layout}
   \begin{steps}
     \item Branch the team repository:
 \begin{shell}
@@ -55,7 +55,7 @@ git checkout -b lab-6
   \end{hint}
 \end{frame}
 
-\begin{frame}[fragile,eyebrow=Setup]{The contract: readings.proto}
+\begin{frame}[fragile,eyebrow=Setup]{Contract: readings.proto}
 \begin{codeblock}
 syntax = "proto3";
 package readings.v1;
@@ -114,7 +114,7 @@ protoc -Iproto --dart_out=grpc:lib/gen \
   \muted{Commit the generated files, or run protoc in CI. Either way, pick one and write it down.}
 \end{frame}
 
-\begin{frame}[fragile,eyebrow=Task I]{A Go server: struct and GetLatest}
+\begin{frame}[fragile,eyebrow=Task I]{Go server: struct and GetLatest}
   \begin{columns}[T]
     \begin{column}{0.6\textwidth}
 \begin{golang}
@@ -142,7 +142,7 @@ func (s *server) GetLatest(
   \end{columns}
 \end{frame}
 
-\begin{frame}[fragile,eyebrow=Task I]{A Go server: the stream and main}
+\begin{frame}[fragile,eyebrow=Task I]{Go server: stream and main}
   \begin{columns}[T]
     \begin{column}{0.58\textwidth}
 \begin{golang}
@@ -175,7 +175,7 @@ func main() {
   \muted{StreamReadings loops until the client's context is done. main wires the implementation to a TCP listener.}
 \end{frame}
 
-\begin{frame}[fragile,eyebrow=Task II]{A unary call with a deadline}
+\begin{frame}[fragile,eyebrow=Task II]{Unary call with a deadline}
   \begin{columns}[T]
     \begin{column}{0.55\textwidth}
       \begin{steps}
@@ -199,7 +199,7 @@ func main() {
   \end{takeaway}
 \end{frame}
 
-\begin{frame}[fragile,eyebrow=Task II]{A Dart client: the unary call}
+\begin{frame}[fragile,eyebrow=Task II]{Dart client: unary call}
   \begin{columns}[T]
     \begin{column}{0.6\textwidth}
 \begin{dart}
@@ -226,7 +226,7 @@ final client = ReadingsClient(channel); try {
   \end{columns}
 \end{frame}
 
-\begin{frame}[fragile,eyebrow=Task III]{The streaming screen, with a cancel}
+\begin{frame}[fragile,eyebrow=Task III]{Streaming screen with cancel}
   \begin{columns}[T]
     \begin{column}{0.55\textwidth}
       \begin{steps}
@@ -247,7 +247,7 @@ final client = ReadingsClient(channel); try {
   \end{columns}
 \end{frame}
 
-\begin{frame}[fragile,eyebrow=Task III]{A Dart client: the stream and cancel}
+\begin{frame}[fragile,eyebrow=Task III]{Dart client: stream and cancel}
   \begin{columns}[T]
     \begin{column}{0.55\textwidth}
 \begin{dart}
@@ -275,7 +275,7 @@ void _cancel() {
   \end{columns}
 \end{frame}
 
-\begin{frame}[eyebrow=Acceptance]{What the grader will do}
+\begin{frame}[eyebrow=Acceptance]{Acceptance checks}
   \vskip 1mm
   \begin{columns}[T]
     \begin{column}{0.48\textwidth}
@@ -294,7 +294,7 @@ void _cancel() {
   \end{columns}
 \end{frame}
 
-\begin{frame}[eyebrow=Troubleshooting]{Errors you will meet, and their fixes}
+\begin{frame}[eyebrow=Troubleshooting]{Common errors}
   \trouble{protoc-gen-go: program not found}{Not on PATH. Add both plugin bin folders to PATH.}
   \trouble{Target of URI doesn't exist: readings.pb.dart}{Match \code{--dart\_out} to where the app imports it.}
   \trouble{Connection refused to localhost:50051}{Emulator localhost is itself. Use \code{10.0.2.2}.}
@@ -302,6 +302,6 @@ void _cancel() {
   \trouble{CLEARTEXT communication not permitted}{Android blocks it. Set \code{usesCleartextTraffic}.}
 \end{frame}
 
-\closingframe{Push before you leave.}{Branch lab-6 · one commit per task · README with device id scheme and port}
+\closingframe{Submission}{Branch lab-6 · one commit per task · README with device id scheme and port}
 
 \end{document}

@@ -14,7 +14,7 @@
 
 \titleframe
 
-\begin{frame}[eyebrow=Today]{What this lab is for}
+\begin{frame}[eyebrow=Today]{Lab objectives}
   \vskip 2mm
   \begin{grid}[2]
     \cell[\faThLarge]{Compose a screen}{Build a todo list from Column, Row, ListView and Card, without a single hard-coded pixel offset.}
@@ -24,7 +24,7 @@
   \taskmeta{Time}{2 hours}{Submit}{Push to your project repo, branch \code{lab-3}, before next lab}
 \end{frame}
 
-\begin{frame}[fragile,eyebrow=Setup]{Where your code goes}
+\begin{frame}[fragile,eyebrow=Setup]{Project setup}
   \begin{steps}
     \item Open the project from Lab 2 and create a branch:
 \begin{shell}
@@ -38,7 +38,7 @@ git checkout -b lab-3
   \end{hint}
 \end{frame}
 
-\begin{frame}[eyebrow=Task I]{The screen, element by element}
+\begin{frame}[eyebrow=Task I]{The todo screen}
   \begin{columns}[T]
     \begin{column}{0.55\textwidth}
       \begin{steps}
@@ -63,7 +63,7 @@ git checkout -b lab-3
   \end{takeaway}
 \end{frame}
 
-\begin{frame}[fragile,eyebrow=Task II]{The anatomy of one swipeable row}
+\begin{frame}[fragile,eyebrow=Task II]{A swipeable row}
   \begin{columns}[T]
     \begin{column}{0.55\textwidth}
 \begin{dart}
@@ -89,7 +89,7 @@ Dismissible(
   \end{columns}
 \end{frame}
 
-\begin{frame}[eyebrow=Troubleshooting]{Layout errors and their fixes}
+\begin{frame}[eyebrow=Troubleshooting]{Layout errors}
   \vskip 2mm
   \trouble{RenderFlex overflowed by 42 pixels}{A Row or Column has more content than space. Wrap the growing child in Expanded or Flexible.}
   \trouble{Vertical viewport was given unbounded height}{A ListView inside a Column. Give it a fixed height, or wrap it in Expanded.}

@@ -14,7 +14,7 @@
 
 \titleframe
 
-\begin{frame}[eyebrow=Today]{What this lab is for}
+\begin{frame}[eyebrow=Today]{Lab objectives}
   \vskip 2mm
   \begin{grid}[2]
     \cell[\faLock]{Gate the app on identity}{Wire Firebase Auth (email and password, plus Google) so authStateChanges drives what the user sees.}
@@ -24,7 +24,7 @@
   \taskmeta{Time}{2 hours}{Submit}{Branch \code{lab-6}, admd-labs repo, before next lab}
 \end{frame}
 
-\begin{frame}[fragile,eyebrow=Setup]{Before you write a line}
+\begin{frame}[fragile,eyebrow=Setup]{Setup}
   \begin{steps}
     \item Branch from the Lab 5 state: \code{git checkout -b lab-6}
     \item Add \code{firebase\_core}, \code{firebase\_auth}, \code{google\_sign\_in}, \code{go\_router} and \code{web\_socket\_channel}.
@@ -92,7 +92,7 @@ Future<UserCredential> signInWithGoogle() async {
   \end{columns}
 \end{frame}
 
-\begin{frame}[fragile,eyebrow=Task I]{authStateChanges drives the app}
+\begin{frame}[fragile,eyebrow=Task I]{Auth state with authStateChanges}
 \begin{dart}
 StreamBuilder<User?>(
   stream: FirebaseAuth.instance.authStateChanges(),
@@ -139,7 +139,7 @@ final router = GoRouter(
   \end{columns}
 \end{frame}
 
-\begin{frame}[eyebrow=Task II]{Why the guard belongs to the router}
+\begin{frame}[eyebrow=Task II]{Router guard and refreshListenable}
   \begin{grid}[2]
     \cell[\faIcon{unlock}]{Without \code{refreshListenable}}{The redirect only runs on navigation. A background sign-out leaves the private screen on display until the user taps something.}
     \cell[\faIcon{sync}]{With it}{Every auth change re-runs \code{redirect} immediately, including the first frame and any deep link.}
@@ -153,7 +153,7 @@ final router = GoRouter(
   \end{checklist}
 \end{frame}
 
-\begin{frame}[fragile,eyebrow=Task III]{One screen, live messages}
+\begin{frame}[fragile,eyebrow=Task III]{WebSocket connection}
 \begin{dart}
 final channel = WebSocketChannel.connect(
     Uri.parse('ws://10.0.2.2:8080/echo'));
@@ -169,7 +169,7 @@ StreamBuilder(
   \end{takeaway}
 \end{frame}
 
-\begin{frame}[eyebrow=Task III]{Building the live screen}
+\begin{frame}[eyebrow=Task III]{The live screen}
   \begin{columns}[T]
     \begin{column}{0.55\textwidth}
       \begin{steps}
@@ -193,7 +193,7 @@ StreamBuilder(
   \end{hint}
 \end{frame}
 
-\begin{frame}[fragile,eyebrow=Reference]{The echo server, in full}
+\begin{frame}[fragile,eyebrow=Reference]{Echo server source}
 \begin{golang}
 var upgrader websocket.Upgrader
 func main() {
@@ -211,7 +211,7 @@ func main() {
 \end{golang}
 \end{frame}
 
-\begin{frame}[fragile,eyebrow=Reference]{Why a local echo server}
+\begin{frame}[fragile,eyebrow=Reference]{Local echo server}
   \begin{grid}[2]
     \cell[\faServer]{No public dependency}{A public echo endpoint can be slow, rate-limited, or offline during grading. This one runs on your laptop, on port 8080.}
     \cell[\faIcon{vial}]{You can see both sides}{The terminal running \code{go run .} prints every frame.}
@@ -231,6 +231,6 @@ go run .
   \trouble{setState() called after dispose()}{A stream event arrived after the screen closed. Cancel the subscription in \code{dispose} before calling \code{sink.close}.}
 \end{frame}
 
-\closingframe{Push before you leave.}{Branch lab-6 · one commit per task · echo server included in the repo}
+\closingframe{Submission}{Branch lab-6 · one commit per task · echo server included in the repo}
 
 \end{document}

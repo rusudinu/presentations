@@ -5,7 +5,7 @@
 \course{Mobile and Embedded Computing}
 \decklabel{Lab 1}
 \title{Toolchain, board, broker, and project kickoff}
-\subtitle{TinyGo, a blinking board, a local broker, and your team}
+\subtitle{TinyGo, a blinking LED, a local MQTT broker, team setup}
 \author{Dinu-Ștefan Rusu}
 \institute{FILS, Universitatea Politehnica București}
 \date{Week 2}
@@ -14,7 +14,7 @@
 
 \titleframe
 
-\begin{frame}[eyebrow=Today]{What this lab is for}
+\begin{frame}[eyebrow=Today]{Lab objectives}
   \vskip 2mm
   \begin{grid}[2]
     \cell[\faMicrochip]{Put code on a device}{Install TinyGo, build the blink program for your board or for the simulator, flash it, and read what it prints on the serial console.}
@@ -26,7 +26,7 @@
   \muted{Bring a board if you have one. If you do not, Task III replaces Task II and is worth the same.}
 \end{frame}
 
-\begin{frame}[fragile,eyebrow=Setup]{Where your work goes}
+\begin{frame}[fragile,eyebrow=Setup]{Repository and branch}
   \begin{steps}
     \item One repository per team. Use the Flutter app repository from ADMD: the project extends that app.
     \item Create the branch and the folder this lab writes into:
@@ -58,7 +58,7 @@ tinygo version
   \muted{Install Go first: TinyGo reuses the Go standard library and the module cache. If \code{tinygo version} is not found, the TinyGo \code{bin} folder is not on your PATH.}
 \end{frame}
 
-\begin{frame}[fragile,embedded,eyebrow=Task I]{Pick a board and confirm its target}
+\begin{frame}[fragile,embedded,eyebrow=Task I]{Board and TinyGo target}
   \begin{columns}[T]
     \begin{column}{0.55\textwidth}
       \begin{steps}
@@ -84,7 +84,7 @@ tinygo targets
   \end{columns}
 \end{frame}
 
-\begin{frame}[fragile,embedded,eyebrow=Reference]{The blink program, in full}
+\begin{frame}[fragile,embedded,eyebrow=Reference]{Blink program: full listing}
 \begin{golang}
 package main
 import "machine"
@@ -129,7 +129,7 @@ tinygo monitor
   \end{columns}
 \end{frame}
 
-\begin{frame}[fragile,embedded,eyebrow=Task III]{No board: the same program in Wokwi}
+\begin{frame}[fragile,embedded,eyebrow=Task III]{Wokwi simulation without a board}
   \begin{columns}[T]
     \begin{column}{0.55\textwidth}
       \begin{steps}
@@ -196,7 +196,7 @@ mosquitto_pub -h localhost \
   \end{columns}
 \end{frame}
 
-\begin{frame}[eyebrow=Task V]{Your team and your project idea}
+\begin{frame}[eyebrow=Task V]{Team and project idea}
   \begin{columns}[T]
     \begin{column}{0.55\textwidth}
       \begin{steps}
@@ -216,7 +216,7 @@ mosquitto_pub -h localhost \
   \end{columns}
 \end{frame}
 
-\begin{frame}[eyebrow=Reference]{The five requirements your idea must meet}
+\begin{frame}[eyebrow=Reference]{Project requirements}
   {\usebeamerfont{small}
   \begin{tabular}{@{}p{0.30\textwidth}p{0.62\textwidth}@{}}
     \toprule
@@ -233,21 +233,21 @@ mosquitto_pub -h localhost \
   \end{takeaway}
 \end{frame}
 
-\begin{frame}[embedded,eyebrow=Troubleshooting]{What goes wrong, and what to do}
+\begin{frame}[embedded,eyebrow=Troubleshooting]{Flashing and serial port errors}
   \vskip 2mm
   \trouble{permission denied: /dev/ttyUSB0}{Your user is not in the serial port group. Add yourself to \code{dialout} on Debian and Ubuntu, or \code{uucp} on Arch, then log out and back in. Do not flash with sudo.}
   \trouble{no serial ports found}{The cable carries power only, or the board is not in its bootloader. Swap the cable, then hold the BOOT button while plugging the board in and release it.}
   \trouble{unknown target or board name}{The string after \code{-target=} is not one TinyGo knows. Copy it from \code{tinygo targets} or from the board's page.}
 \end{frame}
 
-\begin{frame}[eyebrow=Troubleshooting]{When the broker refuses you}
+\begin{frame}[eyebrow=Troubleshooting]{Broker connection errors}
   \vskip 2mm
   \trouble{Error: Connection refused}{Nothing is listening on port 1883. Start the broker in a terminal with \code{mosquitto -v} and leave it running while you test.}
   \trouble{Connection refused from another machine}{The default configuration binds to localhost. Add \code{listener 1883} and \code{allow\_anonymous true} to \code{mosquitto.conf}, and open the port in the local firewall. Lab network only.}
   \trouble{Address already in use}{A broker is already running, often as a system service. Use that one, or stop the service before starting your own.}
 \end{frame}
 
-\begin{frame}[eyebrow=GitHub]{What goes in the pull request}
+\begin{frame}[eyebrow=GitHub]{Pull request contents}
   \vskip 2mm
   \begin{grid}[2]
     \cell[\faMicrochip]{Proof it ran}{A photo of the blinking board, or a screenshot of the Wokwi simulation, plus the serial output copied as text.}
@@ -257,6 +257,6 @@ mosquitto_pub -h localhost \
   \kv{Also in the description}{The board and the target name you used, and a link to the team sheet row.}
 \end{frame}
 
-\closingframe{Push before you leave.}{Branch lab-1 · blink and serial output in the PR · idea approved}
+\closingframe{Submission}{Branch lab-1 · blink and serial output in the PR · idea approved}
 
 \end{document}

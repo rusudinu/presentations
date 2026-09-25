@@ -15,15 +15,15 @@
 \titleframe
 
 \objectivesframe{
-  \cell[\faIcon{layer-group}]{Read a widget tree}{Explain what a widget is, why it is immutable, and which of the three trees holds state.}
-  \cell[\faIcon{ruler-combined}]{Lay out a screen}{Use Container, Padding, Row, Column, Expanded and Stack, and read the constraint rules.}
-  \cell[\faIcon{list-ul}]{Scroll a long list}{Choose between ListView, ListView.builder, GridView and SingleChildScrollView.}
-  \cell[\faIcon{mobile-alt}]{Assemble a Material screen}{Wrap content in a Scaffold with an AppBar, a floating action button, and a SnackBar.}
+  \cell[\faIcon{layer-group}]{Widget trees}{Explain what a widget is, why it is immutable, and which of the three trees holds state.}
+  \cell[\faIcon{ruler-combined}]{Layout}{Use Container, Padding, Row, Column, Expanded and Stack, and read the constraint rules.}
+  \cell[\faIcon{list-ul}]{Scrolling lists}{Choose between ListView, ListView.builder, GridView and SingleChildScrollView.}
+  \cell[\faIcon{mobile-alt}]{Material screens}{Wrap content in a Scaffold with an AppBar, a floating action button, and a SnackBar.}
 }
 
-\divider{Part 1 · Widgets}{Everything is a widget}[Immutable blueprints, the three trees, and what rebuilds]
+\divider{Part 1 · Widgets}{Widgets}[Immutability, the three trees, composition, rebuilds]
 
-\begin{frame}[eyebrow=Widgets]{Everything is a widget}
+\begin{frame}[eyebrow=Widgets]{Widgets}
   \vskip 2mm
   \begin{grid}[3]
     \cell[\faIcon{cube}]{A description of UI}{A widget is an immutable description of a piece of screen. It is not the pixels.}
@@ -36,7 +36,7 @@
   \note{Say this once and repeat it all lecture: there is no separate layout file, no XML, no markup language. Ask the room what a Padding widget could possibly be if padding were a property. Point out that this is why Flutter trees get deep.}
 \end{frame}
 
-\begin{frame}[fragile,eyebrow=Widgets]{Widgets are immutable blueprints}
+\begin{frame}[fragile,eyebrow=Widgets]{Widget immutability}
   \begin{columns}[T]
     \begin{column}{0.54\textwidth}
 \begin{dart}
@@ -77,7 +77,7 @@ Text('Todos')         // a new instance
   \note{The common misconception is that Flutter rebuilds everything every frame. It does not. Widgets are rebuilt, elements are reused, render objects are mutated. That asymmetry is where the performance comes from.}
 \end{frame}
 
-\begin{frame}[fragile,eyebrow=Widgets]{Composition, not inheritance}
+\begin{frame}[fragile,eyebrow=Widgets]{Composition over inheritance}
   \begin{columns}[T]
     \begin{column}{0.54\textwidth}
 \begin{dart}
@@ -104,7 +104,7 @@ Padding(
   \note{Compare with Android XML or UIKit, where you configure one view object with many attributes. Ask the room which is easier to test. Mention that the same nesting reads badly at first and reads fine after a week.}
 \end{frame}
 
-\begin{frame}[fragile,eyebrow=Widgets]{StatelessWidget: configuration only}
+\begin{frame}[fragile,eyebrow=Widgets]{StatelessWidget}
   \begin{columns}[T]
     \begin{column}{0.56\textwidth}
 \begin{dart}
@@ -152,7 +152,7 @@ class _CounterViewState extends State<CounterView> {
   \note{Point at the underscore: the State class is private by convention. Say that setState mutates the field and marks the element dirty, and Flutter rebuilds that subtree on the next frame. Warn against naming a stateful widget something that starts with Stateless.}
 \end{frame}
 
-\begin{frame}[eyebrow=Widgets]{What actually rebuilds}
+\begin{frame}[eyebrow=Widgets]{Rebuild scope and keys}
   \begin{columns}[T]
     \begin{column}{0.54\textwidth}
       \muted{Flutter does not rebuild the whole tree each frame. \code{setState} marks one element dirty, and only that subtree rebuilds.}
@@ -174,7 +174,7 @@ class _CounterViewState extends State<CounterView> {
   \note{Do not go deep here. The one thing to leave with is that a rebuild is cheap and that elements, not widgets, carry state. Promise the room that the reordering demo comes back in Lecture 5.}
 \end{frame}
 
-\begin{frame}[fragile,eyebrow=Widgets]{Extract a widget as soon as it repeats}
+\begin{frame}[fragile,eyebrow=Widgets]{Extracting widgets}
   \begin{columns}[T]
     \begin{column}{0.56\textwidth}
 \begin{dart}
@@ -201,9 +201,9 @@ class UserListItem extends StatelessWidget {
   \note{Show the opposite version from the shared repository, where one build method is eighty lines deep. Ask the room where they would put a breakpoint in it. The widget class versus helper method rule comes back in Lecture 5.}
 \end{frame}
 
-\divider{Part 2 · Layout}{Constraints down, sizes up}[Container, Row, Column, Expanded, Stack, and the overflow error]
+\divider{Part 2 · Layout}{Layout}[Constraints, Container, Row, Column, Expanded, Stack, overflow errors]
 
-\begin{frame}[eyebrow=Layout]{Constraints go down, sizes go up}
+\begin{frame}[eyebrow=Layout]{Layout constraints}
   \vskip 3mm
   \begin{grid}[3]
     \cell[\faIcon{arrow-down}]{1. Constraints go down}{A parent tells each child the minimum and maximum width and height it may take.}
@@ -323,7 +323,7 @@ Stack(
   \note{Badges, online dots and gradient overlays on images are the everyday uses. Warn that a Stack sizes itself to its largest child that is not positioned, so a Stack of only Positioned children collapses.}
 \end{frame}
 
-\begin{frame}[eyebrow=Layout]{The layout widgets you will use every day}
+\begin{frame}[eyebrow=Layout]{Common layout widgets}
   \vskip 2mm
   {\usebeamerfont{small}\begin{tabular}{@{}lp{38mm}p{50mm}@{}}
     \toprule
@@ -342,7 +342,7 @@ Stack(
   \note{Tell the room the full catalog has hundreds of widgets and that nobody memorizes it. The Flutter widget catalog page is the reference. These six are the ones worth knowing by heart.}
 \end{frame}
 
-\begin{frame}[fragile,eyebrow=Layout]{RenderFlex overflowed by 42 pixels}
+\begin{frame}[fragile,eyebrow=Layout]{RenderFlex overflow errors}
   \begin{columns}[T]
     \begin{column}{0.54\textwidth}
 \begin{dart}
@@ -371,7 +371,7 @@ Row(children: [
   \note{Trigger this live by renaming a todo to something long. Say that the error is a normal part of building layouts, not a sign of broken code. The console line number is the fastest way in.}
 \end{frame}
 
-\divider{Part 3 · Scrolling}{Lists that build only what you see}[ListView, builders, grids, and one scroll view per screen]
+\divider{Part 3 · Scrolling}{Scrolling}[ListView, builders, grids, scroll views]
 
 \begin{frame}[fragile,eyebrow=Scrolling]{ListView and ListView.builder}
   \begin{columns}[T]
@@ -439,9 +439,9 @@ SingleChildScrollView(child: Column(children: fields))
   \note{Point at the fifth row and say that CustomScrollView looks intimidating and is mostly a list of the widgets they already know, prefixed with Sliver. Lecture 14 comes back to it for the polish pass.}
 \end{frame}
 
-\divider{Part 4 · Material}{The scaffolding around content}[Scaffold, AppBar, buttons, SnackBars and dialogs]
+\divider{Part 4 · Material}{Material components}[Scaffold, AppBar, buttons, SnackBars and dialogs]
 
-\begin{frame}[fragile,eyebrow=Material]{Scaffold: the skeleton of a screen}
+\begin{frame}[fragile,eyebrow=Material]{Scaffold}
   \begin{columns}[T]
     \begin{column}{0.56\textwidth}
 \begin{dart}
@@ -522,7 +522,7 @@ final ok = await showDialog<bool>(
   \note{Ask who has an iPhone and who has an Android phone, then ask whether they would notice a Material app on iOS. Most would not. Say that Cupertino matters when the client asks for it, not by default. Recent Flutter releases also ship Material and Cupertino as standalone packages, material\_ui and cupertino\_ui; the widgets are the same and the flutter/material.dart import still works.}
 \end{frame}
 
-\divider{Part 5 · Worked example}{Building the Lab 3 todo screen}[Five steps from an empty Scaffold to a working list]
+\divider{Part 5 · Worked example}{Lab 3 todo screen}[Screen state, list, TodoTile, adding and removing items, empty state]
 
 \begin{frame}[fragile,eyebrow=Worked example]{Step 1: the screen and its state}
   \begin{columns}[T]
@@ -637,7 +637,7 @@ ScaffoldMessenger.of(context).showSnackBar(
   \note{Close the section by scrolling back through the five steps in the editor so the room sees the whole file. Say that the lab starts exactly here and that the repository has the finished version to compare against afterwards.}
 \end{frame}
 
-\begin{frame}[eyebrow=Recap]{Three things to remember}
+\begin{frame}[eyebrow=Recap]{Summary}
   \vskip 2mm
   \begin{enumerate}
     \item Widgets are immutable descriptions. \muted{You compose small ones instead of configuring big ones.}
