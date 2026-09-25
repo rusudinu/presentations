@@ -18,7 +18,7 @@
   \vskip 2mm
   \begin{grid}[2]
     \cell[\faIcon{stopwatch}]{Prove four skills, once}{Build a small app from a one-page spec in ninety minutes: a screen, a Cubit, a network call, and a route.}
-    \cell[\faIcon{graduation-cap}]{Worth four points}{One point per requirement, graded from your pushed branch. There is no live demo.}
+    \cell[\faIcon{graduation-cap}]{Worth 30 points}{7.5 points per requirement, graded from your pushed branch. There is no live demo.}
   \end{grid}
   \vskip 6mm
   \taskmeta{Time}{90 minutes}{Submit}{Push to admd-labs, branch lab-7, before time is up}
@@ -67,10 +67,10 @@
   \end{grid}
 \end{frame}
 
-\begin{frame}[eyebrow=Rubric]{One point per requirement}
+\begin{frame}[eyebrow=Rubric]{7.5 points per requirement}
   {\usebeamerfont{small}\begin{tabular}{@{}p{24mm}p{42mm}p{42mm}@{}}
     \toprule
-    \thead{Requirement} & \thead{Full credit (1 pt)} & \thead{Partial credit (0.5 pt)} \\
+    \thead{Requirement} & \thead{Full credit (7.5 p)} & \thead{Partial credit (3.75 p)} \\
     \midrule
     Screen & Matches the spec's widgets, no overflow & Builds, but the layout differs from spec \\
     Cubit state & UI updates through emit, never setState & Cubit exists, but a screen still calls setState \\
@@ -91,7 +91,7 @@ git push -u origin lab-7
     \item Create the branch the moment you receive the spec.
     \item Commit as you finish each requirement, with a message that names it.
     \item Push before the ninety minutes end.
-    \item Open one pull request titled with your name. It does not need a review to count.
+    \item Open one pull request titled with your name.
   \end{steps}
   \begin{warning}
     The grader reads the branch as it stands at the deadline. A late push is not graded.

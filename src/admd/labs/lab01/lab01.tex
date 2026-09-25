@@ -28,7 +28,7 @@
 \begin{frame}[eyebrow=Setup]{The cumulative lab app}
   \begin{steps}
     \item One repository per student, named \code{admd-labs}.
-    \item One branch per lab. One pull request per lab, merged after grading.
+    \item One branch per lab. One pull request per lab, merged into \code{main}.
     \item Create the branch and install tools before starting.
   \end{steps}
   \vskip 4mm
@@ -41,14 +41,15 @@
   {\usebeamerfont{small}
   \begin{tabular}[t]{lp{6cm}r}
     \thead{Work} & \thead{Description} & \thead{Points} \\
-    Lab assignments & One point per lab, cumulative app & 5 \\
-    Practical test & Lab 7, 90 minutes, individual & 4 \\
-    Participation & Attendance and engagement & 1 \\
+    Colloquium & End of semester, before the exam session & 20 \\
+    Midterm & Middle of the semester & 20 \\
+    Lab assignments & Labs 1 to 6, cumulative app & 30 \\
+    Practical test & Lab 7, 90 minutes, individual & 30 \\
     \midrule
-    & \textbf{Pass mark} & \textbf{5 of 10} \\
+    & \textbf{Pass mark} & \textbf{50 of 100} \\
   \end{tabular}
   }
-  \vskip 4mm
+  \vskip 2mm
   \begin{hint}
     Your grader checks the repository history, not just the final state. Commit early and often, with clear messages.
   \end{hint}
@@ -148,11 +149,11 @@ flutter doctor -v
     \item Work on your code, commit often with clear messages.
     \item Push the branch: \code{git push -u origin lab-N}.
     \item Open a pull request on GitHub to merge into \code{main}.
-    \item Wait for grading. Do not merge yourself.
+    \item Merge it, so the next lab starts from \code{main}.
   \end{steps}
 \end{frame}
 
-\begin{frame}[fragile,eyebrow=Submit]{Push your first pull request}
+\begin{frame}[fragile,eyebrow=GitHub]{Push your first pull request}
   \begin{columns}[T]
     \begin{column}{0.55\textwidth}
 \begin{shell}
@@ -166,9 +167,6 @@ git push -u origin lab-1
     \begin{column}{0.41\textwidth}
       \kv{In the PR description}{}
       Add your screenshot and write: \emph{``App runs and hot reload works.''}
-      \\[2mm]
-      \kv{Do not merge}{}
-      Wait for grading. The instructor merges.
     \end{column}
   \end{columns}
 \end{frame}

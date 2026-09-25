@@ -16,7 +16,7 @@
 
 \objectivesframe{
   \cell[\faIcon{calendar-alt}]{How this course runs}{The fourteen lectures, the seven labs, how the grade is built, and what to bring to Lab 1.}
-  \cell[\faIcon{code-branch}]{A working Git setup}{A GitHub account and the loop this course grades: branch, commit, push, pull request, review, merge.}
+  \cell[\faIcon{code-branch}]{A working Git setup}{A GitHub account and the loop you run every lab: branch, commit, push, pull request, review, merge.}
   \cell[\faLayerGroup]{Four build strategies}{Native, web, cross-platform in two flavors, and shared logic with native user interfaces.}
   \cell[\faIcon{mobile-alt}]{A choice you can defend}{Why this course uses Flutter, what that choice costs, and when another strategy fits better.}
 }
@@ -121,27 +121,27 @@
 
 \begin{frame}[eyebrow=Orientation]{How the grade is built}
   \vskip 4mm
-  \begin{grid}[3]
-    \bignum{5 p}{lab assignments, graded from your repository}
-    \bignum{4 p}{practical lab test in Lab 7, individual}
-    \bignum{1 p}{participation across the semester}
+  \begin{grid}[4]
+    \bignum{20 p}{colloquium}
+    \bignum{20 p}{midterm exam}
+    \bignum{30 p}{lab assignments}
+    \bignum{30 p}{practical lab test in Lab 7, individual}
   \end{grid}
   \vskip 4mm
-  \muted{This is a verification, not an exam: there is nothing to sit in the exam session. The exact split is confirmed on the course channel in week 1.}
-  \begin{takeaway}{You pass with at least 5 points out of 10.}
+  \begin{takeaway}{You pass with at least 50 points out of 100.}
     Most of the grade is decided in the lab, week by week, not in a single evening at the end.
   \end{takeaway}
-  \note{Say the pass line out loud and repeat it. The message students need is that lab work is the grade, so falling behind in the labs cannot be recovered later. Mention that the lab test in week 14 is individual and practical.}
+  \note{Say the pass line out loud and repeat it. The message students need is that lab work is most of the grade, so falling behind in the labs cannot be recovered later. Mention that the lab test in week 14 is individual and practical, and that the colloquium and the midterm are separate from it.}
 \end{frame}
 
 \begin{frame}[eyebrow=Orientation]{One repository, one branch per lab}
   \vskip 2mm
   \begin{grid}[3]
-    \cell[\faIcon{folder-open}]{One repository}{Each student keeps one GitHub repository named \code{admd-labs}. Every lab lands in it. Nothing is submitted by email.}
+    \cell[\faIcon{folder-open}]{One repository}{Each student keeps one GitHub repository named \code{admd-labs}. Every lab lands in it.}
     \cell[\faIcon{code-branch}]{One branch per lab}{Work for Lab N goes on a branch named \code{lab-N}, created from \code{main} and pushed before the next lab.}
-    \cell[\faIcon{check-double}]{One pull request}{Each lab ends with a pull request. It is graded, then merged into \code{main} so the next lab starts from it.}
+    \cell[\faIcon{check-double}]{One pull request}{Each lab ends with a pull request, merged into \code{main} so the next lab starts from it.}
   \end{grid}
-  \begin{takeaway}{The repository is the submission.}
+  \begin{takeaway}{Every lab lives in the repository.}
     History matters: small commits with real messages read better than one commit called final.
   \end{takeaway}
   \note{This rule removes every argument about deadlines and file versions. Show a repository on screen if you have one open. Say explicitly that a lab pushed after the next lab has started is late.}
@@ -201,7 +201,7 @@
       \end{itemize}
     \end{column}
     \begin{column}{0.39\textwidth}
-      \kv{In this course}{\code{main} is the graded state of your app. \code{lab-3} is the work in progress for Lab 3.}
+      \kv{In this course}{\code{main} is the finished state of your app. \code{lab-3} is the work in progress for Lab 3.}
       \vskip 3mm
       \muted{A repository is a Git concept, not a GitHub one. GitHub only hosts it.}
     \end{column}
@@ -258,7 +258,7 @@ asdf
   \begin{takeaway}{Write the message for the person reading it in six months.}
     That person is usually you, looking for the commit that broke something.
   \end{takeaway}
-  \note{Ask the room what the bottom three messages tell a reviewer. Nothing. Say that graders read the history, so message quality is visible. Mention that the imperative mood matches what Git itself writes for merges and reverts.}
+  \note{Ask the room what the bottom three messages tell a reviewer. Nothing. Mention that the imperative mood matches what Git itself writes for merges and reverts.}
 \end{frame}
 
 \begin{frame}[eyebrow=Git]{Pull requests and review}
@@ -273,8 +273,6 @@ asdf
     \end{column}
     \begin{column}{0.40\textwidth}
       \kv{In your labs}{The description names what you built, what you could not finish, and any code an agent wrote for you.}
-      \vskip 3mm
-      \muted{A screenshot of the running app in the description saves the grader a build.}
     \end{column}
   \end{columns}
   \begin{takeaway}{Open the pull request early, even when the work is unfinished.}
@@ -521,7 +519,7 @@ flutter run
 \begin{frame}[eyebrow=Recap]{Three things to remember}
   \vskip 2mm
   \begin{enumerate}
-    \item The repository is the submission. \muted{One repository, a branch per lab, a pull request per lab, graded from the history.}
+    \item Every lab lives in one repository. \muted{One repository, a branch per lab, a pull request per lab.}
     \item There are four ways to build a mobile app. \muted{Native, web, cross-platform, and shared logic with native screens.}
     \item Every strategy has a cost. \muted{This course uses Flutter, and states what that choice gives up.}
   \end{enumerate}

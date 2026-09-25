@@ -18,7 +18,7 @@
   \vskip 2mm
   \begin{grid}[2]
     \cell[\faIcon{stopwatch}]{Prove three skills, once}{Build a small app from a one-page spec in ninety minutes: a device message, an offline write, and a remote read.}
-    \cell[\faIcon{graduation-cap}]{Worth 1.5 points}{0.5 points per requirement, graded from your pushed branch. There is no live demo.}
+    \cell[\faIcon{graduation-cap}]{Worth 15 points}{5 points per requirement, graded from your pushed branch. There is no live demo.}
   \end{grid}
   \vskip 6mm
   \taskmeta{Time}{90 minutes}{Submit}{Push to your project repo, branch \code{lab-7}, before time is up}
@@ -76,10 +76,10 @@
   \end{grid}
 \end{frame}
 
-\begin{frame}[eyebrow=Rubric]{0.5 points per requirement}
+\begin{frame}[eyebrow=Rubric]{5 points per requirement}
   {\usebeamerfont{small}\begin{tabular}{@{}p{30mm}p{42mm}p{42mm}@{}}
     \toprule
-    \thead{Requirement} & \thead{Full credit (0.5 pt)} & \thead{Partial credit (0.25 pt)} \\
+    \thead{Requirement} & \thead{Full credit (5 p)} & \thead{Partial credit (2.5 p)} \\
     \midrule
     MQTT pub or sub & Connects, and reconnects after a broker drop & Connects once, but does not recover from a drop \\
     Offline write + outbox & Written offline, reaches the server once online & Outbox exists, but the drain loop never runs \\
@@ -99,7 +99,7 @@ git push -u origin lab-7
     \item Create the branch the moment you receive the spec.
     \item Commit as you finish each requirement, with a message that names it.
     \item Push before the ninety minutes end.
-    \item Open one pull request titled with your name. It does not need a review to count.
+    \item Open one pull request titled with your name.
   \end{steps}
   \begin{warning}
     The grader reads the branch as it stands at the deadline. A late push is not graded.

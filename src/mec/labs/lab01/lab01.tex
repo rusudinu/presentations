@@ -34,10 +34,10 @@
 git checkout -b lab-1
 mkdir -p device/blink
 \end{shell}
-    \item Open a pull request from \code{lab-1} on the first commit. Everything you are graded on goes in its description.
+    \item Open a pull request from \code{lab-1} on the first commit.
   \end{steps}
   \begin{hint}
-    Pull requests, not pushes to main. Your individual mark is read from your own commits.
+    Pull requests, not pushes to main.
   \end{hint}
 \end{frame}
 
@@ -248,7 +248,7 @@ mosquitto_pub -h localhost \
   \trouble{Address already in use}{A broker is already running, often as a system service. Use that one, or stop the service before starting your own.}
 \end{frame}
 
-\begin{frame}[eyebrow=Submission]{What the pull request has to contain}
+\begin{frame}[eyebrow=GitHub]{What goes in the pull request}
   \vskip 2mm
   \begin{grid}[2]
     \cell[\faMicrochip]{Proof it ran}{A photo of the blinking board, or a screenshot of the Wokwi simulation, plus the serial output copied as text.}
@@ -257,7 +257,7 @@ mosquitto_pub -h localhost \
   \vskip 4mm
   \kv{Also in the description}{The board and the target name you used, and a link to the team sheet row.}
   \begin{takeaway}{Open the pull request now, not at the deadline.}
-    A branch with no pull request is not a submission, and an empty description is not evidence.
+    Feedback on a half-built branch is cheap. Feedback on a finished one costs a rewrite.
   \end{takeaway}
 \end{frame}
 

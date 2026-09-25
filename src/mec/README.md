@@ -19,7 +19,7 @@ runtimes or dates.
 | Status | Mandatory, 3 ECTS |
 | Format | 14 weeks. Lecture 2 h every week. Lab 2 h every second week, even weeks (7 labs). Project 2 h every second week, odd weeks (7 sessions) |
 | Evaluation | Exam (E) in the exam session |
-| Grading | Final exam 3 p, laboratory and assignments 3 p, lab test 1.5 p, team project 1.5 p, concept presentation 1 p. Pass with at least 5 of 10 |
+| Grading | Final exam 40 p, laboratory and assignments 30 p, lab test 15 p, team project 15 p. Pass with at least 50 of 100 |
 | Concept presentations | Teams of at most 3 pick a topic from the shared sheet, prepare about 20 minutes of slides plus an optional demo, every member presents, materials go to Moodle |
 | Prerequisite | Application Development for Mobile Devices (ADMD, semester I) or equivalent Flutter and Dart knowledge. Students who took Introduction to SAP instead must work through the ADMD Lectures 2, 3, 5 and 6 decks before week 3 |
 | Instructor | Dinu-Ștefan Rusu, dinu_stefan.rusu@upb.ro, Microsoft Teams course channel, rusudinu.com. Ships Flutter apps professionally: 45+ apps, 400k installs |
@@ -33,7 +33,7 @@ Neighboring courses in the same program: Computer Networks (semester I, mandator
 
 ## The project
 
-Teams of at most 3. Worth 1.5 points. Students extend the app they built in the ADMD labs, so the project hours go into the device and sync work, not into UI basics. Approved in Lab 1, defended in the last project session.
+Teams of at most 3. Worth 15 points. Students extend the app they built in the ADMD labs, so the project hours go into the device and sync work, not into UI basics. Approved in Lab 1, defended in the last project session.
 
 Entry conditions (already true for an ADMD app): state in BLoC, real authentication, one WebSocket screen.
 
@@ -208,4 +208,4 @@ A .proto with one unary call and one server-streaming call for readings. Generat
 
 ### Lab 7: Lab test
 
-The practical test worth 1.5 points. Rules (individual, 90 minutes, own laptop, board or simulator allowed, internet allowed, agents allowed but every line must be explained on request), the format (a one-page spec with three requirements drawn from Labs 2 to 6: publish or subscribe over MQTT, one offline-capable write with an outbox, one gRPC or BLE read), the rubric, submission (branch `lab-7`), two practice specs, and a preparation slide that maps each requirement to the lab that taught it.
+The practical test worth 15 points. Rules (individual, 90 minutes, own laptop, board or simulator allowed, internet allowed, agents allowed but every line must be explained on request), the format (a one-page spec with three requirements drawn from Labs 2 to 6: publish or subscribe over MQTT, one offline-capable write with an outbox, one gRPC or BLE read), the rubric, submission (branch `lab-7`), two practice specs, and a preparation slide that maps each requirement to the lab that taught it.

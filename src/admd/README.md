@@ -16,7 +16,7 @@ history). `EX` means `admd/examples/lib/` (the Flutter example project, grouped 
 | Status | Optional, 4 ECTS, paired with Introduction to SAP |
 | Format | 14 weeks. Lecture 2 h every week. Lab 2 h every second week, in even weeks (7 labs). There are 15 lecture decks for 14 slots: see the note under the lecture plan |
 | Evaluation | Verification (V), no exam session |
-| Grading (proposed, confirm before publishing) | Lab assignments 5 p (cumulative lab app, graded from the repo), practical lab test 4 p (Lab 7), participation 1 p. Pass with at least 5 of 10 |
+| Grading | Colloquium 20 p, midterm 20 p, lab assignments 30 p (cumulative lab app), practical lab test 30 p (Lab 7). Pass with at least 50 of 100 |
 | Instructor | Dinu-Ștefan Rusu, dinu_stefan.rusu@upb.ro, Microsoft Teams course channel, rusudinu.com. Ships Flutter apps professionally: 45+ apps, 400k installs |
 | Stack | Flutter and Dart, Firebase, Go only where a tiny backend is needed |
 | Repository | github.com/rusudinu/presentations for the shared material (slides in `admd/`, code examples in `admd/examples/`); each student keeps one course repository on GitHub for all labs |
@@ -195,7 +195,7 @@ Each lab is two hours, in even weeks. The student's course repository holds one 
 
 ### Lab 1: Orientation, set-up, and your first pull request
 
-Port LABSRC/build-lab1.js, but replace the semester-project rules with the cumulative lab app rules: one repository per student, named `admd-labs`, one branch per lab, one pull request per lab merged to main after the lab is graded. Keep the grading slide (table in Course facts). Keep the environment set-up and both troubleshooting slides (flutter doctor problems; no devices, emulators that will not boot, macOS). Tasks: install and run `flutter doctor`, create the repository, create the starter app, run it on an emulator, open a pull request with a screenshot in the description.
+Port LABSRC/build-lab1.js, but replace the semester-project rules with the cumulative lab app rules: one repository per student, named `admd-labs`, one branch per lab, one pull request per lab merged to main. Keep the grading slide (table in Course facts). Keep the environment set-up and both troubleshooting slides (flutter doctor problems; no devices, emulators that will not boot, macOS). Tasks: install and run `flutter doctor`, create the repository, create the starter app, run it on an emulator, open a pull request with a screenshot in the description.
 
 ### Lab 2: Dart and null safety
 
@@ -219,4 +219,4 @@ New. Task I: Firebase Auth with email and password plus Google sign-in, authStat
 
 ### Lab 7: Lab test
 
-New. The practical test worth 4 points. The deck states the rules (individual, 90 minutes, own laptop, internet allowed, agents allowed but every line must be explained on request), the format (a one-page spec of a small app with four requirements: a screen built from the layout widgets, state in a Cubit, one network call with a model class, one navigation with go_router), the rubric (one point per requirement, partial credit rules), how the submission is made (branch `lab-7`, pushed at the end), and two practice specs of the same shape. Include a "how to prepare" slide that maps each requirement to the lab that taught it.
+New. The practical test worth 30 points. The deck states the rules (individual, 90 minutes, own laptop, internet allowed, agents allowed but every line must be explained on request), the format (a one-page spec of a small app with four requirements: a screen built from the layout widgets, state in a Cubit, one network call with a model class, one navigation with go_router), the rubric (one point per requirement, partial credit rules), how the submission is made (branch `lab-7`, pushed at the end), and two practice specs of the same shape. Include a "how to prepare" slide that maps each requirement to the lab that taught it.
