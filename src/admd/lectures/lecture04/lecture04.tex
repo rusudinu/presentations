@@ -32,8 +32,7 @@
     \item async and await exist so a function can wait for something without occupying that thread while it waits.
     \item The event loop and microtask queue that make this precise belong to Mobile and Embedded Computing (MEC), Lecture 2.
   \end{itemize}
-  \begin{takeaway}{Blocking is not a Flutter bug.}
-    It is what one thread does when nothing yields control back to it.
+  \begin{takeaway}{The thread blocks until your code yields control back to it.}
   \end{takeaway}
   \note{This is a one-line pointer, not a detour: the full event loop and microtask model is MEC Lecture 2 next semester. Here the only point is why the rest of this section matters.}
 \end{frame}
@@ -113,11 +112,10 @@ final results = await Future.wait([
   \vskip 2mm
   \begin{itemize}
     \item A failure inside async code does not throw at the call site. It completes the Future with an error instead.
-    \item await rethrows that error at the point of the await, so try, catch and finally behave exactly as they do in synchronous code.
+    \item await rethrows that error at the point of the await, so try, catch and finally behave as they do in synchronous code.
     \item Without a try around it, the error escapes as an unhandled async error. Users rarely report it; the screen just seems to do nothing.
   \end{itemize}
   \begin{takeaway}{Every await is a place your code can fail.}
-    Wrap it, or plan for the silence when you do not.
   \end{takeaway}
   \note{Ask the room what happens today in their own lab code when a request fails with no try/catch: usually nothing visible, which is worse than a crash because nobody notices. That is the motivation for the next slide.}
 \end{frame}
@@ -269,7 +267,7 @@ StreamBuilder<int>(
     \item Subscribe to what changes with a Stream: new messages, a live price, a sensor reading.
     \item Nest a StreamBuilder inside, or beside, the FutureBuilder so new events update the same screen.
   \end{itemize}
-  \begin{takeaway}{Most real screens need both.}
+  \begin{takeaway}{Most screens need both.}
     A Future for what is already true, a Stream for what keeps changing.
   \end{takeaway}
   \note{Use the Lab 6 live screen as the concrete example: it loads an initial state, then a WebSocket stream keeps it current. This slide is the mental model that lab depends on.}
@@ -364,7 +362,6 @@ Future<List<Photo>> fetchPhotos() async {
     \item That access is not free: a misread instruction can touch files or data you never intended to expose.
   \end{itemize}
   \begin{takeaway}{Tool access raises the stakes of a wrong prompt.}
-    The rest of this section is about keeping that risk under control.
   \end{takeaway}
   \note{Keep this concrete: an agentic CLI in the lab can genuinely run git commands and delete files if asked to, which is why the review habit on the next slides is not optional. The specification is revised often; the stable core is tools, resources and prompts.}
 \end{frame}
@@ -375,7 +372,7 @@ Future<List<Photo>> fetchPhotos() async {
     \item Boilerplate: scaffolding, data classes, test fixtures, glue code.
     \item Explaining unfamiliar code, stack traces and build errors.
     \item Mechanical refactors that touch many files at once.
-    \item The test you were quietly going to skip.
+    \item Writing tests.
     \item A first draft of a task you are unsure how to start.
   \end{itemize}
   \note{Ask for a show of hands on which of these the room has actually used an agent for. Boilerplate and explaining stack traces are usually the two everyone recognizes.}
@@ -387,7 +384,7 @@ Future<List<Photo>> fetchPhotos() async {
     \item Plausible but wrong APIs: Flutter's surface moves fast.
     \item Security holes: hardcoded keys, unvalidated input, permissive database rules.
     \item Code that ignores conventions you never told it about.
-    \item Silent drift away from the package versions you are actually on.
+    \item Silent drift away from the package versions you are on.
     \item The error paths and edge cases nobody asked for.
   \end{itemize}
   \begin{takeaway}{An agent produces confident output whether or not it is correct.}
@@ -404,13 +401,12 @@ Future<List<Photo>> fetchPhotos() async {
     \item It may hardcode an API key directly into a Dart file, which ships inside the compiled app. \muted{Lecture 7 and Lecture 10.}
     \item It rarely writes the empty-list, no-network or expired-token branch unless you ask for it by name.
   \end{itemize}
-  \begin{takeaway}{None of this means do not use it.}
-    It means read the diff with the same suspicion you would give a stranger's pull request.
+  \begin{takeaway}{Read the diff as you would a stranger's pull request.}
   \end{takeaway}
   \note{These are not hypothetical: each one has been the actual root cause of a bug in a student submission in a previous run of this course. Naming them concretely is more useful than the general warning on the previous slide.}
 \end{frame}
 
-\begin{frame}[fragile,eyebrow=Agents]{Prompting: give it context, not wishes}
+\begin{frame}[fragile,eyebrow=Agents]{Prompting: give it context}
   \begin{columns}[T]
     \begin{column}{0.47\textwidth}
       \begin{itemize}
@@ -466,8 +462,6 @@ where possible. Add a widget test.
     Cited in the PR     & Name the tool and what you asked it to do, in the pull request description. \\
     \bottomrule
   \end{tabular}}
-  \par\vskip 2mm
-  \muted{This is not a trust exercise: the same review discipline every professional team applies.}
   \note{These four rules are graded, not optional. If a student cannot explain a line during a lab check, the grading assumes they do not understand it and marks it accordingly.}
 \end{frame}
 

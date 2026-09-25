@@ -30,7 +30,7 @@
     \item Open the project from Lab 2 and create a branch: \code{git checkout -b lab-3}
     \item Create \code{lib/screens/todo\_screen.dart}. All three tasks happen there.
     \item Run the app once before changing anything. If it does not build, fix that first.
-    \item Keep the todo app. Task III debugs this exact app with DevTools.
+    \item Keep the todo app. Task III debugs this app with DevTools.
   \end{steps}
   \begin{hint}
     Hot reload keeps your list contents between edits. Hot restart drops them: use it after changing \code{initState} or dependencies.
@@ -77,9 +77,6 @@
         \item \code{Stack}: children drawn on top of each other.
         \item \code{Scaffold}: AppBar, body, FAB layout.
       \end{itemize}
-      \begin{hint}
-        Every one takes children, not pixels.
-      \end{hint}
     \end{column}
   \end{columns}
 \end{frame}
@@ -222,8 +219,7 @@ final visible = _items.where(
     \begin{column}{0.41\textwidth}
       \kv{One frame}{16.7 ms at 60 Hz · 8.3 ms at 120 Hz}
       \vskip 2mm
-      \begin{takeaway}{Rebuilt is not repainted.}
-        Inspector counts rebuilds.
+      \begin{takeaway}{The Inspector counts rebuilds, not repaints.}
       \end{takeaway}
     \end{column}
   \end{columns}

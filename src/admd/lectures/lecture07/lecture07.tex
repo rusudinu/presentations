@@ -32,7 +32,7 @@
   \end{itemize}
   \vskip 1mm
   \begin{takeaway}{One round trip is expensive on mobile.}
-    Timeouts, retries and generated JSON all exist because that round trip can be slow or simply fail.
+    Timeouts, retries and generated JSON all exist because that round trip can be slow or fail.
   \end{takeaway}
   \note{Ask who has seen a request just hang with no error. That is a missing timeout, the subject of a slide soon. Frame the whole lecture as what happens on this one line between client and server.}
 \end{frame}
@@ -193,7 +193,7 @@ Future<void> search(String query) async {
       \lead{Search as you type}{}
       \begin{itemize}
         \item Every keystroke fires a new request. Cancel the previous one before sending the next.
-        \item A canceled request throws \code{DioExceptionType.cancel}, which you simply ignore.
+        \item A canceled request throws \code{DioExceptionType.cancel}, which you ignore.
         \item Also cancel on \code{dispose()}, so a closed screen does not update dead state.
       \end{itemize}
     \end{column}
@@ -274,8 +274,8 @@ Future<T> withRetry<T>(
     \bottomrule
   \end{tabular}}
   \vskip 1mm
-  \begin{takeaway}{Retrying is a decision, not a default.}
-    Wrap only calls where a repeat is provably harmless: safe methods, plus POST with an idempotency key.
+  \begin{takeaway}{Retry only calls where a repeat is harmless.}
+    Safe methods, plus POST with an idempotency key.
   \end{takeaway}
   \note{Connect this back to the safe-vs-idempotent table from Part 1: everything in the retry rows is either safe or the client controls the URL, like PUT. POST is the one verb that needs extra machinery before it is safe to repeat.}
 \end{frame}
@@ -284,7 +284,7 @@ Future<T> withRetry<T>(
   \begin{itemize}
     \item When a service fails briefly, thousands of clients fail at once. If every one retries after the same delay, the wave is larger than the original load: a thundering herd.
     \item Full jitter, from the previous slide, spreads those retries across the interval, so the recovering server sees load ramp up instead of arriving all at once.
-    \item \textbf{Hedging is the opposite problem.} A few requests are simply slow. Send a second copy after a short delay, take whichever answers first, cancel the other.
+    \item \textbf{Hedging is the opposite problem.} A few requests are slow. Send a second copy after a short delay, take whichever answers first, cancel the other.
   \end{itemize}
   {\renewcommand{\arraystretch}{1.0}\usebeamerfont{small}\begin{tabular}{@{}lll@{}}
     \toprule

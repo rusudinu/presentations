@@ -18,7 +18,7 @@
   \cell[\faCode]{Read the spectrum}{Interpretation, just-in-time and ahead-of-time compilation, and what each one trades away.}
   \cell[\faToggleOn]{Explain the build modes}{Why Dart ships two compilers, what Android's runtime does, and why iOS allows no choice.}
   \cell[\faBolt]{Spend energy on purpose}{Race to idle, thermal throttling, and the duty cycle that decides a device's battery life.}
-  \cell[\faGraduationCap]{Be ready}{The exam format, what to revise per lecture, the project defense, and the concept presentation.}
+  \cell[\faGraduationCap]{Prepare for the exam}{The exam format, what to revise per lecture, the project defense, and the concept presentation.}
 }
 
 % =====================================================================
@@ -63,7 +63,7 @@
   \note{Draw the three boxes on the board and put both toolchains through them. Students who have seen LLVM in Computer Architecture will recognize the middle box. The useful idea is that the intermediate representation is where optimization happens in both cases.}
 \end{frame}
 
-\begin{frame}[fragile,eyebrow=Compilation]{Dart uses both: build modes, not camps}
+\begin{frame}[fragile,eyebrow=Compilation]{Dart uses both, through build modes}
   \vskip 2mm
   \begin{columns}[T]
     \begin{column}{0.55\textwidth}
@@ -79,13 +79,13 @@ flutter build appbundle --release
       \muted{Every performance claim names the build mode it came from.}
     \end{column}
     \begin{column}{0.41\textwidth}
-      \lead{Read this carefully}{"Dart is a JIT language" and "Dart is an AOT language" are both half true. It is one language with two compilers, and the build mode picks one.}
+      \lead{JIT or AOT}{"Dart is a JIT language" and "Dart is an AOT language" are both half true. It is one language with two compilers, and the build mode picks one.}
       \vskip 2mm
       \muted{Hot reload exists because the debug VM can compile new functions into a running isolate.}
     \end{column}
   \end{columns}
   \begin{takeaway}{JIT for the developer loop, AOT for the user.}
-    Profile mode is the compromise: release code plus the hooks DevTools needs, so the numbers you read are real.
+    Profile mode is the compromise: release code plus the hooks DevTools needs.
   \end{takeaway}
   \note{Run the three commands live if the room has a device attached. The habit to build is that any performance claim must name the build mode it was measured in.}
 \end{frame}
@@ -145,7 +145,7 @@ flutter build appbundle --release
       \muted{WebKit's JavaScript engine is the privileged exception. Bitcode is not a workaround: Apple deprecated it in Xcode 14, and a guide that tells you to enable it is out of date.}
     \end{column}
   \end{columns}
-  \begin{takeaway}{This one constraint explains a lot of mobile history.}
+  \begin{takeaway}{Write XOR execute rules out a JIT in third-party iOS apps.}
     No Dalvik-style runtime on iOS, no hot reload in a release build, and JavaScript that only runs fast inside Safari.
   \end{takeaway}
   \note{Write XOR execute deserves a whiteboard sketch: a page with a W bit and an X bit, and the two states the kernel will allow. Ask the room why a browser is allowed to break the rule and an app store app is not.}
@@ -157,7 +157,7 @@ flutter build appbundle --release
     \begin{column}{0.47\textwidth}
       \lead{Flutter}{Dart compiles ahead of time to native ARM for release, so there is no interpreter in production.}
       \vskip 2mm
-      \muted{Impeller precompiles its shaders when the engine is built, so no shader is compiled on the user's device. Debug keeps the JIT, which is exactly what hot reload is.}
+      \muted{Impeller precompiles its shaders when the engine is built, so no shader is compiled on the user's device. Debug keeps the JIT, which hot reload needs.}
     \end{column}
     \begin{column}{0.47\textwidth}
       \lead{React Native}{Hermes precompiles JavaScript to bytecode at build time, which removes the parse cost at launch.}
@@ -196,7 +196,7 @@ flutter build appbundle --release
       \end{enumerate}
     \end{column}
     \begin{column}{0.46\textwidth}
-      \begin{hint}[What actually makes it slow]
+      \begin{hint}[What makes it slow]
         Work placed before \code{runApp}, plugins initialized synchronously, a large image decoded on the first frame, a database opened on the UI isolate.
       \end{hint}
     \end{column}
@@ -213,14 +213,14 @@ flutter build appbundle --release
 \begin{frame}[eyebrow=Energy]{Race to idle: finish fast, then sleep}
   \vskip 2mm
   \begin{grid}[3]
-    \cell[\faIcon{bed}]{Idle is a real state}{A modern SoC has deep low-power states, but only when nothing keeps a core awake. Idle is where the savings live.}
+    \cell[\faIcon{bed}]{Idle is a real state}{A modern SoC has deep low-power states, but only when nothing keeps a core awake.}
     \cell[\faIcon{tachometer-alt}]{Frequency scales}{The governor raises the clock under load and drops it again. A short burst at a high clock usually beats a long dribble at a low one.}
     \cell[\faClock]{Wake-ups are expensive}{A timer that fires every second, a poll loop, a busy animation: each costs more than the work it performs.}
   \end{grid}
   \vskip 3mm
   \kv{The practical rule}{Do the work, then let the hardware sleep.}
   \begin{takeaway}{Anything that prevents idle costs more than the work it does.}
-    That includes a run-time compiler warming up, which is where Part 1 meets this part.
+    That includes a run-time compiler warming up.
   \end{takeaway}
   \note{Give the concrete example of an animation left running behind a modal: it is invisible, it produces nothing, and it keeps the GPU and one core awake for as long as the screen is on.}
 \end{frame}
@@ -242,7 +242,6 @@ flutter build appbundle --release
     \end{column}
   \end{columns}
   \begin{takeaway}{Heat is the feedback loop between energy and speed.}
-    A phone in a case, in a pocket, on a summer day is the device your measurement should represent.
   \end{takeaway}
   \note{Students who measure only the first ten seconds of a scenario report numbers nobody can reproduce. Ask each project team how warm their device was when they took their measured claim.}
 \end{frame}
@@ -252,12 +251,11 @@ flutter build appbundle --release
   \begin{grid}[3]
     \cell[\faBolt]{A run-time compiler}{Every cycle it spends is a cycle the user's battery pays for, and it spends them again on every cold start.}
     \cell[\faIcon{paint-brush}]{A run-time shader}{Compiling an effect the first time it appears costs a frame the user sees and energy nobody planned for.}
-    \cell[\faCheck]{A build-time decision}{Paid once, on your machine, by you. It costs the user nothing at all, on any launch.}
+    \cell[\faCheck]{A build-time decision}{Paid once, on your machine. It costs the user nothing on any launch.}
   \end{grid}
   \vskip 3mm
   \kv{The same question, twice}{How much of this program's behavior can be decided before the user's device is involved.}
   \begin{takeaway}{Build time is free to the user. Run time is not.}
-    That is the single sentence that connects the compilation half of this lecture to the energy half.
   \end{takeaway}
   \note{This is the hinge of the lecture. Say plainly that the industry trend is not JIT versus AOT as camps, but a steady migration of work toward build time, and that the reason is energy rather than elegance.}
 \end{frame}
@@ -268,7 +266,7 @@ flutter build appbundle --release
     \begin{column}{0.52\textwidth}
       \muted{On an ESP32-class part the spread between deep sleep and radio transmit is roughly four orders of magnitude. The question is not how fast the code is, but what fraction of the time the radio is on.}
       \vskip 2mm
-      \begin{hint}[The only formula you need]
+      \begin{hint}[Average current]
         Average current: active current times the active fraction, plus sleep current times the rest.
       \end{hint}
     \end{column}
@@ -281,8 +279,7 @@ flutter build appbundle --release
       \end{steps}
     \end{column}
   \end{columns}
-  \begin{takeaway}{"Stay connected" loses to "wake, send, sleep".}
-    Sleep between publishes.
+  \begin{takeaway}{Sleep between publishes instead of staying connected.}
   \end{takeaway}
   \note{Shorten the active window or lengthen the period: everything else is noise. Ask the teams whose device is battery powered what their period is, and whether they chose it or inherited it from an example.}
 \end{frame}
@@ -296,8 +293,7 @@ flutter build appbundle --release
   \end{grid}
   \vskip 3mm
   \kv{Project requirement five}{One number your team measured, with the method written down. Energy, latency, payload size and frame time all qualify.}
-  \begin{takeaway}{A number without a method is not a measurement.}
-    You will be asked how, before you are asked what.
+  \begin{takeaway}{Report the method with every number.}
   \end{takeaway}
   \note{Insist on repetitions and on the build mode. A frame time from a debug build and a single-shot latency reading are the two failures that show up every year in the defense.}
 \end{frame}
@@ -355,7 +351,6 @@ flutter build appbundle --release
     \bottomrule
   \end{tabular}}
   \begin{takeaway}{Revise rules and numbers.}
-    A phrase repeated without its condition scores zero.
   \end{takeaway}
   \note{Tell students to work through this table with the decks open, one row per sitting. The rightmost column is deliberately phrased as the things a question can be built from.}
 \end{frame}
@@ -491,7 +486,7 @@ flutter build appbundle --release
   \vskip 2mm
   \begin{itemize}
     \item \textbf{A.} Ten small transfers spread over a minute usually cost more energy than one batched transfer of the same bytes.
-    \item \textbf{B.} On an OLED panel dark mode is a genuine saving, while on an LCD the backlight is on regardless.
+    \item \textbf{B.} On an OLED panel dark mode is a saving, while on an LCD the backlight is on regardless.
     \item \textbf{C.} Keeping a core busy at a low clock is more efficient than finishing quickly and returning to idle.
     \item \textbf{D.} On an ESP32-class device the radio, not the processor core, dominates the power budget.
   \end{itemize}
@@ -550,11 +545,11 @@ flutter build appbundle --release
   \vskip 2mm
   \begin{grid}[3]
     \cell[\faMobile]{Start cold}{Launch the app in front of the room, not a screen that has been open for an hour.}
-    \cell[\faBug]{Break it on purpose}{Pull the cable, turn on airplane mode, kill the broker. Recovery is the interesting part.}
+    \cell[\faBug]{Break it on purpose}{Pull the cable, turn on airplane mode, kill the broker.}
     \cell[\faBolt]{Show the number}{State the measured claim, then say how it was measured before anyone has to ask.}
     \cell[\faLayerGroup]{Everyone speaks}{Each member presents the part they wrote and answers questions about it.}
     \cell[\faIcon{video}]{Bring a fallback}{A short recording of the demo, in case the room's network or the hardware fails you.}
-    \cell[\faIcon{road}]{Say what is next}{One honest sentence about a known limitation beats pretending there is none.}
+    \cell[\faIcon{road}]{Say what is next}{One sentence about a known limitation.}
   \end{grid}
   \note{The fallback recording is not a substitute for a live demo, and teams should be told that plainly. It exists so that a failed network does not erase six sessions of work.}
 \end{frame}
@@ -576,7 +571,6 @@ flutter build appbundle --release
     \end{column}
   \end{columns}
   \begin{takeaway}{Choose a topic you can show, not only describe.}
-    Twenty minutes of summary from a vendor page is the weakest presentation you can give.
   \end{takeaway}
   \note{Confirm the remaining free topics on the sheet before the session ends.}
 \end{frame}
@@ -585,9 +579,9 @@ flutter build appbundle --release
 \begin{frame}[eyebrow=Recap]{Three things to remember}
   \vskip 2mm
   \begin{enumerate}
-    \item Compilation is a schedule, not a camp. \muted{Every runtime decides when to translate, and every platform kept moving that moment earlier.}
-    \item Energy follows one rule at both scales. \muted{Do the work, then let the hardware sleep. A phone loses an afternoon; a coin cell loses a year.}
-    \item The exam rewards precision. \muted{Learn the rules with their conditions and the numbers with their units.}
+    \item Every runtime decides when to translate. \muted{Every platform kept moving that moment earlier.}
+    \item Energy follows one rule at both scales. \muted{Do the work, then let the hardware sleep.}
+    \item Learn the rules with their conditions and the numbers with their units.
   \end{enumerate}
   \vskip 5mm
   \kv{Further reading}{\link{https://docs.flutter.dev/perf}{docs.flutter.dev/perf} · \link{https://developer.android.com/topic/performance/baselineprofiles/overview}{Baseline profiles} · \link{https://dart.dev/overview}{dart.dev} · \link{https://tinygo.org/}{tinygo.org}}

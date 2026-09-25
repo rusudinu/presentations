@@ -71,9 +71,6 @@ cd ../app && flutter pub add mqtt_client
       \end{checklist}
     \end{column}
   \end{columns}
-  \begin{takeaway}{A driver is the datasheet, already read.}
-    Writing register numbers by hand is how a two-hour lab becomes a four-hour lab.
-  \end{takeaway}
 \end{frame}
 
 \begin{frame}[embedded,fragile,eyebrow=Task I]{The shape of the sensor loop}
@@ -123,7 +120,7 @@ seq++
     \end{column}
   \end{columns}
   \vskip 1mm
-  \muted{A constant proves nothing. Publish a value that moves, so the number on the phone shows the chain is alive.}
+  \muted{Publish a value that moves, so the number on the phone shows the chain is alive.}
 \end{frame}
 
 \begin{frame}[embedded,eyebrow=Task II]{Publish the reading over MQTT}
@@ -133,7 +130,7 @@ seq++
         \item Join the network. On the ESP32-C3 and ESP32-S3 the radio comes from the espradio package, not from the standard library.
         \item Connect to the broker with a client id that carries your team name.
         \item Publish one JSON document on \code{course/<team>/reading} every two seconds, with QoS 1 and the retain flag off.
-        \item Print the result of every step. A silent board tells you nothing.
+        \item Print the result of every step.
       \end{steps}
     \end{column}
     \begin{column}{0.41\textwidth}
@@ -208,7 +205,7 @@ cat /dev/tty.usbmodem1101 | while IFS= read -r line; do
 done
 \end{shell}
   \vskip 1mm
-  \muted{The board prints the JSON document, one per line, exactly as a networked board would publish it. The laptop only forwards. Nothing else in the lab changes, which is the point: the phone cannot tell the two set-ups apart.}
+  \muted{The board prints the JSON document, one per line, as a networked board would publish it. The laptop only forwards. Nothing else in the lab changes: the phone cannot tell the two set-ups apart.}
   \vskip 2mm
   \begin{warning}
     \code{tinygo monitor} holds the serial port open. Stop it before you start the bridge.
@@ -271,7 +268,7 @@ void _scheduleReconnect() async {
 }
 \end{dart}
   \vskip 1mm
-  \muted{Two clients with the same id disconnect each other, which looks exactly like a broken network.}
+  \muted{Two clients with the same id disconnect each other, which looks like a broken network.}
 \end{frame}
 
 \begin{frame}[fragile,eyebrow=Acceptance]{What the grader will do}
@@ -293,7 +290,7 @@ mosquitto_sub -h localhost -q 1 -t 'course/+/reading' -v
     \begin{column}{0.48\textwidth}
       \kv{In the repository}{}
       \muted{The firmware, the app code, and a README naming your team topic, your board or simulator, and the broker address you used.\par\vskip 1.5mm
-      One commit per task. A screenshot of the app next to the subscriber terminal is the cheapest proof you can leave.}
+      One commit per task. A screenshot of the app next to the subscriber terminal.}
     \end{column}
   \end{columns}
 \end{frame}

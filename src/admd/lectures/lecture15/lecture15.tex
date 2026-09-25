@@ -15,7 +15,7 @@
 \titleframe
 
 \objectivesframe{
-  \cell[\faBoxOpen]{Produce a real build}{Debug, profile and release, flavors, icons, and a version number the stores accept.}
+  \cell[\faBoxOpen]{Produce a release build}{Debug, profile and release, flavors, icons, and a version number the stores accept.}
   \cell[\faKey]{Sign it correctly}{Android keystores and Play App Signing, iOS certificates and provisioning profiles.}
   \cell[\faRocket]{Deliver it}{Play Console and App Store Connect, internal testing and TestFlight, GitHub Actions and fastlane.}
   \cell[\faBell]{Push to a device}{FCM tokens, the three app states, and what a notification payload may carry.}
@@ -209,12 +209,11 @@ keyPassword=...
     \end{column}
     \begin{column}{0.48\textwidth}
       \lead{A secret in Git is public.}{Deleting the file does not help: the object stays in history, and on a public repository it is scraped within minutes.}
-      \muted{If it happens: rotate the credential first, then clean the history. In that order. Rotation is what actually stops the damage.}
+      \muted{If it happens: rotate the credential first, then clean the history. Rotation is what stops the damage.}
       \muted{Store the real values in the CI provider's encrypted secrets and in a password manager for humans.}
     \end{column}
   \end{columns}
   \begin{takeaway}{Write the ignore rules before you create the keys.}
-    That is the only moment when the repository is still guaranteed clean.
   \end{takeaway}
   \note{Mention that a bot scanning new public commits is faster than any of us. Ask the room to check their own lab repository for a stray key before the lab test.}
 \end{frame}
@@ -231,7 +230,7 @@ keyPassword=...
     \item Roll out in stages, and watch the crash rate as it climbs.
   \end{enumerate}
   \vskip 3mm
-  \muted{Review takes days, not minutes, and a new developer account waits longest.}
+  \muted{Review takes days, and a new developer account waits longest.}
   \note{The realistic message: the binary is the easy half. Budget an afternoon for the forms and screenshots, and do it before the deadline, not on it. Mention the one-time 25 dollar registration fee, and that since August 2026 a new upload must target API level 36 and its 64-bit code must support 16 KB memory pages.}
 \end{frame}
 
@@ -308,9 +307,9 @@ keyPassword=...
     \cell[\faRocket]{On a version tag}{Sign, set the build number, upload to internal testing and TestFlight, and post the link to the team channel.}
   \end{grid}
   \vskip 4mm
-  \muted{The pipeline is also the honest answer to "it works on my machine". It builds from a clean checkout every time, with no local caches and no local keys.}
-  \begin{takeaway}{Automate the boring half first.}
-    Tests and analysis on pull requests pay for themselves in a week. Automated store upload can wait until you release often enough to care.
+  \muted{The pipeline builds from a clean checkout every time, with no local caches and no local keys.}
+  \begin{takeaway}{Automate tests and analysis on pull requests first.}
+    Automated store upload can wait until you release often.
   \end{takeaway}
   \note{Callback to Lecture 14: the tests written there are what this pipeline runs. A test suite nobody runs automatically decays within a month.}
 \end{frame}
@@ -330,7 +329,7 @@ jobs:
       - run: flutter analyze
       - run: flutter test
 \end{yaml}
-  \muted{Format, analyze and test are what you run locally: a red pipeline is never a surprise.}
+  \muted{Format, analyze and test are the same commands you run locally.}
   \note{Show that the whole file is about ten meaningful lines. Say that an iOS build needs a macOS runner, which is slower, so that job belongs on a tag and not on every pull request.}
 \end{frame}
 
@@ -351,8 +350,8 @@ jobs:
       \muted{Never echo a secret, never print it in a failing step, and never expose secrets to a workflow triggered by a fork's pull request.}
     \end{column}
   \end{columns}
-  \begin{takeaway}{A secret printed once in a build log is a burned secret.}
-    Rotate it. Deleting the log does not help.
+  \begin{takeaway}{Rotate any secret that was printed in a build log.}
+    Deleting the log does not help.
   \end{takeaway}
   \note{Point at the pipe into base64 minus d and note there is no echo of the value itself. A secret printed once in a public build log is a rotated secret.}
 \end{frame}
@@ -377,7 +376,7 @@ jobs:
   \begin{columns}[T]
     \begin{column}{0.5\textwidth}
       \lead{Shorebird patches Dart code on installed apps.}{You publish a patch, the app downloads it, and the fix is live on the next launch without a store review.}
-      \muted{It covers Dart code and assets. Anything native, a new plugin, a new permission, or a version bump still needs a real store release.}
+      \muted{It covers Dart code and assets. Anything native, a new plugin, a new permission, or a version bump still needs a store release.}
     \end{column}
     \begin{column}{0.46\textwidth}
       \begin{warning}[Use it narrowly]
@@ -400,8 +399,8 @@ jobs:
   \end{grid}
   \vskip 4mm
   \muted{Delivery is best effort. Messages can be delayed by battery saving, collapsed with a newer one, or dropped while the device is offline.}
-  \begin{takeaway}{A push is a hint, not a transport.}
-    Send an identifier and let the app fetch the real data over HTTP. Never treat a push as your only copy of a state change.
+  \begin{takeaway}{Send an identifier in the push and let the app fetch the data over HTTP.}
+    Never treat a push as your only copy of a state change.
   \end{takeaway}
   \note{Ask why the app cannot send its own pushes. The answer is the same as the API key trap in Lecture 12: anything in the binary belongs to the attacker too.}
 \end{frame}
@@ -482,7 +481,7 @@ final m = await fm.getInitialMessage();
     \begin{column}{0.48\textwidth}
       \lead{You get one prompt.}{iOS has always required permission, and Android 13 added POST\_NOTIFICATIONS. A denial is final until the user opens system settings.}
       \muted{Ask after the user has done something that a notification would follow: created a task with a due date, joined a conversation. Explain the value on your own screen first.}
-      \muted{Group related messages, collapse duplicates, and respect quiet hours. An app that pushes daily noise gets its notifications switched off, then deleted.}
+      \muted{Group related messages, collapse duplicates, and respect quiet hours.}
     \end{column}
     \begin{column}{0.48\textwidth}
       \begin{warning}[Not in a payload]
@@ -514,8 +513,6 @@ final m = await fm.getInitialMessage();
       \end{checklist}
     \end{column}
   \end{columns}
-  \vskip 3mm
-  \muted{Run this list from a written checklist, not from memory. The one you skip is the one that fails.}
   \note{Suggest they copy this into the pull request template of their own project. A release checklist is the cheapest quality tool that exists.}
 \end{frame}
 
@@ -586,9 +583,9 @@ final m = await fm.getInitialMessage();
 \begin{frame}[eyebrow=Recap]{Three things to remember}
   \vskip 2mm
   \begin{enumerate}
-    \item Release is a process, not a build command. \muted{Signing, versioning, forms and review take longer than the compile.}
+    \item A release includes signing, versioning, store forms and review. \muted{Together they take longer than the compile.}
     \item Guard the keys, automate the rest. \muted{A lost signing key is unrecoverable. Everything else can be scripted.}
-    \item A push is a hint. \muted{Send an identifier, fetch the content, and never put a secret in a payload.}
+    \item A push carries an identifier; the app fetches the content. \muted{Never put a secret in a payload.}
   \end{enumerate}
   \vskip 5mm
   \kv{Further reading}{\link{https://docs.flutter.dev/deployment/android}{docs.flutter.dev/deployment/android} · \link{https://docs.flutter.dev/deployment/ios}{deployment/ios} · \link{https://firebase.google.com/docs/cloud-messaging}{Firebase Cloud Messaging} · \link{https://docs.fastlane.tools}{docs.fastlane.tools}}

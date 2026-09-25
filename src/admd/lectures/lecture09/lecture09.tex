@@ -44,9 +44,7 @@
     \cell[\faBug]{Crashes}{What broke, with a stack trace.}
     \cell[\faBell]{Alerts}{Who finds out, and when.}
   \end{grid}
-  \begin{takeaway}{Each layer answers a different question.}
-    All four are a day of work now, and a week of guessing after an incident.
-  \end{takeaway}
+  \begin{takeaway}{Each layer answers a different question.}\end{takeaway}
   \note{Walk the four boxes left to right and say which question each one answers. Point out that the first three are cheap to add on day one and impossible to add retroactively for a bug that already happened.}
 \end{frame}
 
@@ -80,7 +78,7 @@ await analytics.logEvent(
   \vskip 2mm
   \begin{itemize}
     \item Name events for the funnel you want to read later. \code{checkout\_started}, then \code{payment\_submitted}, then \code{purchase\_complete} is a chart. Three unrelated names are not.
-    \item Never put personal data in a parameter: no emails, no names, no free text a user typed. That is a legal question about personal data, not a style preference.
+    \item Never put personal data in a parameter: no emails, no names, no free text a user typed. That is a legal question about personal data.
     \item Events are aggregated and delayed by hours. They answer how many users, never what happened to this one user.
   \end{itemize}
   \begin{takeaway}{Analytics is not a log.}
@@ -128,9 +126,7 @@ crash.setUserIdentifier(hashedId);
       \muted{\code{log} adds breadcrumbs to the next report. Custom keys add state. Set a hashed identifier, never an email.}
     \end{column}
   \end{columns}
-  \begin{takeaway}{Report the errors you catch.}
-    A caught exception that quietly returns null is the hardest class of bug to find months later.
-  \end{takeaway}
+  \begin{takeaway}{Report the errors you catch.}\end{takeaway}
   \note{Ask who has written an empty catch block this semester. Everyone has. Show that one recordError line turns that silence into a searchable issue with a stack trace.}
 \end{frame}
 
@@ -166,9 +162,7 @@ crash.setUserIdentifier(hashedId);
   \end{tabular}}
   \vskip 2mm
   \muted{Write the budget down in words: feed load p95 under 1.5 s. Below roughly a thousand samples, p99 is noise.}
-  \begin{takeaway}{A percentile describes a defined share of your users.}
-    An average describes no particular user.
-  \end{takeaway}
+  \begin{takeaway}{A percentile describes a defined share of your users.}\end{takeaway}
   \note{Invent a small data set on the board: nine fast requests and one that timed out. Show the average moving and the median not moving, then ask which one they would put in an alert.}
 \end{frame}
 
@@ -190,9 +184,7 @@ await t.stop();
       \muted{Dart HTTP calls are not traced either. \code{dart:io} bypasses the instrumented native stack, so time the call yourself.}
     \end{column}
   \end{columns}
-  \begin{takeaway}{Give every trace a budget before you read it.}
-    A number with no threshold is a chart nobody looks at twice.
-  \end{takeaway}
+  \begin{takeaway}{Give every trace a budget before you read it.}\end{takeaway}
   \note{Ask which two paths in the lab app deserve a trace. Usually it is the first screen load and the one network call. That is enough: instrumenting everything produces noise nobody reads.}
 \end{frame}
 
@@ -209,9 +201,7 @@ await t.stop();
     Everything else    & never: use a dashboard        & an alert nobody acts on is ignored \\
     \bottomrule
   \end{tabular}}
-  \begin{takeaway}{Every alert needs an owner and an action.}
-    If the answer to ``what would I do at 3 a.m.'' is ``nothing'', it belongs on a dashboard.
-  \end{takeaway}
+  \begin{takeaway}{Every alert needs an owner and an action.}\end{takeaway}
   \note{The last row is the important one. Teams fail at alerting by adding alerts, not by missing them. Ask the room what they currently ignore in their own inbox and why.}
 \end{frame}
 
@@ -246,7 +236,7 @@ await t.stop();
     In-memory cache         & objects for this session  & anything that must survive exit \\
     \bottomrule
   \end{tabular}}
-  \begin{takeaway}{Size and shape pick the store, not habit.}
+  \begin{takeaway}{Size and shape pick the store.}
     A list you filter belongs in a database. A single boolean does not.
   \end{takeaway}
   \note{This table is the map for the rest of the lecture. Ask where the lab todo list belongs and why the theme choice does not belong in the same place.}
@@ -328,9 +318,7 @@ await storage.deleteAll();  // sign out
       \muted{Log lines count as storage. A token printed once ends up in a bug report attached by a user.}
     \end{column}
   \end{columns}
-  \begin{takeaway}{Encrypted storage is not a place to put more data.}
-    It is a place to put the few values you cannot avoid keeping on the device.
-  \end{takeaway}
+  \begin{takeaway}{Put in encrypted storage only the few values you cannot avoid keeping on the device.}\end{takeaway}
   \note{Tie this back to Lecture 7: the API key never ships in the binary either. The rule is the same rule seen from the storage side.}
 \end{frame}
 
@@ -427,9 +415,7 @@ final tmp = await getTemporaryDirectory();
     getExternalStorageDirectory      & shared files  & Android only, outside the sandbox \\
     \bottomrule
   \end{tabular}}
-  \begin{takeaway}{Anything in the temporary directory can vanish between launches.}
-    If losing it breaks the app, it was never a cache.
-  \end{takeaway}
+  \begin{takeaway}{Anything in the temporary directory can vanish between launches.}\end{takeaway}
   \note{Ask where a downloaded invoice PDF goes and where a thumbnail goes. The answers are different, and the reason is who owns the file rather than how big it is.}
 \end{frame}
 
@@ -524,9 +510,6 @@ class _HomeState extends State<Home> with WidgetsBindingObserver {
     \item Act on crash-free users for the version you are rolling out. \muted{Read p95 for speed, and never the average.}
     \item Size and shape pick the store. \muted{Preferences for settings, secure storage for secrets, a database for anything you query.}
   \end{enumerate}
-  \begin{takeaway}{Both halves of this lecture answer the same question.}
-    What is true on a device you cannot reach, and what is still true after it goes offline.
-  \end{takeaway}
   \note{Close the loop with the incident slide: the flag limited the damage, but the crash report was what named the line to fix. Then hand over to the reading list.}
 \end{frame}
 

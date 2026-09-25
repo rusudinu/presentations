@@ -17,7 +17,7 @@
 \begin{frame}[eyebrow=Today]{What this lab is for}
   \vskip 2mm
   \begin{grid}[2]
-    \cell[\faLock]{Null safety in code}{Reach for \code{?}, \code{?.}, \code{??} and \code{late} deliberately instead of by trial and error}
+    \cell[\faLock]{Null safety in code}{When to use \code{?}, \code{?.}, \code{??} and \code{late}}
     \cell[\faLayerGroup]{Classes and inheritance}{Model a small domain with an abstract base class and two subclasses}
   \end{grid}
   \vskip 6mm
@@ -65,8 +65,8 @@ git checkout -b lab-2
   \end{columns}
   }
   \vskip 2mm
-  \begin{takeaway}{Use \code{!} last, not first.}
-    Every \code{!} you write is a promise the compiler can no longer check for you.
+  \begin{takeaway}{Prefer \code{?.}, \code{??} and null checks over \code{!}.}
+    The compiler cannot check a value asserted with \code{!}.
   \end{takeaway}
 \end{frame}
 
@@ -209,6 +209,6 @@ ListView.builder(
   }
 \end{frame}
 
-\closingframe{Push before you leave}{Branch lab-2 · one commit per task · running app is your evidence}
+\closingframe{Push before you leave}{Branch lab-2 · one commit per task}
 
 \end{document}

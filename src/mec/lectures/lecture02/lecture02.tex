@@ -84,7 +84,7 @@ Future<void> refresh() async {
     \end{column}
     \begin{column}{0.40\textwidth}
       \lead{ADMD Lecture 4 owns this topic.}{This slide is a reminder, not new material.}
-      \muted{A failure inside async code completes the Future with an error instead of throwing at the call site. \code{await} rethrows it, so try/catch behaves exactly as it does in synchronous code.}
+      \muted{A failure inside async code completes the Future with an error instead of throwing at the call site. \code{await} rethrows it, so try/catch behaves as it does in synchronous code.}
     \end{column}
   \end{columns}
   \note{This is deliberately short. ADMD Lecture 4 already taught Future, async, await and error handling in depth. The only new point worth making here is the connection to the event loop: await is what hands control back to the loop covered on the previous slide.}
@@ -283,10 +283,9 @@ func handleReading(w http.ResponseWriter,
     \begin{column}{0.40\textwidth}
       \begin{itemize}
         \item \code{net/http} hands every connection to its own goroutine automatically.
-        \item \code{handleReading} already runs concurrently for every caller. Nothing here asked for that.
+        \item \code{handleReading} already runs concurrently for every caller.
         \item \code{"POST /readings"} routing is built into the standard library, no framework needed.
       \end{itemize}
-      \textbf{The goroutine is what this section explains next.}
     \end{column}
   \end{columns}
   \note{Live demo if time allows: go run the handler, then fire two curl requests back to back and log the goroutine id inside the handler to show they differ. The framework did nothing special; this is the default behavior of net/http.}
@@ -346,7 +345,6 @@ wg.Wait()
     \end{column}
   \end{columns}
   \begin{takeaway}{This replaces the Sleep from the previous slide.}
-    Wait for the actual work to finish, not for a guessed amount of time.
   \end{takeaway}
   \note{WaitGroup answers only one question: has everyone finished. It carries no data back. The next few slides cover channels, which is how goroutines actually exchange values while they run.}
 \end{frame}
@@ -396,7 +394,7 @@ ch <- 4 // buffer full: blocks
       \end{itemize}
     \end{column}
   \end{columns}
-  \begin{takeaway}{A bounded queue, for free.}
+  \begin{takeaway}{A buffered channel is a bounded queue.}
     No separate library: the channel itself gives you backpressure.
   \end{takeaway}
   \note{Ask what happens if N is set far too high: the program stops applying any backpressure at all, and a slow consumer allows memory to grow without bound. Buffering trades backpressure for a small amount of slack; it does not remove the need for one or the other.}
@@ -414,7 +412,7 @@ ch <- 4 // buffer full: blocks
     \bottomrule
   \end{tabular}}
   \begin{takeaway}{None of this is checked for you.}
-    The Dart isolate table two sections back had two rows of ``impossible''. Go has none: shared memory buys speed, and hands the safety work back to you.
+    The Dart isolate table two sections back had two rows of ``impossible''. Go has none.
   \end{takeaway}
   \note{This is the honest cost of Go's model. A data race here is a real, silent bug: two goroutines touching the same map with no synchronization can corrupt it without ever panicking. The race detector is not optional in a codebase with real concurrency; run it in CI.}
 \end{frame}
@@ -464,8 +462,7 @@ default:
       \end{itemize}
     \end{column}
   \end{columns}
-  \begin{takeaway}{select turns waiting into a choice.}
-    Exactly one branch runs; nothing else blocks the goroutine.
+  \begin{takeaway}{select runs exactly one branch.}
   \end{takeaway}
   \note{Point out that this timeout pattern is idiomatic Go: there is no separate Future.timeout call, the same select statement that multiplexes channels also expresses a deadline. It is one primitive doing both jobs.}
 \end{frame}
@@ -524,8 +521,8 @@ for item := range ch { // consumer
     On failure    & ends that isolate only       & an unrecovered panic ends the process \\
     \bottomrule
   \end{tabular}}
-  \begin{takeaway}{Same task, opposite guarantee.}
-    Isolates trade a copy per message for safety. Goroutines trade the copy for speed, and hand the discipline back to you.
+  \begin{takeaway}{Isolates copy every message; goroutines share one heap.}
+    Isolates trade a copy per message for safety. Goroutines trade the copy for speed.
   \end{takeaway}
   \note{Go's slogan is a convention, not an enforced rule: nothing stops a goroutine from reaching across the shared heap instead of using the channel. Dart's separate heaps make that mistake impossible to write, at the cost of copying every message.}
 \end{frame}

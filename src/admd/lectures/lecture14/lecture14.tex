@@ -40,11 +40,10 @@ Text('Total', style: tt.titleMedium)
     \end{column}
     \begin{column}{0.41\textwidth}
       \lead{The first version has no dark mode.}{Every hard-coded color is a value that cannot change with the platform, the user's settings, or next year's brand.}
-      \muted{It is also unsearchable. Nobody can answer "which blue is the button" without reading forty files.}
+      \muted{It is also unsearchable: finding which blue the button uses means reading forty files.}
     \end{column}
   \end{columns}
-  \begin{takeaway}{Read a role, never write a color.}
-    A widget that names \code{cs.primary} keeps working when the palette, the mode or the brand changes.
+  \begin{takeaway}{A widget that names a role such as \code{cs.primary} keeps working when the palette, the mode or the brand changes.}
   \end{takeaway}
   \note{Ask what happens to the top version when the phone switches to dark mode. Nothing happens: that is the point. Say that theming is not decoration, it is removing duplicated constants.}
 \end{frame}
@@ -230,10 +229,10 @@ A controller and a FocusNode belong to your State object, and leak if forgotten.
 \begin{frame}[eyebrow=Forms]{Errors people can act on}
   \vskip 2mm
   \begin{grid}[3]
-    \cell[\faExclamationCircle]{Errors under the field}{The message sits where the mistake is. Nobody hunts for the wrong field.}
+    \cell[\faExclamationCircle]{Errors under the field}{The message sits where the mistake is.}
     \cell[\faServer]{Server errors}{"Email already registered" is not a validator result. Show it near the button.}
     \cell[\faLock]{Disable submit in flight}{Keep a bool in the bloc state. A double tap must not create two accounts.}
-    \cell[\faUndo]{Keep what they typed}{On failure, keep every field. Retyping after a network blink loses users.}
+    \cell[\faUndo]{Keep what they typed}{On failure, keep every field.}
     \cell[\faArrowUp]{Scroll to the error}{On a long form the field can be off screen. \code{Scrollable.ensureVisible} helps.}
     \cell[\faCheckCircle]{Say what succeeded}{A form that submits silently looks broken. One SnackBar is enough.}
   \end{grid}
@@ -313,8 +312,8 @@ if (MediaQuery.disableAnimationsOf(context)) return child;
     300 to 400 ms & a full route transition      & the user waits for the animation \\
     \bottomrule
   \end{tabular}
-  \begin{takeaway}{Motion explains a change, it does not announce it.}
-If the user notices the animation instead of the result, it is too long. Never block input until it ends.
+  \begin{takeaway}{If the user notices the animation instead of the result, it is too long.}
+Never block input until it ends.
   \end{takeaway}
   \note{Reduce Motion is a real accessibility setting on both platforms and it reaches you through MediaQuery. For some users animation causes nausea, so this is not a preference to ignore. Say that motion should explain a change, not announce the developer.}
 \end{frame}
@@ -326,7 +325,7 @@ If the user notices the animation instead of the result, it is too long. Never b
   \begin{grid}[3]
     \cell[\faVolumeUp]{Unlabeled controls}{An icon button with no label is announced as "button" and nothing else by TalkBack and VoiceOver.}
     \cell[\faLowVision]{Low contrast}{Gray on gray fails outdoors, on a cheap panel, and for anyone over forty.}
-    \cell[\faHandPointer]{Tiny targets}{A 24 dp icon is a 24 dp target unless you say otherwise. Fingers are not cursors.}
+    \cell[\faHandPointer]{Tiny targets}{A 24 dp icon is a 24 dp target unless you say otherwise.}
     \cell[\faTextHeight]{Fixed heights}{A row with a hard-coded height overflows the moment the user enlarges text.}
     \cell[\faPalette]{Color as the only signal}{Red text alone does not say "error" to a person who cannot see red. Add an icon or a word.}
     \cell[\faKeyboard]{No focus order}{On a keyboard or a switch device, tab order is your layout order. Check it once.}
@@ -355,8 +354,8 @@ Semantics(
       \muted{\code{MergeSemantics} joins a row into one announcement. \code{liveRegion: true} makes a status line speak when it changes.}
     \end{column}
   \end{columns}
-  \begin{takeaway}{The framework guesses, and you confirm.}
-    Flutter builds a semantics tree on its own. Your job is every place where the pixels do not carry the meaning.
+  \begin{takeaway}{Flutter builds a semantics tree on its own.}
+    Add \code{Semantics} wherever the pixels do not carry the meaning.
   \end{takeaway}
   \note{Point out that tooltip on an IconButton gives you a semantic label for free, so there is no excuse for an unlabeled icon. Open the Semantics debugger in DevTools to show the tree the reader actually walks.}
 \end{frame}
@@ -375,7 +374,7 @@ Semantics(
     \bottomrule
   \end{tabular}
   \begin{takeaway}{Test with the phone's own settings.}
-    Set the font size to the largest step, turn a screen reader on, and open every screen. Two minutes, and it finds most of these.
+    Set the font size to the largest step, turn a screen reader on, and open every screen.
   \end{takeaway}
   \note{The two contrast numbers come from WCAG level AA and every serious design review uses them. Note that Material's own components already meet the 48 dp target, so the failures are almost always custom widgets.}
 \end{frame}
@@ -489,7 +488,7 @@ await tester.pumpAndSettle();
 \end{dart}
     \end{column}
     \begin{column}{0.41\textwidth}
-      \lead{Test time does not pass on its own.}{Nothing animates, no timer fires and no Future completes until you pump. That is a feature: the test is deterministic.}
+      \lead{Test time does not pass on its own.}{Nothing animates, no timer fires and no Future completes until you pump, so the test is deterministic.}
       \begin{warning}
         \code{pumpAndSettle} never returns if something animates forever, such as a spinner. Pump a fixed duration instead.
       \end{warning}
@@ -548,7 +547,7 @@ testWidgets('TodoTile matches its golden', (tester) async {
   \vskip 2mm
   \muted{Create or update the reference images with \code{flutter test --update-goldens}, then review them in the pull request like any other change.}
   \begin{takeaway}{Commit the golden files.}
-    The diff in the review is a picture, which is the only test output a designer can read.
+    The diff in the review is a picture, so a designer can review it.
   \end{takeaway}
   \note{Warn that goldens are only stable because the test environment uses a fixed test font, not the system font. Keep goldens for small reusable widgets. A golden of a whole screen fails on every unrelated change and gets ignored.}
 \end{frame}
@@ -560,9 +559,9 @@ flutter test                        # unit, widget, bloc, golden
 flutter test integration_test       # on a booted device or emulator
 \end{shell}
   \vskip 2mm
-  \muted{An integration test starts with \code{IntegrationTestWidgetsFlutterBinding.ensureInitialized()} and then uses the same \code{testWidgets} API, except that the real app runs on a real device with real plugins.}
-  \begin{takeaway}{Green on your laptop proves nothing.}
-    Run analyze and test on every pull request. A branch that fails the checks cannot be merged. The pipeline itself is Lecture 15.
+  \muted{An integration test starts with \code{IntegrationTestWidgetsFlutterBinding.ensureInitialized()} and then uses the same \code{testWidgets} API, except that the full app runs on a device with its plugins.}
+  \begin{takeaway}{Run analyze and test on every pull request.}
+    A branch that fails the checks cannot be merged. The pipeline itself is Lecture 15.
   \end{takeaway}
   \note{Say that the CI job for this course runs the first two commands on every pull request. Integration tests need a device, so they usually run on a schedule rather than on every push. The integration\_test package comes from the SDK: add it under dev\_dependencies as integration\_test with sdk: flutter, never from pub.dev.}
 \end{frame}
@@ -571,7 +570,7 @@ flutter test integration_test       # on a booted device or emulator
   \vskip 2mm
   \begin{enumerate}
     \item Declare colors and type once. \muted{A widget that reads a role instead of a hex value already supports dark mode, large text and a rebrand.}
-    \item Polish is mostly restraint. \muted{Short animations, honest error messages, a 48 dp target, and a screen that survives being made twice as wide.}
+    \item Keep animations short and error messages specific. \muted{Use a 48 dp tap target, and a layout that adapts when the window is twice as wide.}
     \item Tests are how a refactor stays cheap. \muted{Many unit and widget tests, a few golden and integration tests, all of them run by CI.}
   \end{enumerate}
   \vskip 4mm

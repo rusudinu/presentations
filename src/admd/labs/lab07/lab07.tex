@@ -31,8 +31,7 @@
     \item Your own laptop, your existing \code{admd-labs} repository from Labs 1 to 6.
     \item No new packages beyond what Labs 2 to 6 already added, unless the spec names one.
   \end{steps}
-  \begin{takeaway}{The clock does not pause.}
-    A crashed emulator or a broken hot reload eats into your ninety minutes. Restart calmly and keep going.
+  \begin{takeaway}{Time lost to a crashed emulator or a broken hot reload is not added back.}
   \end{takeaway}
 \end{frame}
 
@@ -111,7 +110,7 @@ git push -u origin lab-7
     \bottomrule
   \end{tabular}}
   \vskip 4mm
-  \begin{takeaway}{Nothing on the test is new.}
+  \begin{takeaway}{Every requirement was covered in Labs 3 to 6.}
     Re-read the Task slides and the reference code in those four labs. Redo one small screen from memory before you come.
   \end{takeaway}
 \end{frame}
@@ -168,7 +167,7 @@ git push -u origin lab-7
   \vskip 2mm
   \trouble{Bad state: field does not exist for the class}{The JSON keys do not match the model. Print the raw response before writing fromJson.}
   \trouble{No routes matched location "/habit/3"}{The path pushed is not in the go\_router route list, or a name is misspelled.}
-  \trouble{A blank screen, nothing in the console}{The Cubit never emitted after the network call finished. Check that the future actually completes.}
+  \trouble{A blank screen, nothing in the console}{The Cubit never emitted after the network call finished. Check that the future completes.}
   \trouble{setState() or emit() called after dispose()}{A response arrived after the screen closed. Check \code{mounted} before calling either.}
 \end{frame}
 

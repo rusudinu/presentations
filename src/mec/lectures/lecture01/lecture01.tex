@@ -41,9 +41,6 @@
       \end{grid}
     \end{column}
   \end{columns}
-  \begin{takeaway}{Ask questions during the lecture, not after it.}
-    Every slide here comes from work that shipped, so there is usually a war story behind it.
-  \end{takeaway}
   \note{Introduce yourself in under two minutes. Say plainly that the material is chosen from production experience, not from a textbook. Point at the Teams channel as the fastest way to reach you between sessions.}
 \end{frame}
 
@@ -133,7 +130,6 @@
     \bignum{50}{points needed to pass}
   \end{grid}
   \begin{takeaway}{Sixty of the hundred points come from work done during the semester.}
-    The exam alone cannot carry you, and it cannot sink you either.
   \end{takeaway}
   \note{Read the split out loud once and then move on. The message students need is that continuous work dominates, so falling behind in the labs is the usual way to fail this course.}
 \end{frame}
@@ -155,7 +151,6 @@
     \end{column}
   \end{columns}
   \begin{takeaway}{Claim a topic in the first three weeks.}
-    The interesting topics go first, and a topic nobody claims still has to be presented by somebody.
   \end{takeaway}
   \note{Open the shared sheet on the projector and show that claiming is first come, first served.}
 \end{frame}
@@ -232,7 +227,7 @@
     \bottomrule
   \end{tabular}}
   \begin{takeaway}{This course lives on the right half of the table.}
-    Board means a single-board computer, MCU a microcontroller. The orders of magnitude are the point, not the exact numbers.
+    Board means a single-board computer, MCU a microcontroller.
   \end{takeaway}
   \note{Ask the room to guess the RAM of an ESP32 before you show the last column. The guesses are usually off by three orders of magnitude, which is exactly the reflex this table is meant to reset.}
 \end{frame}
@@ -261,7 +256,7 @@
     \cell[\faSatelliteDish]{Radios}{Cellular, Wi-Fi and BLE, each with its own cost.}
   \end{grid}
   \begin{takeaway}{On a desktop the first four are effectively elastic.}
-    On a phone all six are hard budgets, and the battery is the one nobody can give back to you.
+    On a phone all six are hard budgets.
   \end{takeaway}
   \note{Ask what happens when an app asks for more RAM than the phone can give. On both platforms the app is terminated, usually while in the background, which is why Lecture 7 spends time on process lifecycle.}
 \end{frame}
@@ -300,7 +295,7 @@
     \bignum{16.7 ms}{one frame at 60 Hz, for comparison}
   \end{grid}
   \begin{takeaway}{One frame budget equals one divided by the refresh rate.}
-    Most phones sold in 2026 run at 90–120 Hz, so the familiar 16 ms describes a 60 Hz screen and nothing else.
+    Most phones sold in 2026 run at 90–120 Hz, so the familiar 16 ms describes a 60 Hz screen.
   \end{takeaway}
   \note{Write the division on the board once: one second divided by 120 frames gives 8.3 ms. Students who memorized 16 ms in an earlier course need to hear that it was a refresh rate, not a law.}
 \end{frame}
@@ -340,7 +335,6 @@
   \vskip 3mm
   \kv{Where the semester goes}{Lectures 3 and 4 build the left box. Lectures 5 to 9 build the middle box. Lectures 10 and 11 build the right box.}
   \begin{takeaway}{The phone is the only device in the chain with a screen, a battery worth charging and a network stack you trust.}
-    That is why it sits in the middle.
   \end{takeaway}
   \note{Draw the three boxes on the board and keep them there for the rest of the lecture. This picture is the shape of the project, so students should recognize it when the requirements are graded.}
 \end{frame}
@@ -356,7 +350,7 @@
     \cell[\faMicrochip]{3. Machine instructions}{ARM or x86 opcodes for one CPU and one operating system.}
     \cell[\faBolt]{4. Execution}{The instructions run, over a runtime that handles memory, threads and system calls.}
   \end{grid}
-  \begin{takeaway}{The question that separates toolchains is when step 3 happens.}
+  \begin{takeaway}{Toolchains differ in when step 3 happens.}
     Before you ship, on the device at start-up, or once a function turns out to be hot.
   \end{takeaway}
   \note{Keep this slide abstract on purpose. Every distinction on the next four slides is a different answer to the question of when translation happens and who pays for it.}
@@ -379,7 +373,7 @@
     \end{column}
   \end{columns}
   \begin{takeaway}{Compiled and interpreted describe a toolchain, not a language.}
-    The same source can be run either way, and for Dart it genuinely is.
+    The same source can be run either way, and for Dart it is.
   \end{takeaway}
   \note{Ask the room to name a compiled language and an interpreted one. Then point out that C has interpreters and Python has ahead-of-time compilers. The dichotomy students arrive with is a folk taxonomy.}
 \end{frame}
@@ -399,7 +393,7 @@
     \bottomrule
   \end{tabular}}
   \vskip 2mm
-  \begin{takeaway}{These are a continuum, not four boxes.}
+  \begin{takeaway}{Most runtimes mix these approaches.}
     Android's ART mixes all three: ahead-of-time compilation, a JIT, and profiles collected on the device.
   \end{takeaway}
   \note{The row students should remember is start-up. On a phone, a cold start that takes an extra second becomes a review complaint, which is a large part of why release builds are compiled ahead of time.}
@@ -410,7 +404,7 @@
   \begin{columns}[T]
     \begin{column}{0.56\textwidth}
       \begin{itemize}
-        \item There is a real gap, and it depends on the workload. A tight numeric loop shows the largest difference. Code dominated by input and output shows almost none.
+        \item There is a gap, and it depends on the workload. A tight numeric loop shows the largest difference. Code dominated by input and output shows almost none.
         \item A JIT can beat an ahead-of-time compiler, because it sees the actual types and hot branches at run time.
         \item AOT wins where a phone needs it: cold start, memory footprint, predictable latency.
       \end{itemize}
@@ -479,7 +473,7 @@ flutter build apk --release
   \begin{enumerate}
     \item One spectrum, cloud to microcontroller. \muted{This course lives on the constrained half, where the machine runs on a battery.}
     \item Compiled and interpreted describe a toolchain. \muted{Dart sits at two points on that spectrum: JIT while you develop, AOT for what you ship.}
-    \item Memory is managed for you, not for free. \muted{A collection pause inside a frame budget is a dropped frame the user can see.}
+    \item Garbage collection costs frame time. \muted{A collection pause inside a frame budget is a dropped frame the user can see.}
   \end{enumerate}
   \vskip 5mm
   \kv{Further reading}{\link{https://tinygo.org/}{tinygo.org} · \link{https://dart.dev/language/concurrency}{dart.dev on the Dart runtime} · \link{https://docs.flutter.dev/perf}{docs.flutter.dev/perf} · \link{https://mqtt.org/}{mqtt.org}}

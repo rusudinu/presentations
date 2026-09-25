@@ -30,7 +30,7 @@
       \begin{itemize}
         \item Client-side code runs on the phone: rendering, local state, caching, and the optimistic update that makes a form feel instant.
         \item Server-side code runs on a machine you control: secrets, durable storage, authorization, billing, and anything that must be identical for every user.
-        \item One request and one response cross the network between them. On mobile that round trip costs roughly 40–200 ms on a good connection, seconds on a bad one, and nothing at all inside a tunnel.
+        \item One request and one response cross the network between them. On mobile that round trip costs roughly 40–200 ms on a good connection, seconds on a bad one.
       \end{itemize}
     \end{column}
     \begin{column}{0.36\textwidth}
@@ -114,7 +114,7 @@
     \item A cold start is the platform building a new instance because no warm one was free: pull the image, start the runtime, run top-level code, then finally the handler.
     \item It lands on the first user after a period of no traffic, and again on every traffic spike.
   \end{itemize}
-  \muted{Minimum instances, or provisioned concurrency, mean paying for idle capacity, the exact cost serverless was meant to remove. A smaller package and a fast-starting runtime cost nothing extra, which is one reason for the Go section later in this lecture.}
+  \muted{Minimum instances, or provisioned concurrency, mean paying for idle capacity, the cost serverless was meant to remove. A smaller package and a fast-starting runtime cost nothing extra.}
   \note{Numbers are orders of magnitude, not benchmarks. Tell students to measure their own p99 on the platform they picked. Cold-start cost is unusually a language choice: almost nothing else about a small backend depends on the runtime.}
 \end{frame}
 
@@ -180,7 +180,7 @@
   \vskip 2mm
   \begin{grid}[3]
     \cell[\faIcon{terminal}]{Rebuild it from a script}{A Dockerfile plus one provisioning script. The machine should be reproducible, never hand-tuned.}
-    \cell[\faIcon{sync-alt}]{Run it as a service}{systemd or Docker with a restart policy. A crash at 3 a.m. must recover without you.}
+    \cell[\faIcon{sync-alt}]{Run it as a service}{systemd or Docker with a restart policy.}
     \cell[\faLock]{Lock down access}{Key-only SSH, no root login, a firewall open only on ports 80 and 443, automatic security updates.}
     \cell[\faIcon{shield-alt}]{Terminate TLS properly}{Caddy or nginx in front, with automatic certificates. Never serve an API over plain HTTP.}
     \cell[\faIcon{save}]{Test the restore}{Snapshots plus an off-box copy of the database. A backup you never restored is unverified.}
@@ -257,7 +257,7 @@ final res = await dio.post(
       \begin{itemize}
         \item When a service fails briefly, ten thousand clients fail at once and every one retries after exactly one second. The retry wave is larger than the original load: a brief outage becomes a long one. That is a thundering herd.
         \item Full jitter spreads retries across the whole interval, so a recovering server sees load ramp up instead of arriving all at once.
-        \item Hedging is the opposite problem: a small fraction of requests are simply slow. Send a second copy after a short delay, take whichever answers first, and cancel the other.
+        \item Hedging is the opposite problem: a small fraction of requests are slow. Send a second copy after a short delay, take whichever answers first, and cancel the other.
       \end{itemize}
     \end{column}
     \begin{column}{0.34\textwidth}
@@ -279,7 +279,7 @@ final res = await dio.post(
   \note{The winner is whichever attempt replies first; the loser is simply canceled, not an error. Ask which methods are safe to hedge: GET freely, POST only behind an idempotency key the server remembers.}
 \end{frame}
 
-\divider{Part 4 \textperiodcentered\ API design for a mobile client}{Design decisions clients actually feel}[Pagination, versioning, conditional requests, compression, and rate limits]
+\divider{Part 4 \textperiodcentered\ API design for a mobile client}{Design decisions clients feel}[Pagination, versioning, conditional requests, compression, and rate limits]
 
 \begin{frame}[fragile,eyebrow=API design]{Pagination with cursors, not page numbers}
   \begin{columns}[T]
@@ -361,11 +361,10 @@ type Page struct {
   \begin{itemize}
     \item A rate limit caps how many requests one client, one API key, or one IP address may make in a window, so one runaway client or a retry storm cannot take the service down for everyone else.
     \item The token bucket is the common shape: a bucket refills at a fixed rate, and each request costs one token; a burst is allowed until the bucket is empty.
-    \item The server answers 429 Too Many Requests with a \code{Retry-After} header, so a well-behaved client waits exactly that long instead of guessing.
+    \item The server answers 429 Too Many Requests with a \code{Retry-After} header, so a well-behaved client waits that long instead of guessing.
     \item Return the budget in headers on every response, such as \code{X-RateLimit-Remaining}, so a client can back off before it gets rejected.
   \end{itemize}
-  \begin{takeaway}{A limit the client can see in headers is one clients cooperate with.}
-    Not one they fight.
+  \begin{takeaway}{Expose the rate limit in response headers.}
   \end{takeaway}
   \note{Connect a rate limit back to the retry and hedge slides: a client that retries without jitter against a rate-limited endpoint produces the exact thundering herd from Part 3.}
 \end{frame}
@@ -429,7 +428,7 @@ WantedBy=multi-user.target
     \end{column}
     \begin{column}{0.4\textwidth}
       \lead{One file, one service.}{\code{systemctl enable --now api} starts it and keeps it running across reboots.}
-      \muted{\code{Restart=always} with a short \code{RestartSec} means a crash recovers in about two seconds, with nobody paged at 3 a.m.}
+      \muted{\code{Restart=always} with a short \code{RestartSec} means a crash recovers in about two seconds.}
     \end{column}
   \end{columns}
   \note{Point out that this is the whole operational story for a project backend: one unit file, one restart policy, one environment file. Nothing here needs Kubernetes.}
@@ -454,7 +453,6 @@ if dsn == "" {
     \end{column}
   \end{columns}
   \begin{takeaway}{A required variable that is missing should crash at startup.}
-    Not on the first request, hours later.
   \end{takeaway}
   \note{Ask the room whether they have ever committed an API key by accident. Most have. The fix is not remembering harder: it is a .gitignore entry and a pre-commit check that scans for secret-shaped strings.}
 \end{frame}
@@ -498,9 +496,6 @@ logger.Info("reading saved",
 \end{golang}
     \end{column}
   \end{columns}
-  \begin{takeaway}{If you cannot turn it into a chart, it is not a structured log yet.}
-    A sentence in a log file is for a human reading it live, once.
-  \end{takeaway}
   \note{Log the boring successful requests too, not just the errors: status code, duration, and device identifier on every call is what tells you the baseline changed before it becomes an outage.}
 \end{frame}
 
@@ -509,8 +504,8 @@ logger.Info("reading saved",
   \begin{itemize}
     \item Lab 5's sync server is this lecture in miniature: a small Go program, an in-memory list with a version per row, one endpoint that accepts offline writes and returns what changed since a cursor.
     \item Lab 6 adds gRPC (Lecture 11) to the same binary: one unary call and one server-streaming call, both served from the process that already answers HTTP.
-    \item Keep it on one small VPS or one Cloud Run service for the whole semester. The project needs a reliable box, not a distributed system.
-    \item Everything in this lecture applies at project scale: environment variables for broker and database URLs, a health check the grading script can poll, and structured logs for the night before the defense.
+    \item Keep it on one small VPS or one Cloud Run service for the whole semester.
+    \item Everything in this lecture applies at project scale: environment variables for broker and database URLs, a health check the grading script can poll, and structured logs.
   \end{itemize}
   \begin{takeaway}{The project backend is small on purpose.}
     The skill being graded is running it correctly, not scaling it.
@@ -522,7 +517,7 @@ logger.Info("reading saved",
   \vskip 2mm
   \begin{enumerate}
     \item The client is untrusted input. \muted{Every rule that matters is checked again on the server.}
-    \item Serverless bills per request and cold-starts; a VPS bills per month and never does. \muted{Pick by cost shape, not by fashion.}
+    \item Serverless bills per request and cold-starts; a VPS bills per month and never does. \muted{Pick by cost shape.}
     \item A cursor, an ETag, and a rate-limit header are what make an API pleasant to build a mobile client against. \muted{Small, additive changes keep old app versions working.}
   \end{enumerate}
   \vskip 5mm

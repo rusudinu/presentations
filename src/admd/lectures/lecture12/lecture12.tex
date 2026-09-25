@@ -31,9 +31,9 @@
     \cell[\faCloud]{A cloud large language model}{A large model on someone else's machines. Highest capability, network-bound, billed per token.}
   \end{grid}
   \vskip 2mm
-  \muted{Artificial intelligence (AI) in an app is not one thing. The three shapes differ in where the compute happens, what happens with no network, and what an attacker can reach.}
+  \muted{The three shapes of artificial intelligence (AI) in an app differ in where the compute happens, what happens with no network, and what an attacker can reach.}
   \begin{takeaway}{Most shipping apps use two of the three.}
-    Picking one is an architecture decision, not a library choice, and it is expensive to reverse late.
+    Picking one is an architecture decision, and it is expensive to reverse late.
   \end{takeaway}
   \note{Ask the room to name an app that already does one of these three. The boundary between them, not the labels, is where most of the design work sits.}
 \end{frame}
@@ -102,9 +102,6 @@
   \end{grid}
   \vskip 4mm
   \lead{The share of requests that reach the cloud is one number.}{It is your bill, your slowest response time, and your privacy exposure, all at once.}
-  \begin{takeaway}{A hybrid architecture is a promise you can break silently.}
-    A system whose escalation rate nobody can quote is a cloud system with a cache in front of it.
-  \end{takeaway}
   \note{Ask what happens to the privacy story if most requests silently escalate to the cloud. The escalation rate is the one number worth remembering here, not the diagram.}
 \end{frame}
 
@@ -131,7 +128,7 @@
   \end{grid}
   \vskip 4mm
   \begin{takeaway}{These are community-maintained Dart wrappers.}
-    Each call crosses a platform channel into the native ML Kit SDK. Fine for a photo; it is why the next slide is about back-pressure, not raw speed.
+    Each call crosses a platform channel into the native ML Kit SDK. Fine for a photo; it is why the next slide is about back-pressure.
   \end{takeaway}
   \note{The umbrella package trades convenience for binary size. A common mistake is importing google\_ml\_kit for one feature and shipping every model with it.}
 \end{frame}
@@ -185,7 +182,6 @@ Future<void> onFrame(CameraImage f) async {
     \end{column}
   \end{columns}
   \begin{takeaway}{Real-time on-device ML is a back-pressure problem.}
-    The model is fast enough. The frame pipeline breaks first.
   \end{takeaway}
   \note{Get the sensor rotation wrong and detection silently returns nothing, with no error at all. Stop the stream and close the scanner in dispose, and again when the app backgrounds: continuous inference drains the battery.}
 \end{frame}
@@ -335,7 +331,7 @@ AIzaSyD-EXAMPLE_KEY_xxxxxxxxxx
       \vskip 1mm
       \muted{Obfuscation renames symbols. It does not remove the bytes your HTTP client puts on the wire.}
       \vskip 1mm
-      \muted{The bill is yours. A leaked key is billed to the account that issued it until you notice.}
+      \muted{A leaked key is billed to the account that issued it until you notice.}
     \end{column}
   \end{columns}
   \begin{takeaway}{There is no secret you can ship inside a client.}
@@ -354,7 +350,6 @@ AIzaSyD-EXAMPLE_KEY_xxxxxxxxxx
   \vskip 5mm
   \muted{Works with any provider, with your own rate limits, your own logging and your own prompt control, at the cost of a service you now have to operate and keep online.}
   \begin{takeaway}{The credential lives somewhere the user cannot reach.}
-    That single property is what separates this from the key-in-the-app version.
   \end{takeaway}
   \note{This is the same backend shape as the authentication lecture: the app never holds a long-lived secret, only a short-lived token proving it belongs to a signed-in user.}
 \end{frame}
@@ -422,7 +417,7 @@ Stream<String> ask(String prompt) async* {
       \vskip 1mm
       \muted{Feed this into a StreamBuilder. Show three states: sent, thinking, writing, since a spinner that never changes looks like a hang.}
       \vskip 1mm
-      \lead{A frozen screen is a bug, not a wait.}{Cancel the stream on dispose or when a new question starts.}
+      \lead{Cancel the stream.}{On dispose, or when a new question starts.}
     \end{column}
   \end{columns}
   \note{A canceled request has still paid for the radio wake-up. Nothing here causes jank unless work happens inside the builder itself.}
@@ -459,7 +454,7 @@ Stream<String> ask(String prompt) async* {
     \bottomrule
   \end{tabular}}
   \vskip 1mm
-  \muted{Set a budget for the whole feature, not one attempt: three tries of ten seconds each is a spinner no user waits out.}
+  \muted{Set a budget for the whole feature, not one attempt: three tries of ten seconds each is a 30-second wait.}
   \begin{takeaway}{Retries multiply load and cost, so cap them.}
     Reuse the same backoff-with-jitter machinery from the networking lecture.
   \end{takeaway}
@@ -492,7 +487,7 @@ responseSchema: Schema.object(properties: {
 \begin{frame}[eyebrow=Recap]{Three things to remember}
   \vskip 2mm
   \begin{enumerate}
-    \item On-device or cloud is an architecture decision. \muted{Latency, privacy, offline behavior, cost and capability ceiling, not a library choice.}
+    \item On-device or cloud is an architecture decision. \muted{Latency, privacy, offline behavior, cost and capability ceiling.}
     \item No app ever holds a provider key. \muted{Your backend holds it, or Firebase AI Logic with App Check does.}
     \item Stream the answer, cap the tokens, and validate everything the model says. \muted{Treat model output like input from the internet.}
   \end{enumerate}

@@ -15,7 +15,7 @@
 \titleframe
 
 \objectivesframe{
-  \cell[\faCubes]{Explain the machine}{Tokens, embeddings, attention, the context window, and why a wrong answer sounds exactly like a right one.}
+  \cell[\faCubes]{Explain the machine}{Tokens, embeddings, attention, the context window, and why a wrong answer sounds like a right one.}
   \cell[\faDatabase]{Ground it in your data}{Chunk, embed, retrieve, cite. Build the retrieve-augment-generate loop and know how it fails.}
   \cell[\faWrench]{Let the model act}{Declare a tool, run the call loop, confirm before a side effect, and read a Model Context Protocol server.}
   \cell[\faMobile]{Ship it in Flutter}{Where each piece runs, streaming into a bloc, cost caps, logging without leaking, evaluation before release.}
@@ -32,8 +32,7 @@
   \end{grid}
   \vskip 3mm
   \muted{A large language model (LLM) reads a sequence of token ids and writes another one. Every limit and every price on the following slides is counted in these.}
-  \begin{takeaway}{Token count is the currency of the whole lecture.}
-    The context limit, the latency and the bill are three views of the same number.
+  \begin{takeaway}{The context limit, the latency and the bill are all counted in tokens.}
   \end{takeaway}
   \note{Open a tokenizer playground live and paste a Romanian sentence next to its English translation. The difference in token count surprises the room and explains the cost slide later.}
 \end{frame}
@@ -53,8 +52,8 @@
       \muted{An embedding model is not the language model. It is a separate, much smaller model that only produces vectors and never writes text.}
     \end{column}
   \end{columns}
-  \begin{takeaway}{Meaning becomes geometry.}
-    That single move is what makes search over your own documents possible in Part 3.
+  \begin{takeaway}{Embeddings are what make search over your own documents possible.}
+    Part 3 builds on them.
   \end{takeaway}
   \note{Ask the room how you would find a note about a dentist appointment when the note says stomatolog. Keyword search fails and vector search does not, which is the whole argument for embeddings.}
 \end{frame}
@@ -75,9 +74,6 @@
       \muted{Attention is why word order and distance matter, and why a long prompt costs more than linearly.}
     \end{column}
   \end{columns}
-  \begin{takeaway}{A conversation is a loop over one operation.}
-    Everything a model appears to know is the shape of that probability distribution.
-  \end{takeaway}
   \note{Predict the next word of a sentence out loud with the room before showing this. People do the same thing, which makes both the ability and the failure mode intuitive.}
 \end{frame}
 
@@ -142,9 +138,6 @@ generationConfig: GenerationConfig(
   \end{tabular}}
   \vskip 2mm
   \muted{A model's knowledge is frozen when its training ends. Fine-tuning teaches behavior and format, not fresh facts, and a fine-tuned model goes stale the same way.}
-  \begin{takeaway}{You change the input, never the model.}
-    Which is why the rest of this lecture is about context, retrieval and tools.
-  \end{takeaway}
   \note{Students often ask to fine-tune a model on the course notes. Ask what happens when a note changes: retrieval re-indexes in seconds, fine-tuning needs another training run.}
 \end{frame}
 
@@ -173,7 +166,7 @@ generationConfig: GenerationConfig(
     \cell[\faIcon{comment}]{The user turn}{The question, plus what your app attaches: the selected item, retrieved passages, tool results.}
     \cell[\faIcon{sliders-h}]{Generation config}{Temperature, the output cap, the response schema. Steering that lives in code.}
   \end{grid}
-  \begin{takeaway}{A prompt is source code you cannot compile.}
+  \begin{takeaway}{Treat a prompt as source code.}
     Version it, review it in a pull request, and keep a fixed set of questions it must still pass.
   \end{takeaway}
   \note{Show a prompt file from a real project if you have one. The interesting part is always the refusal rules and the output format, not the friendly opening sentence.}
@@ -246,8 +239,7 @@ and reply exactly: "All clear."
   \end{grid}
   \vskip 3mm
   \muted{Retrieval-augmented generation (RAG) answers all three the same way: find the relevant text first, put it in the prompt, and require the answer to come from it.}
-  \begin{takeaway}{RAG is not a model feature.}
-    It is search plus prompt assembly plus a grounding rule, and all three are your code.
+  \begin{takeaway}{RAG is search plus prompt assembly plus a grounding rule, all in your code.}
   \end{takeaway}
   \note{Ask the room what the model would say about this course. It has never seen the syllabus, so whatever comes back is a plausible invention, which is the demonstration this section needs.}
 \end{frame}
@@ -265,7 +257,7 @@ and reply exactly: "All clear."
     \begin{column}{0.44\textwidth}
       \lead{Cosine, not keywords.}{Cosine similarity compares direction and ignores length, so two texts that mean the same thing score high with no words in common.}
       \vskip 1mm
-      \muted{Exact search compares every vector and is always right. Approximate nearest neighbor search trades a little recall for speed, which is what every real store does.}
+      \muted{Exact search compares every vector and is always right. Approximate nearest neighbor search trades a little recall for speed, which is what production stores do.}
     \end{column}
   \end{columns}
   \begin{takeaway}{Hybrid search is usually the safe default.}
@@ -328,7 +320,7 @@ Future<String> answer(String question) async {
   return res.text ?? 'I could not find that in your notes.';
 }
 \end{dart}
-  \muted{The system prompt carries the grounding rule: answer only from the context, say you do not know when it is missing, cite the source labels. The owner filter is not a nicety: a shared index queried without it is a data leak.}
+  \muted{The system prompt carries the grounding rule: answer only from the context, say you do not know when it is missing, cite the source labels. A shared index queried without the owner filter is a data leak.}
   \note{Ask what k should be. Too small and the answer is not in the context; too large and the model drowns in near misses, and both cost you tokens. Four is a starting point, not a rule.}
 \end{frame}
 
@@ -348,7 +340,7 @@ Future<String> answer(String question) async {
     \end{column}
   \end{columns}
   \begin{takeaway}{Keep twenty questions with known answers in the repository.}
-    Run them before every release. It is the only regression test a prompt has.
+    Run them before every release.
   \end{takeaway}
   \note{The stale-index failure is the one that reaches production, because nothing errors: retrieval returns confident answers from documents that were deleted weeks ago.}
 \end{frame}
@@ -368,12 +360,11 @@ Future<String> answer(String question) async {
     \end{column}
     \begin{column}{0.42\textwidth}
       \begin{hint}[Keep the set small]
-        Every declaration costs input tokens on each turn and gives the model one more thing to confuse. Five sharp tools beat twenty vague ones.
+        Every declaration costs input tokens on each turn and gives the model one more thing to confuse.
       \end{hint}
     \end{column}
   \end{columns}
-  \begin{takeaway}{The description is the part people write badly.}
-    A tool the model never picks, or picks for the wrong question, is almost always a description problem.
+  \begin{takeaway}{A tool the model never picks, or picks for the wrong question, usually has a poor description.}
   \end{takeaway}
   \note{Read two descriptions of the same tool aloud, one vague and one precise, and ask which question each would attract. Tool selection is a retrieval problem in disguise.}
 \end{frame}
@@ -422,8 +413,7 @@ return res.text ?? '';
   \end{grid}
   \vskip 3mm
   \muted{Give the model a way to finish: an instruction to reply in text once it has enough, and a final turn that carries the tool results with no tools attached.}
-  \begin{takeaway}{An agent without a stop condition is an unbounded bill.}
-    Every production loop has a maximum number of rounds and a wall-clock deadline.
+  \begin{takeaway}{Every production loop has a maximum number of rounds and a wall-clock deadline.}
   \end{takeaway}
   \note{Ask the room what happens when a tool returns an error the model does not understand. Usually it retries the same call, which is exactly why the duplicate rule is on the list.}
 \end{frame}
@@ -431,7 +421,7 @@ return res.text ?? '';
 \begin{frame}[eyebrow=Tools]{Confirm before a side effect}
   \begin{columns}[T]
     \begin{column}{0.52\textwidth}
-      \lead{Reading is not writing.}{Split the set. A read tool can run freely. A tool that writes, spends, deletes or messages another person stops and asks first.}
+      \lead{Split read tools from write tools.}{A read tool can run freely. A tool that writes, spends, deletes or messages another person stops and asks first.}
       \vskip 1mm
       \muted{Show the user what will happen in their own words: the exact todo text, the exact recipient. A confirmation of a summary the user cannot check is not consent.}
     \end{column}
@@ -441,8 +431,7 @@ return res.text ?? '';
       \end{warning}
     \end{column}
   \end{columns}
-  \begin{takeaway}{Undo is worth more than a dialog.}
-    A confirmation the user taps through changes nothing. A write that can be reversed within ten seconds does.
+  \begin{takeaway}{A write that can be undone within ten seconds protects better than a confirmation dialog.}
   \end{takeaway}
   \note{Ask which tools in the lab app would need a confirmation. Adding a todo probably does not if it is easy to undo; deleting every completed one certainly does.}
 \end{frame}
@@ -456,8 +445,8 @@ return res.text ?? '';
   \end{grid}
   \vskip 3mm
   \muted{The Model Context Protocol (MCP) is an open standard for connecting a model-facing application to external tools and data. A host speaks remote procedure calls to one or more servers, over a local process pipe or over the network.}
-  \begin{takeaway}{Same loop, standard plug.}
-    MCP standardizes discovery, so one server can serve your backend, an editor and a desktop assistant without a line of glue in each.
+  \begin{takeaway}{MCP standardizes tool discovery.}
+    One server can serve your backend, an editor and a desktop assistant without a line of glue in each.
   \end{takeaway}
   \note{In a phone app the host is your backend, not the app: the app calls your API and the backend speaks MCP. Say clearly that the protocol changes who writes the glue, never what the loop does.}
 \end{frame}
@@ -477,9 +466,6 @@ return res.text ?? '';
     Prompts and schemas & the repository, reviewed & they are code, and they regress \\
     \bottomrule
   \end{tabular}}
-  \begin{takeaway}{Nothing here is new since Lecture 12.}
-    The rules that governed a single call govern a whole loop, with more surface.
-  \end{takeaway}
   \note{Walk the table top to bottom and ask which row the lab app already satisfies. The last row is the one students skip, and prompts drift exactly like untested code does.}
 \end{frame}
 

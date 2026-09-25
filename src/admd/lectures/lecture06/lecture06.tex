@@ -46,7 +46,7 @@
   \vskip 4mm
   \muted{BLoC stands for Business Logic Component. The \code{flutter\_bloc} package gives you the base classes and the widgets that connect them to the tree.}
   \begin{takeaway}{One direction only.}
-    Events go up, states come down. When you can point at the single line that produced a state, debugging stops being guesswork.
+    Events go up, states come down.
   \end{takeaway}
   \note{Draw the loop on the board once: widget, event, bloc, state, widget. Stress that a widget never mutates state directly. That single rule is what makes the whole pattern testable and traceable.}
 \end{frame}
@@ -400,7 +400,7 @@ Widget body(AuthState state) => switch (state) {
   \vskip 3mm
   \muted{Both are used in production code. What you must not do is mix them inside one feature.}
   \begin{takeaway}{Pick one per feature and stay with it.}
-    A screen that keeps data visible while refreshing wants the status field. A screen with genuinely disjoint modes wants the sealed hierarchy.
+    A screen that keeps data visible while refreshing wants the status field. A screen with disjoint modes wants the sealed hierarchy.
   \end{takeaway}
   \note{Give the concrete rule: a list that pulls to refresh is the first case, an authentication gate is the second. Tell them Lab 5 uses the status field version, because the todo list must survive a reload.}
 \end{frame}
@@ -489,7 +489,7 @@ lib/
     \end{column}
     \begin{column}{0.46\textwidth}
       \lead{Group by feature, not by kind.}{A folder named \code{blocs} at the root means every change touches five distant folders.}
-      \muted{One feature is one folder you could delete in a single command. That is a useful test of whether the boundaries are real.}
+      \muted{One feature is one folder you could delete in a single command.}
     \end{column}
   \end{columns}
   \note{Mention that the bloc, event and state files are conventionally siblings, and many teams use part files to join them. Keep it simple in the lab: three files, plain imports, no code generation yet.}
@@ -561,7 +561,7 @@ final todoListProvider =
     NotifierProvider<TodoListNotifier, List<Todo>>(TodoListNotifier.new);
 \end{dart}
   \begin{takeaway}{The same rules apply here.}
-    State is replaced, never mutated. \code{ref.watch} in build subscribes, \code{ref.read} in a callback does not. Notifiers are tested exactly like cubits.
+    State is replaced, never mutated. \code{ref.watch} in build subscribes, \code{ref.read} in a callback does not. Notifiers are tested like cubits.
   \end{takeaway}
   \note{Show that build returns the initial state instead of a constructor argument, and that assigning to state is the emit of this world. A Notifier is a Cubit with a different spelling, which is the honest summary.}
 \end{frame}
@@ -581,7 +581,7 @@ final todoListProvider =
   \end{tabular}}
   \vskip 3mm
   \begin{takeaway}{This course uses flutter\_bloc.}
-    Both are good. Pick the one your team already runs, and never run two state management packages in one app.
+    Pick the one your team already runs, and never run two state management packages in one app.
   \end{takeaway}
   \note{Be explicit that this is not a verdict on quality. The reason for the course choice is that the explicit event log makes it easier to grade and easier to discuss in a review. Tell them they will meet Riverpod in real code and should be able to read it.}
 \end{frame}

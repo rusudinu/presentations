@@ -75,8 +75,7 @@ class Todo {
   Map<String, dynamic> toJson() => _$TodoToJson(this);
 }
 \end{dart}
-  \begin{takeaway}{The generator writes the boring half.}
-    Rebuilt from \code{todo.g.dart} after every model change.
+  \begin{takeaway}{Run build\_runner after every model change to regenerate \code{todo.g.dart}.}
   \end{takeaway}
 \end{frame}
 
@@ -93,7 +92,7 @@ class Todo extends Equatable {
   List<Object?> get props => [userId, id, title, completed];
 }
 \end{dart}
-  \begin{takeaway}{Same fields, same value.}
+  \begin{takeaway}{Equatable compares todos by their fields.}
     Without Equatable, \code{==} compares identity: two separate instances are never equal.
   \end{takeaway}
 \end{frame}
@@ -152,8 +151,7 @@ Future<List<Todo>> fetchTodos() async {
       .toList();
 }
 \end{dart}
-  \begin{takeaway}{Decode once, here.}
-    Nothing past this function ever sees raw JSON again.
+  \begin{takeaway}{JSON is decoded only in this function.}
   \end{takeaway}
 \end{frame}
 
@@ -171,8 +169,8 @@ Future<T> withRetry<T>(Future<T> Function() op) async {
   }
 }
 \end{dart}
-  \begin{takeaway}{Retry what can succeed later.}
-    A 404 stays a 404.
+  \begin{takeaway}{Retry only errors that can succeed later.}
+    A 404 fails on every attempt.
   \end{takeaway}
 \end{frame}
 

@@ -125,12 +125,9 @@ match /readings/{userId} {
     \end{column}
     \begin{column}{0.46\textwidth}
       \lead{This runs on Google's side.}{It is the only server-side check anywhere in this picture.}
-      \muted{Never store a password or an API key in a document. Anything that needs a real secret belongs behind a Cloud Function.}
+      \muted{Never store a password or an API key in a document. Anything that needs a secret belongs behind a Cloud Function.}
     \end{column}
   \end{columns}
-  \begin{takeaway}{The rules file is your backend.}
-    Every rule you do not write is a rule nobody enforces.
-  \end{takeaway}
   \note{Highlight the commented-out wrong version. request.auth != null only proves someone is signed in; it does not prove they own this document. The uid comparison is the entire rule.}
 \end{frame}
 
@@ -139,7 +136,7 @@ match /readings/{userId} {
   \begin{enumerate}
     \item Cloud Functions are the same serverless model from a FaaS platform, wired to Firebase triggers: a Firestore write, a new Auth user, a scheduled job, or an HTTPS call your app invokes directly.
     \item They run in TypeScript, JavaScript, or Python, not Dart. That is a second language and a second toolchain in your repository.
-    \item \textbf{Use them for exactly what the client must not do:} verifying a receipt, calling a paid API with your secret key, sending a push to someone else's device.
+    \item \textbf{Use them for what the client must not do:} verifying a receipt, calling a paid API with your secret key, sending a push to someone else's device.
   \end{enumerate}
   \begin{hint}[Where Firebase stops]
     Joins, aggregate reporting, arbitrary queries, and any bill you need to predict in advance. That is a job for a backend you write yourself.
@@ -166,7 +163,7 @@ final res = await fn.call({
     \end{column}
   \end{columns}
   \begin{takeaway}{The client sends a token, never an identity.}
-    The function is the only place that decides who the caller actually is.
+    The function is the only place that decides who the caller is.
   \end{takeaway}
   \note{Contrast this with a REST call where the client would pass a user id in the body. Here the identity comes from the auth token Firebase already verified, which is what makes the callable trustworthy.}
 \end{frame}
@@ -242,11 +239,8 @@ flutter pub outdated   # newer
     \item \textbf{pubspec.yaml says what you will accept. pubspec.lock records what you actually got.}
     \item Commit pubspec.lock for an application: it is what makes your build, your teammate's build, and CI resolve to identical code.
     \item Do not commit it for a package you publish: there, consumers should resolve against their own constraint set.
-    \item flutter pub get obeys the lockfile. flutter pub upgrade rewrites it. That is the whole difference between the two commands.
+    \item flutter pub get obeys the lockfile. flutter pub upgrade rewrites it.
   \end{enumerate}
-  \begin{takeaway}{Two files, two audiences.}
-    The constraint is a promise to the resolver. The lock is a promise to everyone building your code, including whoever grades it.
-  \end{takeaway}
   \note{This is the rule the admd-labs repository is graded against: commit pubspec.lock so the grader resolves the exact versions you tested against, not whatever is newest on the day it is cloned.}
 \end{frame}
 
@@ -267,9 +261,7 @@ flutter pub outdated   # newer
       \lead{Flip the flag to 5\%}{You release, without a build.}
     \end{column}
   \end{columns}
-  \begin{takeaway}{The kill switch is the main benefit.}
-    A bad release turned off in thirty seconds is a different incident than one needing a store review.
-  \end{takeaway}
+  \begin{takeaway}{The kill switch is the main benefit.}\end{takeaway}
   \note{Ask the room to name a bug that only a store review can fix versus one a flag flip fixes. The distinction is whether the bad code is still reachable once you flip the flag off.}
 \end{frame}
 
@@ -322,9 +314,6 @@ if (rc.getBool('checkout_v2_enabled')) return const CheckoutV2();
     \item Every live flag is a branch you must keep working. Delete the flag and the dead code path as soon as it reaches 100 percent.
     \item \textbf{Flags are not security.} The disabled code still ships inside the binary, and the values are readable. Authorization still belongs on the server.
   \end{enumerate}
-  \begin{takeaway}{A flag you never delete is technical debt with a toggle.}
-    Budget the cleanup when you add the flag, not after.
-  \end{takeaway}
   \note{The security point is the one to slow down on. A flag hides a feature from the UI, but a curious user reading the APK can still find the disabled code and, if the values are not re-checked server-side, the data behind it.}
 \end{frame}
 
@@ -455,9 +444,7 @@ Query(
     Errors    & the HTTP status code & HTTP 200 plus an errors array \\
     \bottomrule
   \end{tabular}}
-  \begin{takeaway}{Neither one wins.}
-    Simple resources favor REST. Deeply related data and several clients favor GraphQL.
-  \end{takeaway}
+  \begin{takeaway}{Simple resources favor REST. Related data and several clients favor GraphQL.}\end{takeaway}
   \note{Ask the room to place the ADMD lab app on this table. A todo list with one client is a clean REST fit; a dashboard combining several related resources for multiple platforms is where GraphQL starts to pay off.}
 \end{frame}
 

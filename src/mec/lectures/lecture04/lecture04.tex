@@ -36,11 +36,11 @@
     \end{column}
     \begin{column}{0.40\textwidth}
       \begin{hint}[The cost is the radio]
-        On a battery the bytes are not the problem. Waking a Wi-Fi radio to hear that nothing changed is the worst trade a device can make, and it makes it every interval, forever.
+        On a battery the cost is waking the Wi-Fi radio on every interval, even when nothing changed.
       \end{hint}
     \end{column}
   \end{columns}
-  \begin{takeaway}{Polling scales with the clock. Events scale with reality.}
+  \begin{takeaway}{Publishing on events costs less than polling.}
     A device that publishes when it has something to say sends fewer packets, reports faster, and sleeps in between.
   \end{takeaway}
   \note{Ask the room what poll interval they would pick for a room thermometer. Whatever number comes back, point out that it is both too slow for an alarm and far too fast for a value that changes twice an hour.}
@@ -72,7 +72,7 @@
     \cell[\faIcon{mobile-alt}]{Subscribers receive}{Your Flutter app, a dashboard and a database can all take the same reading without the device changing a line.}
   \end{grid}
   \begin{takeaway}{The device never learns who is listening.}
-    That is the whole point of a broker: you add a consumer by subscribing, not by reflashing a board that is glued to a wall.
+    You add a consumer by subscribing, not by reflashing the board.
   \end{takeaway}
   \note{Draw the three boxes on the board and then add a fourth subscriber while talking. The picture makes the argument better than the slide does. Mention that the broker is also the single point of failure, which is why the project brief asks for a hosted one.}
 \end{frame}
@@ -187,7 +187,7 @@ $SYS/broker/uptime     broker statistics, not matched by a root '#'
     \end{column}
     \begin{column}{0.40\textwidth}
       \begin{hint}[Battery first]
-        A session held open exists to receive commands quickly. If the device only publishes, connect, send, disconnect and sleep. The handshake is paid once; the keep-alive is paid forever.
+        A session held open exists to receive commands quickly. If the device only publishes, connect, send, disconnect and sleep.
       \end{hint}
     \end{column}
   \end{columns}
@@ -225,7 +225,7 @@ mosquitto_sub -h localhost -u dev -P pass -t 'mec/lab/#' -v
 mosquitto_pub -h localhost -u dev -P pass -t mec/lab/r1/temp -m '{"c":21.4}'
 \end{shell}
   \vskip 1mm
-  \muted{Subscribe in one terminal, publish in another, and watch the line appear. Getting that far before any board or app code exists removes half the debugging from Lab 2.}
+  \muted{Subscribe in one terminal, publish in another, and watch the line appear.}
   \note{Insist on allow_anonymous false from the first minute. A broker that accepts anyone is a habit, and the habit is what ends up on a public address later. The -v flag prints the topic next to the payload, which is what you want when wildcards are involved.}
 \end{frame}
 
@@ -250,9 +250,9 @@ c.PublishPayload(fl, pv, payload)
 \end{golang}
     \end{column}
     \begin{column}{0.39\textwidth}
-      \lead{Wi-Fi is a driver, not a given.}{On the ESP32-C3 and the ESP32-S3 the radio comes from the espradio package. Check your target first.}
+      \lead{Wi-Fi comes from a driver package.}{On the ESP32-C3 and the ESP32-S3 the radio comes from the espradio package. Check your target first.}
       \begin{hint}[Order of failure]
-        Network first, broker second, sensor third. Print at every step: a silent board says nothing.
+        Network first, broker second, sensor third. Print at every step.
       \end{hint}
     \end{column}
   \end{columns}
@@ -309,7 +309,7 @@ Future<void> _scheduleReconnect() async {
     \bottomrule
   \end{tabular}}
   \begin{takeaway}{Develop against the local one, demo against the hosted one.}
-    A plain 1883 listener is a lab tool. The moment it is reachable from outside the room it is an open microphone and an open command channel.
+    A plain 1883 listener is a lab tool.
   \end{takeaway}
   \note{Several hosted brokers offer a free tier that is more than enough for a project. Tell teams to create it during the project session, not the night before the defense, because per-device credentials take longer to get right than the code does.}
 \end{frame}
@@ -370,7 +370,7 @@ Future<void> _scheduleReconnect() async {
     \end{column}
   \end{columns}
   \begin{takeaway}{A broker is a command channel, not just a data feed.}
-    Treat write access with the seriousness you would give a shell on the board, because in practice that is what it is.
+    Treat write access like a shell on the board.
   \end{takeaway}
   \note{Search engines index reachable brokers. Show one anonymized example if you have it, or simply state that scanning the whole address space for port 1883 takes hours, not weeks. Students underestimate how quickly an exposed port is found.}
 \end{frame}
@@ -409,7 +409,7 @@ Future<void> _scheduleReconnect() async {
     Forward secrecy & yes, with ephemeral exchange & only with an ephemeral PSK suite \\
     \bottomrule
   \end{tabular}}
-  \begin{takeaway}{Both work. Neither survives a shared secret in the firmware.}
+  \begin{takeaway}{Do not compile one shared secret into the firmware.}
     One key compiled into an image on a thousand boards means one extracted board compromises all of them.
   \end{takeaway}
   \note{Pre-shared keys are underrated for small fleets: no certificate authority, no expiry, far less code. The trade is that you need a real way to get a distinct secret onto each unit, which is the next slide.}
@@ -447,7 +447,7 @@ topic read  mec/cmd/sensor01/#
 \end{codeblock}
     \end{column}
     \begin{column}{0.50\textwidth}
-      \muted{A credential with no expiry is a credential you will never replace. Give it a lifetime you can actually meet, and build the renewal path before the first board ships.}
+      \muted{Give every credential a lifetime you can meet, and build the renewal path before the first board ships.}
       \vskip 2mm
       \muted{Rotation has to be interruptible. The device keeps the old credential until the new one has completed a handshake, then discards it.}
     \end{column}
@@ -489,8 +489,8 @@ topic read  mec/cmd/sensor01/#
       \muted{The build signs the image with a private key that stays on the build machine. The bootloader verifies it against a public key held in the chip, and secure boot makes that check impossible to skip. The transport is not the trust boundary: verify the image even when it arrived over TLS.}
     \end{column}
   \end{columns}
-  \begin{takeaway}{An unsigned update path is remote code execution with a nice name.}
-    Whoever can answer the update request owns every board you shipped, whether or not they ever touched one.
+  \begin{takeaway}{An unsigned update path is remote code execution.}
+    Whoever can answer the update request owns every board you shipped.
   \end{takeaway}
   \note{Ask what a self test should check. The useful answer is whatever failure would make the device unreachable, because that is the only class of bug rollback can save you from. A wrong sensor reading is not one of them.}
 \end{frame}
@@ -506,7 +506,7 @@ mec/<team>/<device>/cmd/<name>/ack       device answers, same request id
   \vskip 2mm
   \muted{Put identity in the topic and values in the payload. Keep the levels short, because every publish carries the whole string. Give each device exactly one retained status topic, and point its last will at that topic so the app gets a presence indicator for free.}
   \begin{takeaway}{Write the topic tree down before you write the firmware.}
-    It is the contract between the two halves of your project, and changing it later means reflashing a board and editing an app on the same afternoon.
+    It is the contract between the two halves of your project, and changing it later means reflashing a board and editing an app.
   \end{takeaway}
   \note{Have each team read their topic tree out loud in the project session. Most problems are visible immediately: a value in the topic name, no team prefix, or a command topic that any device could subscribe to.}
 \end{frame}
@@ -517,7 +517,7 @@ mec/<team>/<device>/cmd/<name>/ack       device answers, same request id
   \begin{enumerate}
     \item MQTT is publish and subscribe through a broker. \muted{The device never learns who is listening, and a retained message plus a last will give the app a status topic it can trust.}
     \item Quality of service is per hop, not end to end. \muted{QoS 1 plus an idempotent payload with a sequence number is the right default for telemetry.}
-    \item Identity and updates are part of the design. \muted{One credential per device over TLS, and a signed image in a second partition with a rollback that actually works.}
+    \item Identity and updates are part of the design. \muted{One credential per device over TLS, and a signed image in a second partition with a rollback.}
   \end{enumerate}
   \vskip 4mm
   \kv{Further reading}{\link{https://mqtt.org/}{mqtt.org} · \link{https://mosquitto.org/man/mosquitto-conf-5.html}{mosquitto.conf reference} · \link{https://datatracker.ietf.org/doc/html/rfc7252}{RFC 7252, CoAP} · \link{https://pub.dev/packages/mqtt_client}{pub.dev/packages/mqtt\_client}}

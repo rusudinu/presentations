@@ -142,7 +142,7 @@ final router = GoRouter(
 \begin{frame}[eyebrow=Task II]{Why the guard belongs to the router}
   \begin{grid}[2]
     \cell[\faIcon{unlock}]{Without \code{refreshListenable}}{The redirect only runs on navigation. A background sign-out leaves the private screen on display until the user taps something.}
-    \cell[\faIcon{sync}]{With it}{Every auth change re-runs \code{redirect} immediately, including the very first frame and any deep link.}
+    \cell[\faIcon{sync}]{With it}{Every auth change re-runs \code{redirect} immediately, including the first frame and any deep link.}
   \end{grid}
   \vskip 6mm
   \kv{Done when}{}
@@ -164,7 +164,7 @@ StreamBuilder(
       snapshot.data as String? ?? 'Waiting...'),
 )
 \end{dart}
-  \begin{takeaway}{await channel.ready is the line everyone forgets.}
+  \begin{takeaway}{Await \code{channel.ready} after \code{connect()}.}
     \code{connect()} returns instantly and never throws. Without \code{ready}, a rejected handshake surfaces later as a stream error.
   \end{takeaway}
 \end{frame}
@@ -214,7 +214,7 @@ func main() {
 \begin{frame}[fragile,eyebrow=Reference]{Why a local echo server}
   \begin{grid}[2]
     \cell[\faServer]{No public dependency}{A public echo endpoint can be slow, rate-limited, or offline during grading. This one runs on your laptop, on port 8080.}
-    \cell[\faIcon{vial}]{You can see both sides}{The terminal running \code{go run .} prints every frame, which makes the WebSocket lifecycle from Lecture 11 concrete instead of abstract.}
+    \cell[\faIcon{vial}]{You can see both sides}{The terminal running \code{go run .} prints every frame.}
   \end{grid}
   \vskip 4mm
 \begin{shell}

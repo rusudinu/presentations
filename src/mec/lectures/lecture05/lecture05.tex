@@ -70,7 +70,7 @@
     \end{column}
   \end{columns}
   \begin{takeaway}{The central controls the timing.}
-    The peripheral proposes parameters and the central decides. Every power question is really a question about that decision.
+    The peripheral proposes parameters and the central decides.
   \end{takeaway}
   \note{Draw the asymmetry on the board. Students expect a symmetric socket and BLE is not that. Note that a phone can act as a peripheral on both platforms, but flutter\_blue\_plus does not do it, which is why the lab uses Go for that side.}
 \end{frame}
@@ -117,7 +117,7 @@
     Supervision timeout  & 100 ms to 32 s & how long silence lasts before the link is lost \\
     \bottomrule
   \end{tabular}}
-  \begin{takeaway}{Latency is the free win.}
+  \begin{takeaway}{Use peripheral latency to save power.}
     It keeps the link alive and the response fast when it matters, while letting the device sleep through the events where it has nothing to send.
   \end{takeaway}
   \note{Work one example out loud: an interval of one second with a latency of four means the peripheral must answer at most every five seconds, but still replies at once when the central writes. Warn that a supervision timeout shorter than interval times latency is invalid.}
@@ -220,8 +220,8 @@
     \cell[\faDatabase]{Bonding}{Pairing, then storing the long-term key on both sides. The next connection encrypts with no user interaction.}
     \cell[\faExclamationCircle]{Neither is automatic}{A plain BLE link is unencrypted. Encryption starts only when a characteristic demands it.}
   \end{grid}
-  \begin{takeaway}{Bond once, then forget about it.}
-    A bonded sensor reconnects silently. An unbonded one asks the user every time, and users say no.
+  \begin{takeaway}{A bonded sensor reconnects silently.}
+    An unbonded one asks the user every time.
   \end{takeaway}
   \note{Modern pairing uses an elliptic-curve exchange that defeats a passive listener even in the weakest model; the older legacy pairing does not. Explain that the operating system owns the bond, so clearing it means going into the phone's Bluetooth settings.}
 \end{frame}
@@ -411,7 +411,7 @@ await d.connectionState
 await d.discoverServices();
 \end{dart}
   \begin{takeaway}{A reconnect loop is part of the feature.}
-    Sensors go out of range, run flat and get switched off. An app that needs a manual retry after every drop is not finished.
+    Sensors go out of range, run flat and get switched off.
   \end{takeaway}
   \note{With autoConnect the call returns at once and the platform connects whenever the device appears, with no timeout. It is incompatible with the mtu argument, so pass null and request the MTU yourself on Android. Task III of Lab 3 is this slide.}
 \end{frame}
@@ -500,12 +500,12 @@ for i := uint8(0); ; i++ {
 \begin{frame}[embedded,eyebrow=Design]{Design the service, not just the code}
   \vskip 2mm
   \begin{grid}[3]
-    \cell[\faLayerGroup]{Keep the value small}{Fit one reading in twenty bytes. Scaled integers beat a JSON string every time.}
+    \cell[\faLayerGroup]{Keep the value small}{Fit one reading in twenty bytes. Scaled integers beat a JSON string.}
     \cell[\faClock]{Batch on the device}{Ten readings in one notification cost one connection event. Ten notifications cost ten.}
     \cell[\faIcon{compress-alt}]{Summarize, do not stream}{Send a minimum, a maximum and a mean instead of a hundred raw samples.}
     \cell[\faToggleOn]{One concern each}{A reading, a setting and a command are three characteristics, not one blob.}
     \cell[\faDatabase]{Document the encoding}{Byte order, scale and unit go in the repository next to the UUID.}
-    \cell[\faBatteryHalf]{Let the device sleep}{A long interval with peripheral latency saves more than any code you write.}
+    \cell[\faBatteryHalf]{Let the device sleep}{Use a long interval with peripheral latency.}
   \end{grid}
   \note{Close the technical part here. The recurring mistake is treating BLE like an HTTP endpoint and sending text. Ask each project team which single value their device must send, and how many bytes it really needs.}
 \end{frame}
@@ -517,7 +517,7 @@ for i := uint8(0); ; i++ {
   \vskip 2mm
   \begin{enumerate}
     \item The central owns the timing. \muted{Connection interval, peripheral latency and MTU decide latency and battery life.}
-    \item GATT is discovered, never assumed. \muted{Rediscover services after every reconnection and never reuse an old characteristic object.}
+    \item GATT is discovered on every connection. \muted{Rediscover services after every reconnection and never reuse an old characteristic object.}
     \item Declare before you request. \muted{BLUETOOTH\_SCAN with neverForLocation and BLUETOOTH\_CONNECT on Android, NSBluetoothAlwaysUsageDescription on iOS.}
   \end{enumerate}
   \vskip 3mm

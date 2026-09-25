@@ -16,12 +16,12 @@
 
 \objectivesframe{
   \cell[\faServer]{Design the contract}{Write a .proto file and generate Go and Dart stubs with protoc, from one source of truth.}
-  \cell[\faCode]{Call all four shapes}{Unary, server streaming, client streaming and bidirectional, and know which one a screen actually needs.}
+  \cell[\faCode]{Call all four shapes}{Unary, server streaming, client streaming and bidirectional, and know which one a screen needs.}
   \cell[\faBolt]{Reason about the wire}{Why protobuf is smaller than JSON, how a schema evolves safely, and what HTTP/2 buys for free.}
-  \cell[\faClock]{Survive the network}{Deadlines, cancellation and the radio tail: the habits that keep a mobile client polite.}
+  \cell[\faClock]{Survive the network}{Deadlines, cancellation and the radio tail on a mobile client.}
 }
 
-\begin{frame}[eyebrow=Overview]{What gRPC actually is}
+\begin{frame}[eyebrow=Overview]{What gRPC is}
   \vskip 3mm
   \begin{grid}[4]
     \cell[\faServer]{Contract first}{gRPC is a Remote Procedure Call (RPC) framework: one .proto file is the source of truth for every client and the server.}
@@ -40,7 +40,7 @@
       \begin{itemize}
         \item \textbf{REST (Representational State Transfer) models nouns.} \muted{You name resources and use a few fixed verbs on them, a good fit for a public API that strangers discover from a URL.}
         \item \textbf{RPC models verbs.} \muted{You name the operation your app needs, such as GetDashboard, and call it like a local function. Client and server agree on a list of procedures, not a URL space.}
-        \item \textbf{On a phone the difference is round trips.} \muted{A resource-shaped screen often needs three or four sequential requests, and each one costs real time on cellular before any data moves.}
+        \item \textbf{On a phone the difference is round trips.} \muted{A resource-shaped screen often needs three or four sequential requests, and each one costs time on cellular before any data moves.}
       \end{itemize}
     \end{column}
     \begin{column}{0.44\textwidth}
@@ -80,8 +80,7 @@ GetDashboard(user_id: 42)
   \end{tabular}}
   \end{center}
   \vskip 2mm
-  \begin{takeaway}{Neither one is modern.}
-    gRPC wins where you own both ends of the call. REST wins where you do not.
+  \begin{takeaway}{gRPC fits where you own both ends of the call; REST fits where you do not.}
   \end{takeaway}
   \note{This table is the decision your team makes for project requirement four. Point out that a public, discoverable API is the one case where REST is still the right default.}
 \end{frame}
@@ -138,8 +137,7 @@ protoc -Iproto --dart_out=grpc:lib/gen \
     \item \textbf{A server skeleton.} \muted{UnimplementedTelemetryServer in Go: embed it, then implement one method at a time.}
     \item \textbf{Generated code is build output.} \muted{Never edit it by hand. The pubspec needs the protobuf and grpc packages to compile the result.}
   \end{itemize}
-  \begin{takeaway}{The compiler writes the parsing code,}
-    which is the code you would otherwise get subtly wrong.
+  \begin{takeaway}{The compiler writes the parsing code.}
   \end{takeaway}
   \note{Ask what happens if two developers hand-edit the same generated file differently. The answer is why generated code stays out of manual review.}
 \end{frame}
@@ -185,8 +183,7 @@ func (s *server) SubmitReading(ctx context.Context,
   \end{tabular}}
   \end{center}
   \vskip 2mm
-  \begin{takeaway}{The client branches on \code{e.code},}
-    not on a parsed string. That is the whole point of a status code.
+  \begin{takeaway}{The client branches on \code{e.code}, not on a parsed string.}
   \end{takeaway}
   \note{These codes are the same list on every language's generated client. A Dart catch block and a Go status.Error use the same vocabulary. PermissionDenied is worth a mention too: valid credentials, disallowed call.}
 \end{frame}
@@ -209,7 +206,7 @@ debugPrint(res.storedId);
     \begin{column}{0.37\textwidth}
       {\usebeamerfont{small}
       \begin{itemize}
-        \item \textbf{It looks like a local call.} \muted{That is the point of RPC, and the danger: it is still the network.}
+        \item \textbf{It looks like a local call.} \muted{It is still a network call.}
         \item \textbf{Always set a deadline.} \muted{Without one, a stalled call holds a UI state forever.}
       \end{itemize}}
     \end{column}
@@ -291,7 +288,7 @@ debugPrint('stored: ${sum.accepted}');
   \note{Client streaming is the shape offline sync from Lecture 8 actually needs: drain the outbox in order and get one acknowledgement, not one round trip per row.}
 \end{frame}
 
-\divider{Part 3 · The wire}{What actually travels, and how it changes}[Protobuf's size on the wire, and evolving a schema safely]
+\divider{Part 3 · The wire}{What travels, and how it changes}[Protobuf's size on the wire, and evolving a schema safely]
 
 \begin{frame}[fragile,eyebrow=Wire format]{Why protobuf is smaller, and by how much}
   \begin{columns}[T]
@@ -315,8 +312,8 @@ debugPrint('stored: ${sum.accepted}');
 \end{codeblock}
     \end{column}
   \end{columns}
-  \begin{takeaway}{Quote the mechanism, not a multiplier.}
-    Protobuf is smaller, often by a large factor, but the ratio depends on your schema and data. Measure yours.
+  \begin{takeaway}{The size ratio depends on your schema and data.}
+    Protobuf is smaller, often by a large factor. Measure yours.
   \end{takeaway}
   \note{This slide replaces the temptation to quote a multiplier. Have students serialize one real message both ways and print the byte counts themselves.}
 \end{frame}
@@ -340,13 +337,13 @@ message Reading {
       \muted{Backward: a missing field decodes to its default. Never renumber, reuse, or retype a field.}}
     \end{column}
   \end{columns}
-  \begin{takeaway}{Users do not update.}
-    A year-old build is still on the network, and the wire format is the compatibility contract.
+  \begin{takeaway}{The wire format is the compatibility contract.}
+    A year-old build is still on the network.
   \end{takeaway}
   \note{Ask what happens when an old build, still on someone's phone from last year, receives a message with a field it has never heard of. Nothing happens: it skips the bytes.}
 \end{frame}
 
-\begin{frame}[eyebrow=Call shapes]{Four call shapes, not one}
+\begin{frame}[eyebrow=Call shapes]{Four call shapes}
   {\usebeamerfont{small}\renewcommand\arraystretch{1.0}
   \begin{tabular}{@{}lp{42mm}p{50mm}@{}}
     \toprule
@@ -383,8 +380,7 @@ message Reading {
       \end{itemize}
     \end{column}
   \end{columns}}
-  \begin{takeaway}{One connection, kept warm.}
-    That is most of gRPC's mobile advantage, before a single byte of protobuf is counted.
+  \begin{takeaway}{One warm, reused connection is most of gRPC's mobile advantage.}
   \end{takeaway}
   \note{The head-of-line blocking TCP still causes is the setup for the next slide: QUIC is the fix HTTP/2 could not make on its own. HPACK is HTTP/2's header compression.}
 \end{frame}
@@ -408,7 +404,7 @@ message Reading {
     \end{column}
   \end{columns}}
   \begin{takeaway}{Handshakes and reconnects are the mobile cost.}
-    QUIC addresses both, which is why it belongs in the same argument as the radio tail.
+    QUIC addresses both.
   \end{takeaway}
   \note{Emphasize connection migration: it is the one QUIC feature with no equivalent fix in HTTP/2, because TCP's identity is tied to the IP and port.}
 \end{frame}
@@ -439,7 +435,6 @@ message Reading {
     \end{column}
   \end{columns}}
   \begin{takeaway}{Batch, set a deadline, cancel on dispose.}
-    Three habits that show up as battery life in a review.
   \end{takeaway}
   \note{This is where Lecture 7's background execution material and this lecture meet. A team whose project needs a live gRPC stream while backgrounded will find it does not survive on iOS. Keepalive pings are not free either: they hold the connection open and wake the radio, so tune the interval.}
 \end{frame}
@@ -467,9 +462,6 @@ http.ListenAndServe(":8080", mux)
       \muted{A Flutter web build cannot open a raw gRPC connection.}
     \end{column}
   \end{columns}
-  \begin{takeaway}{The boundary has a shape here too:}
-    what the browser sandbox will let you send is part of your architecture.
-  \end{takeaway}
   \note{If a team's project ships a Flutter web build, this is the slide that tells them why a raw gRPC channel will not compile for that target. Connect ships Go, TypeScript and Swift clients, and a Dart one is only on the roadmap, so a Flutter web client still talks gRPC-Web.}
 \end{frame}
 
@@ -479,8 +471,7 @@ http.ListenAndServe(":8080", mux)
     \cell[\faServer]{Lab 6}{One .proto with a unary call and a server-streaming call, a Go server, and a generated Dart client. The stream updates live, canceling stops it, and a two-second deadline fails a call against a server that sleeps three seconds.}
     \cell[\faIcon{tasks}]{The project}{Requirement four accepts gRPC as one boundary choice: a Go server with a generated Dart client, alongside FFI or a platform channel from Lecture 12.}
   \end{grid}
-  \begin{takeaway}{Everything on this slide, you now have the vocabulary for.}
-    The exact commands and acceptance criteria are in the Lab 6 handout.
+  \begin{takeaway}{The exact commands and acceptance criteria are in the Lab 6 handout.}
   \end{takeaway}
   \note{Preview Lab 6 concretely: a .proto with one unary and one server-streaming call, generated stubs, a running server, a Flutter client, a deadline and a cancel.}
 \end{frame}
@@ -488,9 +479,9 @@ http.ListenAndServe(":8080", mux)
 \begin{frame}[eyebrow=Recap]{Three things to remember}
   \vskip 2mm
   \begin{enumerate}
-    \item A .proto is a contract, not a suggestion. \muted{Field numbers are the wire format; never renumber or reuse one.}
+    \item A .proto is a contract. \muted{Field numbers are the wire format; never renumber or reuse one.}
     \item The shape of a call is part of the contract. \muted{Unary, server streaming, client streaming and bidirectional are four different generated signatures.}
-    \item Deadlines and cancellation make gRPC polite on a phone. \muted{Set one, cancel in dispose, and mind the radio tail.}
+    \item Deadlines and cancellation matter on a phone. \muted{Set one, cancel in dispose, and mind the radio tail.}
   \end{enumerate}
   \vskip 5mm
   \kv{Further reading}{\link{https://grpc.io/docs/}{grpc.io/docs} \textperiodcentered\ \link{https://protobuf.dev/programming-guides/encoding/}{protobuf.dev/encoding} \textperiodcentered\ \link{https://www.rfc-editor.org/rfc/rfc9114}{RFC 9114 (HTTP/3)}}

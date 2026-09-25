@@ -28,13 +28,12 @@
   \vskip 2mm
   \begin{grid}[3]
     \cell[\faIcon{play}]{Foreground}{On screen. A full CPU share, the network, and every permission the user granted.}
-    \cell[\faIcon{pause}]{Background}{Off screen but still alive for a short while. The clock is running.}
+    \cell[\faIcon{pause}]{Background}{Off screen but still alive for a short while.}
     \cell[\faIcon{ban}]{Not running}{The process is gone. Your objects, timers, sockets and subscriptions went with it.}
   \end{grid}
   \vskip 3mm
   \muted{Neither platform allows an ordinary app to keep running because it would like to. Background execution is granted for a declared reason, for a limited time, and it can be withdrawn.}
-  \begin{takeaway}{Write for the third box.}
-    Any state that only lives in memory is state you are about to lose. Persist first, then continue.
+  \begin{takeaway}{Persist state before the process is killed.}
   \end{takeaway}
   \note{Open by asking who has shipped an app that stopped syncing overnight. This is the lecture that explains why. Stress that the third box is the normal case, not the exception: on a phone with many apps installed, being killed is routine.}
 \end{frame}
@@ -115,8 +114,8 @@ void didChangeAppLifecycleState(
       \muted{Treat \code{paused} as the last line of your program.}
     \end{column}
   \end{columns}
-  \begin{takeaway}{Foreground triggers are the contract.}
-    A resume handler and a connectivity handler will do more real syncing than any background scheduler.
+  \begin{takeaway}{Sync on resume and on regaining connectivity.}
+    A resume handler and a connectivity handler will do more syncing than any background scheduler.
   \end{takeaway}
   \note{This callback is the single most useful piece of the lecture for the project. Show that resuming and regaining connectivity are the two triggers that always fire, and that everything in the next three sections is an optimization on top of them.}
 \end{frame}
@@ -139,7 +138,7 @@ void didChangeAppLifecycleState(
     \end{column}
   \end{columns}
   \begin{takeaway}{"Every 15 minutes" means "no sooner than 15 minutes".}
-    Under Doze the gap between two runs of a periodic job can be hours. Design for that, do not fight it.
+    Under Doze the gap between two runs of a periodic job can be hours.
   \end{takeaway}
   \note{Ask the room what happens to a periodic Dart timer while the phone is in a drawer overnight. On Android it is deferred or the process is gone, and on iOS the process is suspended. A timer is not a scheduler.}
 \end{frame}
@@ -165,10 +164,10 @@ void didChangeAppLifecycleState(
   \note{This is the honest answer to why a background task runs on your phone but not on a tester's phone. Their bucket is different. Tell students to check it with the adb command on the measuring slide before filing a bug against a plugin.}
 \end{frame}
 
-\begin{frame}[eyebrow=Android]{Foreground services: the honest way to run}
+\begin{frame}[eyebrow=Android]{Foreground services}
   \vskip 2mm
   \begin{grid}[3]
-    \cell[\faIcon{bell}]{A visible notification}{The user can see the service and stop it. That visibility is the price of the CPU time.}
+    \cell[\faIcon{bell}]{A visible notification}{The user can see the service and stop it.}
     \cell[\faIcon{tags}]{A declared type}{Since Android 14 every one needs a type in the manifest with a matching permission: location, data sync, connected device, media.}
     \cell[\faIcon{lock}]{Limited entry}{You generally cannot start one while the app is in the background. Start it from a screen the user is on.}
   \end{grid}
@@ -216,7 +215,7 @@ void didChangeAppLifecycleState(
       \end{warning}
     \end{column}
   \end{columns}
-  \begin{takeaway}{Ask one question: would the user notice a delay of ten minutes?}
+  \begin{takeaway}{Would the user notice a delay of ten minutes?}
     If the answer is no, an exact alarm is the wrong tool and it will be rejected at review.
   \end{takeaway}
   \note{Give the concrete example: a medication reminder at eight in the morning is an exact alarm, a step count upload is not. Students reach for alarms because they are the only API that looks precise, and that instinct is what these restrictions exist to correct.}
@@ -229,7 +228,7 @@ void didChangeAppLifecycleState(
     \cell[\faIcon{gavel}]{What it costs}{Store policy allows the prompt only for a narrow set of app categories. Asking without one risks the listing.}
     \cell[\faIcon{times-circle}]{Why it fails anyway}{The user can revoke it, many vendors add their own killer on top, and it does not fix a design that wakes too often.}
   \end{grid}
-  \begin{takeaway}{An exemption is a patch over a design problem.}
+  \begin{takeaway}{Do not rely on a battery exemption.}
     If the app only works when it is exempt, the work is scheduled wrong. Fix the schedule instead, and test on a device from a vendor that ships extra restrictions.
   \end{takeaway}
   \note{Students will find this permission on a forum as the fix for every background problem. Say plainly that it is the wrong first move: it hurts the user, it is policed by the store, and vendor customizations mean it does not even work everywhere.}
@@ -329,7 +328,7 @@ void didChangeAppLifecycleState(
   \end{tabular}}
   \vskip 2mm
   \muted{One abstraction in Dart can cover both shapes. The guarantees do not match.}
-  \begin{takeaway}{Write one interface, two expectations.}
+  \begin{takeaway}{The guarantees differ by platform.}
     Android promises the work happens eventually. iOS only promises to offer the chance.
   \end{takeaway}
   \note{Have the students copy this table. It is the map they will use in Lab 4 and in the project. Emphasize the last row: iOS has no equivalent of an exact alarm, so a scheduled reminder is a local notification and nothing else.}
@@ -393,7 +392,7 @@ Workmanager().registerPeriodicTask('sync',
       \end{hint}
     \end{column}
   \end{columns}
-  \begin{takeaway}{Pick by the shape of the work, not by convenience.}
+  \begin{takeaway}{Pick the tool by the shape of the work.}
     Periodic and deferrable goes to workmanager. Continuous and visible goes to a foreground service.
   \end{takeaway}
   \note{For the project, a team streaming MQTT while the screen is off needs this on Android and needs a different story on iOS. Tell them to decide that story early rather than discovering it during the demo. Check the package first: it has had no release since late 2024, so it may need a pinned Gradle or Android SDK version to build.}
@@ -466,8 +465,8 @@ FirebaseMessaging
 \begin{frame}[embedded,eyebrow=Energy]{Where the milliamp-hours actually go}
   \vskip 2mm
   \begin{grid}[3]
-    \cell[\faIcon{mobile-alt}]{The screen}{On an OLED panel a black pixel is unlit, so dark mode is a real saving. On an LCD the backlight is on regardless.}
-    \cell[\faIcon{microchip}]{CPU and GPU}{Inefficient code raises load, load raises temperature, and the system throttles the chip. The energy problem returns as a speed problem.}
+    \cell[\faIcon{mobile-alt}]{The screen}{On an OLED panel a black pixel is unlit, so dark mode saves energy. On an LCD the backlight is on regardless.}
+    \cell[\faIcon{microchip}]{CPU and GPU}{Inefficient code raises load, load raises temperature, and the system throttles the chip.}
     \cell[\faIcon{satellite-dish}]{The radio}{The most expensive component per byte, and the one that keeps drawing power after your request has finished.}
   \end{grid}
   \begin{takeaway}{Race to idle.}
@@ -542,8 +541,8 @@ adb bugreport report.zip
       \lead{iOS: the energy gauge}{The debug navigator rates energy impact live, and Instruments has an energy template. MetricKit reports the same categories from real users.}
     \end{column}
   \end{columns}
-  \begin{takeaway}{One measured number beats an argument.}
-    The project asks for exactly that: a claim you measured, with the method written down.
+  \begin{takeaway}{Measure one number for the project.}
+    The project asks for a claim you measured, with the method written down.
   \end{takeaway}
   \note{Demonstrate the force-idle command if there is a device on the desk. It turns a bug that takes a night to reproduce into one that takes ten seconds. The standby bucket command answers most reports of the form "it works on my phone".}
 \end{frame}
@@ -566,9 +565,9 @@ adb bugreport report.zip
 \begin{frame}[eyebrow=Recap]{Three things to remember}
   \vskip 2mm
   \begin{enumerate}
-    \item Background execution is granted, not owned. \muted{Declare a reason, accept a budget, and expect to be killed.}
-    \item Foreground triggers are the contract, background work is a bonus. \muted{Sync on resume and on reconnect first.}
-    \item The radio is the battery budget. \muted{Batch, defer, and prefer one wake to twenty small ones.}
+    \item Background execution is granted by the system. \muted{Declare a reason, accept a budget, and expect to be killed.}
+    \item Foreground triggers do most of the syncing. \muted{Sync on resume and on reconnect first.}
+    \item The radio dominates the battery drain. \muted{Batch, defer, and prefer one wake to twenty small ones.}
   \end{enumerate}
   \vskip 4mm
   \kv{Further reading}{\link{https://developer.android.com/training/monitoring-device-state/doze-standby}{Doze and App Standby} · \link{https://developer.android.com/topic/libraries/architecture/workmanager}{WorkManager} · \link{https://developer.apple.com/documentation/backgroundtasks}{BackgroundTasks} · \link{https://pub.dev/packages/workmanager}{pub.dev/packages/workmanager}}

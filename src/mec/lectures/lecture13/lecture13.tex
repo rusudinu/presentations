@@ -17,8 +17,8 @@
 
 \objectivesframe{
   \cell[\faIcon{tachometer-alt}]{Spend the frame budget}{One frame is 1 \(\div\) refresh rate. See where Impeller and the raster thread spend it.}
-  \cell[\faLayerGroup]{Read the three trees}{Widget, Element and RenderObject, and how reconciliation decides what a rebuild actually touches.}
-  \cell[\faBolt]{Cut real costs}{const constructors, builder lists, and when an offscreen buffer or a decoded image is the actual problem.}
+  \cell[\faLayerGroup]{Read the three trees}{Widget, Element and RenderObject, and how reconciliation decides what a rebuild touches.}
+  \cell[\faBolt]{Cut costs}{const constructors, builder lists, and when an offscreen buffer or a decoded image is the problem.}
   \cell[\faIcon{search}]{Profile before you fix}{Read the DevTools frame chart, tell a UI-thread problem from a raster-thread one, and fix a real list screen.}
 }
 
@@ -55,7 +55,7 @@
     Hot  & process and UI both alive, just brought to the foreground & 1.5 s \\
     \bottomrule
   \end{tabular}}
-  \begin{takeaway}{Measure the one your users actually hit.}
+  \begin{takeaway}{Measure the one your users hit.}
     Cold start is what a store reviewer sees once. Hot start is what a daily user sees ten times a day.
   \end{takeaway}
   \note{These thresholds are Android vitals' bad-behavior flags, not engineering targets. Do not quote a "good" number you cannot source; measure your own app and track the trend across releases instead.}
@@ -86,7 +86,7 @@
   \begin{columns}[T]
     \begin{column}{0.56\textwidth}
       \begin{itemize}
-        \item Flutter does not draw the platform's native widgets. It ships a renderer and paints the entire surface itself, so every rendering problem in it is Flutter's, and yours.
+        \item Flutter does not draw the platform's native widgets. It ships a renderer and paints the entire surface itself.
         \item The renderer is \textbf{Impeller}, not Skia. iOS runs Impeller only. Android enables it by default on API 29 and later, and falls back to the legacy OpenGL renderer below that. Flutter on the web still draws with Skia.
       \end{itemize}
     \end{column}
@@ -115,10 +115,10 @@
 \end{frame}
 
 \begin{frame}[eyebrow=Rendering]{Three trees, three very different costs}
-  \muted{ADMD Lectures 3 and 5 introduced the three trees at the developer level. Here is what each one actually costs to touch.}
+  \muted{ADMD Lectures 3 and 5 introduced the three trees at the developer level. Here is what each one costs to touch.}
   \vskip 3mm
   \begin{grid}[3]
-    \cell[\faIcon{clone}]{Widget tree}{The blueprint. Immutable, no behavior. Allocating one is a bump-pointer write: constant time, genuinely cheap.}
+    \cell[\faIcon{clone}]{Widget tree}{The blueprint. Immutable, no behavior. Allocating one is a bump-pointer write: constant time.}
     \cell[\faIcon{sitemap}]{Element tree}{The mediator. Persists across frames, holds your State, decides if the old render object can be kept.}
     \cell[\faIcon{th}]{RenderObject tree}{The machinery. Layout, paint, hit-testing. Expensive to touch, kept alive as long as possible.}
   \end{grid}
@@ -142,8 +142,7 @@
     holds & no mutable data of its own & a State object, kept across rebuilds \\
     \bottomrule
   \end{tabular}}
-  \begin{takeaway}{Stateless is not static.}
-    It just does not own the state that changes. Something above it still decides when it runs.
+  \begin{takeaway}{Something above a StatelessWidget decides when it rebuilds.}
   \end{takeaway}
   \note{This corrects a persistent wrong belief. Ask the room to picture a StatelessWidget as a child of a widget whose parent rebuilds every second: it rebuilds every second too, with nothing "stateless" about the frequency.}
 \end{frame}
@@ -165,7 +164,7 @@ bool canUpdate(Widget a, Widget b) {
     \begin{column}{0.40\textwidth}
       \begin{itemize}
         \item The element tree walks the new children in order and asks this once per child: linear, \(O(N)\) in the child count.
-        \item Keeping types and keys stable is the whole game: it keeps the answer "true".
+        \item Keeping types and keys stable keeps the answer "true".
       \end{itemize}
     \end{column}
   \end{columns}
@@ -175,7 +174,7 @@ bool canUpdate(Widget a, Widget b) {
   \note{This one function is worth writing on the board. Everything on the next few slides, keys, const, list identity, follows from this single comparison running once per child, every rebuild.}
 \end{frame}
 
-\begin{frame}[eyebrow=Rendering]{What setState actually does}
+\begin{frame}[eyebrow=Rendering]{What setState does}
   \begin{columns}[T]
     \begin{column}{0.56\textwidth}
       \begin{itemize}
@@ -195,7 +194,6 @@ bool canUpdate(Widget a, Widget b) {
     \end{column}
   \end{columns}
   \begin{takeaway}{Only dirty subtrees rebuild.}
-    That is the whole performance model this lecture builds on.
   \end{takeaway}
   \note{Pedantic but worth saying: the mutation is what matters, setState only schedules the rebuild. Doing the mutation inside the callback is a convention that keeps the two together, not a requirement of the language.}
 \end{frame}
@@ -241,12 +239,12 @@ for (final t in todos)
     \end{column}
   \end{columns}
   \begin{takeaway}{Keys are cheap. GlobalKeys are not.}
-    Use a GlobalKey when you actually need to reparent or reach a State from outside it, not as a convenient handle to a widget.
+    Use a GlobalKey when you need to reparent or reach a State from outside it, not as a convenient handle to a widget.
   \end{takeaway}
   \note{Ask for an example from a student's own project: the usual answer is "to get a form's validation state from a button outside the form", which is exactly the case a GlobalKey exists for.}
 \end{frame}
 
-\begin{frame}[eyebrow=Rendering]{What each operation actually costs}
+\begin{frame}[eyebrow=Rendering]{What each operation costs}
   \vskip 1mm
   {\usebeamerfont{small}\begin{tabular}{@{}p{36mm}p{24mm}p{64mm}@{}}
     \toprule
@@ -259,7 +257,7 @@ for (final t in todos)
     \bottomrule
   \end{tabular}}
   \begin{takeaway}{Layout is one depth-first pass: constraints go down, sizes come up.}
-    A relayout boundary stops a dirty flag from propagating upward. A fixed-size box around a busy widget is a real optimization.
+    A relayout boundary stops a dirty flag from propagating upward. A fixed-size box around a busy widget is an optimization.
   \end{takeaway}
   \note{Say the word out loud: O(N squared) is quadratic, not exponential. Exponential would be 2 to the N. The distinction matters the moment a student reasons about scale on the exam.}
 \end{frame}
@@ -290,7 +288,7 @@ const Padding(
       \end{itemize}
     \end{column}
   \end{columns}
-  \begin{takeaway}{This is the one optimization that costs nothing but a keyword.}
+  \begin{takeaway}{Use const constructors wherever the arguments allow it.}
     Turn on the \code{prefer\_const\_constructors} lint and let the IDE add them for you.
   \end{takeaway}
   \note{The mechanism is worth spelling out: identical(old, new) is true for two const instances, so the element returns without descending at all. Nothing below a skipped const subtree is even visited.}
@@ -320,8 +318,7 @@ ListView.builder(
       \end{itemize}
     \end{column}
   \end{columns}
-  \begin{takeaway}{The bad version is not slow, it is unbounded.}
-    Works on ten test rows, fails on a user's ten thousand.
+  \begin{takeaway}{The eager version's cost grows with the number of rows.}
   \end{takeaway}
   \note{This connects to Lecture 2: heavy parsing of the data feeding a list, CSV or JSON, never belongs on the UI isolate either. compute() moves it off, ListView.builder keeps the build itself cheap.}
 \end{frame}
@@ -365,7 +362,7 @@ ListView.builder(
     \end{column}
   \end{columns}
   \begin{takeaway}{A layer is a deliberate trade: less repaint spread, for more video memory.}
-    Reach for it once you have profiled a real repaint problem, not by default.
+    Reach for it once you have profiled a repaint problem, not by default.
   \end{takeaway}
   \note{If a student asks how to check the effect, DevTools has a "Highlight Repaints" overlay that flashes any region that repaints, which makes an unwanted spread visible immediately.}
 \end{frame}
@@ -374,7 +371,7 @@ ListView.builder(
   \begin{itemize}
     \item Decoding an image allocates a full bitmap at its native pixel dimensions, not at the size it is displayed on screen.
     \item A large photo decoded to fill a small avatar still allocates the full decoded bitmap first, then Flutter scales it down for display.
-    \item A screen with many such images, a photo grid or a long avatar list, can allocate far more memory than the screen actually shows, and force needless garbage collection.
+    \item A screen with many such images, a photo grid or a long avatar list, can allocate far more memory than the screen shows, and force needless garbage collection.
   \end{itemize}
   \begin{takeaway}{The source resolution decides the memory cost, not the layout size.}
     A 4000-pixel-wide photo in a 40-pixel avatar still pays for 4000 pixels of decoded bitmap, unless you tell Flutter otherwise.
@@ -423,7 +420,6 @@ flutter run --profile        # on a real device
     \item Run it on a real device. A simulator has different GPU and thermal behavior, so its numbers do not transfer.
   \end{itemize}
   \begin{takeaway}{Profile before you change anything.}
-    A guess about what is slow is usually wrong, and always unverifiable without a trace.
   \end{takeaway}
   \note{Emphasize this every time a student proposes a fix without a trace: ask what the DevTools frame chart showed before they made the change. Usually nobody looked yet.}
 \end{frame}
@@ -432,10 +428,10 @@ flutter run --profile        # on a real device
   \begin{itemize}
     \item The Performance view's timeline draws one bar per frame, split into a UI-thread segment and a raster-thread segment.
     \item A bar taller than the budget line, 8.3 ms at 120 Hz, marks a janky frame. The timeline scrolls as the app runs, so a scroll gesture that jumps the line is easy to spot.
-    \item Click a bar to expand it into a flame chart of the actual calls that ran during that frame: build, layout, paint, and everything beneath them.
+    \item Click a bar to expand it into a flame chart of the calls that ran during that frame: build, layout, paint, and everything beneath them.
   \end{itemize}
-  \begin{takeaway}{The shape of the bar is the diagnosis.}
-    A tall, wide band across many frames is a systemic problem. One isolated tall bar is usually a single expensive event, like a navigation.
+  \begin{takeaway}{A tall, wide band across many frames is a systemic problem.}
+    One isolated tall bar is usually a single expensive event, like a navigation.
   \end{takeaway}
   \note{Turn on "Track widget builds" in the same view before demoing this: it highlights exactly which widgets rebuilt for the selected frame, which turns "something rebuilt" into "this specific widget rebuilt".}
 \end{frame}
@@ -487,7 +483,7 @@ ListView(children: users.map((u) =>
   \note{This is a composite of realistic mistakes, not one bug: eager list construction, an unnecessary Opacity wrapper, and undersized decoding. Ask the room to name the fix for each before advancing.}
 \end{frame}
 
-\begin{frame}[fragile,eyebrow=Profiling]{After: the fix, and what actually moved}
+\begin{frame}[fragile,eyebrow=Profiling]{After: the fix, and what moved}
   \begin{columns}[T]
     \begin{column}{0.52\textwidth}
 \begin{dart}

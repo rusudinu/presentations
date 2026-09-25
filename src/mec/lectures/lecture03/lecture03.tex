@@ -37,7 +37,6 @@
     \bottomrule
   \end{tabular}
   \begin{takeaway}{This is the far right of the device spectrum from Lecture 1.}
-    Every habit from that lecture applies, with no headroom left to absorb a mistake.
   \end{takeaway}
   \note{Do not reteach the spectrum, the room met it in week 1. The point here is the size of the step: roughly ten thousand times less memory and a thousand times less power. Ask what a Flutter app would have to give up to fit in the right column.}
 \end{frame}
@@ -81,7 +80,7 @@
     \cell[\faStream]{The stack is small}{Deep recursion and large local buffers corrupt memory silently.}
     \cell[\faCode]{Buffers, not strings}{Building strings allocates. Reuse one byte slice and write into it.}
     \cell[\faIcon{compress-arrows-alt}]{Parse incrementally}{Decoding a whole JSON document needs it all in RAM. Read field by field.}
-    \cell[\faTrash]{Collection still happens}{The collector is small and simple. Allocating less is the only real fix.}
+    \cell[\faTrash]{Collection still happens}{The collector is small and simple. Allocating less is the only fix.}
   \end{grid}
   \note{This is the slide students ignore until Lab 2 fails. Ask them how large a single 4 KB HTTP response buffer is as a fraction of the RAM. Then point out that the network stack, the radio driver and their own code all live in the same block.}
 \end{frame}
@@ -107,7 +106,7 @@ func main() {
 \end{golang}
     \end{column}
     \begin{column}{0.41\textwidth}
-      \lead{There is nothing to return to.}{If \code{main} exits, the board stops or resets. The loop is the program.}
+      \lead{There is nothing to return to.}{If \code{main} exits, the board stops or resets.}
       \muted{Every step in the loop delays every other step. A sensor read that blocks for 100 ms is 100 ms in which nothing else happens.}
       \begin{hint}[Rule of thumb]
         A super loop is right while one slow step is still acceptable.
@@ -236,7 +235,7 @@ volts := float32(raw) * 3.3 / 65535.0
     \end{column}
     \begin{column}{0.41\textwidth}
       \lead{Wiring, in words.}{A resistive sensor forms a divider between the supply and ground. Its middle point goes to the ADC pin.}
-      \muted{Readings jitter. Average several samples, or you will show noise and call it a measurement.}
+      \muted{Readings jitter. Average several samples.}
       \begin{hint}[Reference]
         The number means nothing until you know the reference voltage.
       \end{hint}
@@ -407,7 +406,7 @@ func main() {
     \end{column}
     \begin{column}{0.41\textwidth}
       \lead{One API, every board.}{\code{machine.LED} and \code{machine.ADC0} are aliases a board file defines. Where a target defines neither, name the pin yourself and the rest is unchanged.}
-      \muted{\code{println} writes to the serial port. That is why the monitor is your debugger, and why an LED in the loop is the cheapest proof that the loop still runs.}
+      \muted{\code{println} writes to the serial port. That is why the monitor is your debugger. An LED toggled in the loop shows that the loop still runs.}
     \end{column}
   \end{columns}
   \note{This is the shape of every program the room will write this semester: configure, then loop, then sleep. Point out that there is no framework calling their code, which is the opposite of Flutter.}
@@ -462,8 +461,8 @@ println("seq:", seq, "raw:", raw)
       \muted{A stepping debugger needs a probe over SWD or JTAG. Not what the lab uses.}
     \end{column}
   \end{columns}
-  \begin{takeaway}{Every embedded bug looks the same at first: the board went quiet.}
-    A sequence number in every line tells you whether it stopped, reset, or lost its connection.
+  \begin{takeaway}{Print a sequence number in every line.}
+    It tells you whether the board stopped, reset, or lost its connection.
   \end{takeaway}
   \note{Tell the story of a board that reset every thirty seconds because of a watchdog nobody fed, and how the sequence number restarting at zero was the only clue. That is the habit worth installing today.}
 \end{frame}
@@ -521,9 +520,8 @@ for r := range readings {
     \bignum{duty}{cycle, not clock speed, decides battery life}
   \end{grid}
   \vskip 5mm
-  \muted{Average current is roughly the active current times the active time, plus the sleep current times the sleep time, all divided by the period. Shorten the active window or lengthen the period, and everything else is noise.}
-  \begin{takeaway}{The question is not how fast the code runs.}
-    It is what fraction of the time the radio is powered.
+  \muted{Average current is roughly the active current times the active time, plus the sleep current times the sleep time, all divided by the period. Shorten the active window or lengthen the period.}
+  \begin{takeaway}{Battery life depends on the fraction of time the radio is powered.}
   \end{takeaway}
   \note{On an ESP32-class part the datasheet spread between deep sleep and Wi-Fi transmit is roughly four orders of magnitude: microamps against hundreds of milliamps. Ask the room to guess which line of their program costs the most energy. It is the connect, not the computation.}
 \end{frame}
@@ -565,12 +563,11 @@ for {
 \end{golang}
     \end{column}
     \begin{column}{0.43\textwidth}
-      \lead{Staying connected loses to waking up.}{A keep-alive powers the radio forever to save a handshake you pay once.}
+      \lead{Reconnecting costs less than staying connected.}{A keep-alive powers the radio forever to save a handshake you pay once.}
       \muted{Batch readings before you spend a connection. Six in one publish cost one sixth of the radio time. Accept the reconnect unless commands must arrive fast.}
     \end{column}
   \end{columns}
   \begin{takeaway}{This is the same optimization as batching network calls on a phone.}
-    There it saves an afternoon. On a coin cell it decides between a week and a year.
   \end{takeaway}
   \note{The functions here are the student's own: the shape is the lesson, not the API. Lecture 4 fills in what publish actually does over MQTT. Ask what breaks if the device sleeps for thirty minutes instead of thirty seconds.}
 \end{frame}

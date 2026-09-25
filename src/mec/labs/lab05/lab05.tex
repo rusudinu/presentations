@@ -258,8 +258,7 @@ ListTile(
   onTap: () => notesDao.clearFlag(note.id),
 )
 \end{dart}
-  \begin{takeaway}{The marker is the whole UI cost of this rule.}
-    No merge screen, no dialog: one boolean and one badge tell the user their edit did not survive.
+  \begin{takeaway}{One boolean and one badge tell the user their edit did not survive.}
   \end{takeaway}
 \end{frame}
 
@@ -277,7 +276,7 @@ ListTile(
     \begin{column}{0.48\textwidth}
       \kv{In the repository}{}
       \muted{The Drift schema, the sync engine, and \code{server/lab5/main.go}, with a README naming your conflict rule.\par\vskip 1.5mm
-      One commit per task. A screenshot of both devices showing the same value is the cheapest proof you can leave.}
+      One commit per task. A screenshot of both devices showing the same value.}
     \end{column}
   \end{columns}
 \end{frame}

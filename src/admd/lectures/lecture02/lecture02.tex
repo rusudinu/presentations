@@ -41,8 +41,7 @@ System.out.println(name.length());
       \muted{Non-nullable by default arrived later, and separately, in Swift, Kotlin, Dart, and TypeScript's strict mode.}
     \end{column}
   \end{columns}
-  \begin{takeaway}{Null is not a value problem, it is a type problem.}
-    If the type cannot say "maybe absent", the compiler cannot help you.
+  \begin{takeaway}{The compiler can only help if the type says a value may be absent.}
   \end{takeaway}
   \note{Ask the room what a null pointer exception actually is, in their own words. Most have hit one. Point out this bug is old, well understood, and largely a solved problem in the languages this course uses.}
 \end{frame}
@@ -55,7 +54,7 @@ System.out.println(name.length());
     \cell[\faLock]{Security vulnerabilities}{A hard-coded key, a missing check, insecure storage. A fully type-checked app can still be completely insecure.}
   \end{grid}
   \vskip 4mm
-  \begin{takeaway}{The one real overlap is memory safety.}
+  \begin{takeaway}{The one overlap is memory safety.}
     Dart, Kotlin and Swift have no manual pointer arithmetic, so the classic exploitable bugs of C and C++, buffer overflows and use-after-free, cannot happen there. Security itself stays a design and review discipline; Lecture 10 comes back to it.
   \end{takeaway}
   \note{This slide exists because students conflate a type-safe language with a secure app. Give one concrete example of each column if the room looks unconvinced: a typo caught at compile time, a null from a flaky API, and a hard-coded API key in a public repository.}
@@ -81,7 +80,7 @@ nickname ??= 'anon';
 \end{dart}
     \end{column}
     \begin{column}{0.40\textwidth}
-      \lead{Five symbols, and that is most of it}{}
+      \lead{Five symbols}{}
       \begin{itemize}
         \item \code{?} the type may hold null
         \item \code{?.} reads or calls only if not null
@@ -110,9 +109,9 @@ String greet(String? name) {
 \end{dart}
     \end{column}
     \begin{column}{0.40\textwidth}
-      \lead{Sound means the guarantee holds}{A non-nullable Dart variable can never hold null at run time. That is a guarantee, not a strong tendency.}
+      \lead{Sound means the guarantee holds}{A non-nullable Dart variable can never hold null at run time.}
       \vskip 2mm
-      \muted{So the compiler stops emitting null checks for it. Sound null safety makes release builds smaller and faster, not only safer.}
+      \muted{So the compiler stops emitting null checks for it. Sound null safety also makes release builds smaller and faster.}
     \end{column}
   \end{columns}
   \note{Demo opportunity: delete the null check inside greet and show the analyzer error in the editor, then add ! to make it compile anyway. The lesson is that ! moves the failure from build time to a user's phone.}
@@ -175,7 +174,7 @@ fun notify(id: Int) {
     \end{column}
   \end{columns}
   \vskip 3mm
-  \muted{Operators map almost one to one: \code{?.}, \code{??} (Kotlin: \code{?:}), \code{!} (Kotlin: \code{!!}), \code{late final} (Kotlin: \code{lateinit var}, \code{var} only). Learn it once: it transfers straight to Kotlin, and to Swift and Rust after that.}
+  \muted{Operators map almost one to one: \code{?.}, \code{??} (Kotlin: \code{?:}), \code{!} (Kotlin: \code{!!}), \code{late final} (Kotlin: \code{lateinit var}, \code{var} only).}
   \note{This is the slide that pays off for the IoT track students who also write Kotlin. Ask if anyone has hit a NullPointerException in Kotlin interop code; the answer is usually from unannotated Java.}
 \end{frame}
 
@@ -232,9 +231,9 @@ String card({
 \end{dart}
     \end{column}
     \begin{column}{0.40\textwidth}
-      \lead{Why named parameters matter}{Every Flutter widget constructor uses them. A call site reads as prose, not as a row of anonymous arguments.}
+      \lead{Why named parameters matter}{Every Flutter widget constructor uses them.}
       \vskip 2mm
-      \muted{Functions are first-class values: pass them, store them, return them. That is what a callback like \code{onPressed} really is.}
+      \muted{Functions are first-class values: pass them, store them, return them. That is what a callback like \code{onPressed} is.}
     \end{column}
   \end{columns}
   \note{Have students read card's call site out loud before showing the definition. Named parameters are the single biggest readability win Flutter borrows from Dart.}
@@ -335,7 +334,7 @@ topics.where((t) => t.length > 4)
     \begin{column}{0.40\textwidth}
       \lead{Where you will see this}{Flutter builds a list of children conditionally this way, without a helper function and without a temporary list.}
       \vskip 2mm
-      \muted{\code{for}, \code{if} and \code{while} read exactly like Kotlin and Java. Nothing new to learn there.}
+      \muted{\code{for}, \code{if} and \code{while} read like Kotlin and Java.}
     \end{column}
   \end{columns}
   \note{Collection-if and collection-for feel like a small trick the first time you see them, then turn up in nearly every widget build method. Worth a second example if the room looks unsure.}
@@ -413,8 +412,6 @@ Future<String> fetchName(); // arrives later
     Typed list literal & \code{<String>['a', 'b']} \\
     \bottomrule
   \end{tabular}
-  \vskip 3mm
-  \muted{Six lines, and most of the Dart you will read this semester is already here.}
   \note{Use this as a one-slide anchor before moving to Kotlin. Point at each row and ask a student to say out loud what it does, without looking at the previous slides.}
 \end{frame}
 
@@ -565,7 +562,7 @@ flutter doctor
 \end{shell}
     \end{column}
     \begin{column}{0.40\textwidth}
-      \lead{Run it first, always}{\code{flutter doctor} names the exact missing piece. Read that line before asking for help.}
+      \lead{Run it first, always}{\code{flutter doctor} names the missing piece. Read that line before asking for help.}
       \vskip 2mm
       \muted{An Android emulator is enough for every lab. A real device is faster, and the only way to test sensors.}
       \vskip 2mm

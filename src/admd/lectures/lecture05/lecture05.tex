@@ -17,7 +17,7 @@
 \objectivesframe{
   \cell[\faBug]{Debug on purpose}{Launch and attach DevTools, read the inspector, set breakpoints and step through Dart.}
   \cell[\faLayerGroup]{The three trees}{Widget, Element and RenderObject, and what setState actually triggers.}
-  \cell[\faToggleOn]{Stateless vs Stateful}{When a widget really needs a State object, and when it genuinely does not.}
+  \cell[\faToggleOn]{Stateless vs Stateful}{When a widget needs a State object, and when it does not.}
   \cell[\faIcon{share-alt}]{Sharing state}{Lifting state up, InheritedWidget, and why value equality decides rebuilds.}
 }
 
@@ -98,7 +98,7 @@ dart devtools   # already running? paste that VM Service URI
   \end{itemize}
   \vskip 3mm
   \begin{takeaway}{You cannot reason about layout from the source alone.}
-    The Flex explorer shows the constraints your widget actually received, not the ones you assumed.
+    The Flex explorer shows the constraints your widget received.
   \end{takeaway}
   \note{Demo Select Widget Mode live if a device is attached. Ask the room what the yellow-and-black stripes mean; most have seen them without knowing the name.}
 \end{frame}
@@ -106,7 +106,7 @@ dart devtools   # already running? paste that VM Service URI
 \begin{frame}[eyebrow=Debugging]{Counting rebuilds, highlighting repaints}
   \begin{columns}[T]
     \begin{column}{0.56\textwidth}
-      \lead{Rebuild Stats}{On the Performance view. It counts how many times each widget rebuilt. That count is the measurement this lecture is about.}
+      \lead{Rebuild Stats}{On the Performance view. It counts how many times each widget rebuilt.}
       \muted{Highlight repaints, in the Inspector, wraps every layer in a rotating color. Anything flashing constantly is repainting when it should not.}
     \end{column}
     \begin{column}{0.40\textwidth}
@@ -138,7 +138,7 @@ dart devtools   # already running? paste that VM Service URI
   \vskip 2mm
   \begin{itemize}
     \item The performance overlay draws two bar charts: the UI thread, which runs your Dart build and layout, and the raster thread, where Impeller turns the layer tree into GPU commands. A bar that crosses the line is a dropped frame.
-    \item The usual causes sit squarely in this lecture: setState called too high in the tree, expensive work inside build, and a missing const.
+    \item The usual causes are covered in this lecture: setState called too high in the tree, expensive work inside build, and a missing const.
   \end{itemize}
   \vskip 3mm
   \begin{takeaway}{Debug-mode timings are meaningless.}
@@ -187,7 +187,6 @@ dart devtools   # already running? paste that VM Service URI
   \end{tabular}}
   \vskip 4mm
   \begin{takeaway}{Most state is ephemeral.}
-    If setState in one widget is enough, that is the correct answer, not a beginner's answer.
   \end{takeaway}
   \note{Ask for an example of app state from the todo lab: the signed-in user once auth arrives, or the list of todos itself once it is shared across two screens.}
 \end{frame}
@@ -278,12 +277,12 @@ ListView(
     Mutable state & none of its own & a separate, long-lived State object \\
     build() runs & on insert, and on every parent rebuild & all of that, plus on every setState \\
     Lifecycle hooks & none & initState, didUpdateWidget, dispose \\
-    Genuinely fits & a label, an icon, a button that only calls a callback & a text field, an animation, a timer \\
+    Fits & a label, an icon, a button that only calls a callback & a text field, an animation, a timer \\
     \bottomrule
   \end{tabular}}
   \vskip 4mm
   \begin{takeaway}{A StatelessWidget does not "build once".}
-    It rebuilds whenever its parent does. It simply holds no mutable state of its own.
+    It rebuilds whenever its parent does. It holds no mutable state of its own.
   \end{takeaway}
   \note{Two corrections from older material. First, StatelessWidget does rebuild, with its parent. Second, a button is usually stateless: the state lives in whatever its callback changes, not in the button.}
 \end{frame}
@@ -341,13 +340,13 @@ class _ParentState extends State<Parent> {
 \begin{frame}[eyebrow=Sharing state]{Lifting state up: the cost}
   \vskip 3mm
   \begin{itemize}
-    \item The children stay reusable and know nothing about each other. That is the whole benefit.
+    \item The children stay reusable and know nothing about each other.
     \item Lift too far and you get prop drilling: a value threaded through five widgets that do not care about it, just to reach the sixth.
-    \item That is precisely the problem InheritedWidget solves.
+    \item That is the problem InheritedWidget solves.
   \end{itemize}
   \vskip 4mm
   \begin{takeaway}{Lifting state up is the default answer.}
-    Reach for a package only when the drilling becomes a real problem.
+    Reach for a package only when the drilling becomes a problem.
   \end{takeaway}
   \note{Ask the room to imagine a five-screen-deep widget just to pass a signed-in user object down. That mental image is the entire motivation for the next slide.}
 \end{frame}
@@ -444,7 +443,7 @@ a == b;   // true with Equatable, false without it
   \begin{enumerate}
     \item Widgets are immutable blueprints. \muted{The State object is what persists across builds.}
     \item setState marks one Element dirty. \muted{Only that subtree rebuilds on the next frame.}
-    \item Value equality decides rebuilds. \muted{That is the whole reason Equatable exists.}
+    \item Value equality decides rebuilds.
   \end{enumerate}
   \note{Run through the three points as a checklist against the lab app: which widgets are const, where does setState live, and does any model class need Equatable yet.}
 \end{frame}

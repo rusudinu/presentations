@@ -24,7 +24,7 @@
 \begin{frame}[eyebrow=Framing]{Three boundaries inside your app}
   \vskip 2mm
   \begin{grid}[3]
-    \cell[\faIcon{envelope}]{A message}{A platform channel encodes a call, hands it to the other side, and decodes the reply. Convenient, and it costs what it costs to encode.}
+    \cell[\faIcon{envelope}]{A message}{A platform channel encodes a call, hands it to the other side, and decodes the reply.}
     \cell[\faBolt]{A direct call}{dart:ffi jumps straight into machine code already in your address space. No encoding, no thread hop, no safety net.}
     \cell[\faLayerGroup]{A build step}{Kotlin Multiplatform pays the cost once, at compile time. What ships is native code on both platforms.}
   \end{grid}
@@ -45,7 +45,7 @@
   \end{grid}
   \vskip 3mm
   \muted{Two more threads share the process: raster, which submits frames to the GPU, and I/O, which loads assets and decodes images. Neither one runs your widget code.}
-  \begin{takeaway}{So every crossing is one of exactly two things.}
+  \begin{takeaway}{Every crossing is one of two things.}
     Encode a message and hand it to the other side, or drop to the one thing both runtimes already agree on: the C ABI.
   \end{takeaway}
   \note{Draw the process as one box with two heaps if you have a whiteboard. The point students need to leave with: a platform channel and dart:ffi are not two arbitrary APIs, they are the only two ways across this specific wall.}
@@ -131,7 +131,7 @@ ch.setMethodCallHandler { call, r in
   \vskip 2mm
   \begin{grid}[3]
     \cell[\faIcon{sync-alt}]{Hot reload skips native code}{Only the Dart side reloads. A change in Kotlin or Swift needs a full stop and restart of the app.}
-    \cell[\faIcon{hourglass-half}]{The handler is on the main thread}{Do real work on another thread and call \code{result} later, or the native UI itself will freeze.}
+    \cell[\faIcon{hourglass-half}]{The handler is on the main thread}{Do the work on another thread and call \code{result} later, or the native UI itself will freeze.}
     \cell[\faLock]{Channel names are not namespaced}{Prefix them with your package, as \code{dev.upb.mec/battery} does, or two plugins will collide.}
   \end{grid}
   \begin{takeaway}{Register once, per platform, per engine.}
@@ -187,7 +187,7 @@ class StepStreamHandler(private val mgr: SensorManager) :
   \note{onListen fires once, when Dart starts listening, and onCancel fires once, when it stops. Register the sensor listener in onListen, tear it down in onCancel, never leak it.}
 \end{frame}
 
-\begin{frame}[eyebrow=Channels]{What a channel call actually costs}
+\begin{frame}[eyebrow=Channels]{What a channel call costs}
   \begin{columns}[T]
     \begin{column}{0.58\textwidth}
       \lead{Two things are being paid for.}{The thread hop is roughly fixed: two queue posts, two context switches. The call is asynchronous, so it also waits behind whatever the UI thread is already doing.}
@@ -226,8 +226,7 @@ print('${sw.elapsedMicroseconds / n} us');
       \muted{Repeat with a direct FFI call instead of \code{invokeMethod}.}
     \end{column}
   \end{columns}
-  \begin{takeaway}{Report the shape you find, not a number from a slide.}
-    A channel call runs microseconds to low milliseconds. An FFI call stays flat.
+  \begin{takeaway}{A channel call runs microseconds to low milliseconds. An FFI call stays flat.}
   \end{takeaway}
   \note{Have every student run this on their own phone and compare the noop numbers across the room. The spread between devices is the actual lesson: neither number is a constant of nature, so never quote one without saying which phone produced it.}
 \end{frame}
@@ -274,7 +273,7 @@ void analyze(const double *xs, int32_t n, Stats *out);
 void free_stats(Stats *s);
 \end{codeblock}
   \begin{takeaway}{Do not hand-write the struct and the lookup.}
-    ffigen reads this header and generates the Dart \code{Struct}, the typedefs and the lookup calls for every function in it. Hand-written bindings are exactly the kind of code a tool should own.
+    ffigen reads this header and generates the Dart \code{Struct}, the typedefs and the lookup calls for every function in it.
   \end{takeaway}
   \note{A header is the contract, same idea as the .proto file from Lecture 11. Whoever owns the C library changes the header; the Dart side regenerates instead of hand-editing pointer types.}
 \end{frame}
@@ -530,8 +529,7 @@ struct DeviceView: View {
     Maturity & stable, large plugin ecosystem & stable since 2023 \\
     \bottomrule
   \end{tabular}}
-  \begin{takeaway}{Neither approach deletes the boundary. They move it.}
-    Flutter crosses at run time. Kotlin Multiplatform crosses at compile time.
+  \begin{takeaway}{Flutter crosses the boundary at run time. Kotlin Multiplatform crosses it at compile time.}
   \end{takeaway}
   \note{Be even-handed. If a team already has separate native apps and native engineers, Kotlin Multiplatform usually fits better. If a small team wants one UI everywhere, Flutter does. Neither answer criticizes the other.}
 \end{frame}

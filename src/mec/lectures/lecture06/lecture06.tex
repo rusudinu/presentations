@@ -165,8 +165,7 @@ SensorInterval.fastestInterval   // whatever the hardware can do
       \muted{A window going through an FFT or a model belongs in an isolate (Lecture 2).}
     \end{column}
   \end{columns}
-  \begin{takeaway}{Sample fast, render slow.}
-    Consume every sample the algorithm needs, then throttle what reaches the widget tree to something the eye can follow.
+  \begin{takeaway}{Process every sample; update the UI at a lower rate.}
   \end{takeaway}
   \note{Draw the two rates on the board: the algorithm rate and the render rate. They are almost never the same number. Mention that isolates cannot receive platform channel events directly, so the stream is always read on the main isolate and the payload forwarded from there.}
 \end{frame}
@@ -185,7 +184,7 @@ SensorInterval.fastestInterval   // whatever the hardware can do
       \muted{Nothing here integrates anything. Integration is where drift enters.}
     \end{column}
   \end{columns}
-  \begin{takeaway}{Peak counting beats anything clever, at this size.}
+  \begin{takeaway}{Peak counting is enough for a step counter.}
     A threshold with hysteresis and a minimum interval is about twenty lines and gets within a few percent on a walk.
   \end{takeaway}
   \note{Sketch the magnitude signal on the board: a flat line at 9.81, then a rough sine at two hertz. Mark the threshold and the debounce window on the sketch. Students who see the picture write the code in ten minutes, and students who do not, do not.}
@@ -263,7 +262,7 @@ void _detect(double m, double baseline) {
   \vskip 3mm
   \kv{You do not pick the source}{You state an accuracy and the platform's fused provider picks the cheapest combination that meets it. Asking for less accuracy is how you ask for less power.}
   \begin{takeaway}{Every position carries its own error estimate.}
-    \code{Position.accuracy} is a radius in meters. A fix with a two kilometer radius is not a location.
+    \code{Position.accuracy} is a radius in meters.
   \end{takeaway}
   \note{Ask why a maps app finds you instantly indoors and a GNSS logger does not. Wi-Fi scanning is the answer. Point at the accuracy field and say that any app which ignores it eventually shows the user standing in the sea.}
 \end{frame}
@@ -299,7 +298,7 @@ void _detect(double m, double baseline) {
 \end{codeblock}
   \vskip 1mm
   \muted{An undeclared Android permission is denied forever, with no dialog. A missing iOS usage string terminates the app the moment it touches the API.}
-  \begin{takeaway}{The sentence in the plist is the product.}
+  \begin{takeaway}{Write the usage string for the user.}
     The user sees it once, inside a dialog you cannot restyle. Say what they gain, not what the app needs.
   \end{takeaway}
   \note{This is the same two-step shape as every other runtime permission, so remind them of ADMD Lecture 8 and move fast. The one thing to dwell on is the usage string. Read a bad and a good version out loud and ask which one they would accept.}
@@ -373,7 +372,7 @@ _positions = Geolocator.getPositionStream(locationSettings: settings)
 void dispose() { _positions?.cancel(); super.dispose(); }
 \end{dart}
   \vskip 1mm
-  \muted{The distance filter is the cheapest optimization here: a phone on a desk produces no events at all. Use \code{getCurrentPosition} when one fix is enough, and never leave a stream behind a screen the user has left.}
+  \muted{With a distance filter, a phone on a desk produces no events at all. Use \code{getCurrentPosition} when one fix is enough, and never leave a stream behind a screen the user has left.}
   \note{Compare the two calls: a one-shot fix for a form, a stream for a live route. Ask what distance filter suits a walking route and what suits a driving one. Then remind them that cancelling the subscription is what actually powers the receiver down.}
 \end{frame}
 
@@ -488,7 +487,7 @@ NfcManager.instance.startSession(
     Camera preview and encode & hundreds of milliamps & budget it in minutes, not hours \\
     \bottomrule
   \end{tabular}}
-  \begin{takeaway}{The sensor die is rarely the bill.}
+  \begin{takeaway}{The sensor itself is rarely the main cost.}
     What costs is keeping the processor awake to receive samples, and keeping a radio or an image pipeline powered.
   \end{takeaway}
   \note{Give the ordering rather than the numbers: barometer, accelerometer, gyroscope, GNSS, camera, each roughly ten times the previous one. That ranking is stable across phones even when the exact figures are not, and Lecture 7 puts real numbers on it.}

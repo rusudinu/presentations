@@ -15,7 +15,7 @@
 \titleframe
 
 \objectivesframe{
-  \cell[\faClock]{Order events honestly}{Why a wall clock cannot order two edits, and what a Lamport or vector clock gives you instead.}
+  \cell[\faClock]{Order events}{Why a wall clock cannot order two edits, and what a Lamport or vector clock gives you instead.}
   \cell[\faIcon{code-branch}]{Pick a strategy}{Last writer wins, first writer wins, merge by field, ask the user, and what each one costs.}
   \cell[\faCode]{Ship a resolver}{One Dart function that both devices run and that both devices agree on.}
   \cell[\faLayerGroup]{Read a CRDT}{Counters, registers and sets whose merge is commutative, associative and idempotent.}
@@ -37,7 +37,7 @@
   \note{Put the pull loop from Lecture 8 back on the projector and point at the resolve call. Say plainly that the rest of the sync engine is plumbing, and this one function is where the product decisions live.}
 \end{frame}
 
-\begin{frame}[eyebrow=Conflicts]{Where conflicts actually come from}
+\begin{frame}[eyebrow=Conflicts]{Where conflicts come from}
   \vskip 3mm
   \begin{columns}[T]
     \begin{column}{0.50\textwidth}
@@ -48,7 +48,7 @@
       \end{itemize}
     \end{column}
     \begin{column}{0.46\textwidth}
-      \lead{Update and update}{Both devices set the title of the same note. The case everybody thinks of.}
+      \lead{Update and update}{Both devices set the title of the same note.}
       \vskip 2mm
       \lead{Update and delete}{One deletes the row, the other edits it. No value satisfies both users.}
       \vskip 2mm
@@ -76,7 +76,7 @@
   \note{Make the arithmetic explicit: 09:14:07 is greater than 09:13:55, so the rule works exactly as designed and still throws away the right answer. Note that stamping on the server only helps for writes that arrive as they happen, which is what offline breaks.}
 \end{frame}
 
-\begin{frame}[eyebrow=Conflicts]{What ordering we actually need}
+\begin{frame}[eyebrow=Conflicts]{What ordering we need}
   \vskip 2mm
   \begin{grid}[3]
     \cell[\faArrowRight]{Happens-before}{Event a happens-before b if a is earlier on the same device, or a is a message send and b its receipt. Then take the transitive closure.}
@@ -111,8 +111,8 @@ class Lamport {
       \muted{One way only: if a happens-before b, then L(a) is smaller.}
     \end{column}
   \end{columns}
-  \begin{takeaway}{The converse is false, and that is the problem.}
-    It does not prove causality: the two events may simply have been concurrent.
+  \begin{takeaway}{The converse is false.}
+    It does not prove causality: the two events may have been concurrent.
   \end{takeaway}
   \note{Walk one message exchange on the board with two counters. Then ask what L equals 4 here and 7 there tells you: nothing about causality. That gap is why the next slide exists.}
 \end{frame}
@@ -151,7 +151,7 @@ int? compare(Vc a, Vc b) {
     \bottomrule
   \end{tabular}}
   \vskip 3mm
-  \muted{P is the phone, L the laptop. Step 5 is the payoff: L does not guess, its vector is smaller in every slot.}
+  \muted{P is the phone, L the laptop. In step 5, L does not guess: its vector is smaller in every slot.}
   \note{Walk the table row by row and pause on step 3. Ask what a wall clock would have said: it would have picked one edit and called it settled, with no signal that anything was lost. Step 5 shows that most pulls are not conflicts at all.}
 \end{frame}
 
@@ -186,9 +186,9 @@ class Hlc implements Comparable<Hlc> {
 \end{frame}
 
 % =====================================================================
-\divider{Part 3 · Strategies}{Four ways to resolve, honestly ranked}[Each one loses something. Decide what, in advance and in writing]
+\divider{Part 3 · Strategies}{Four ways to resolve}[Each one loses something. Decide what, in advance and in writing]
 
-\begin{frame}[eyebrow=Strategies]{Four strategies, honestly ranked}
+\begin{frame}[eyebrow=Strategies]{Four strategies, ranked}
   \vskip 1mm
   {\usebeamerfont{small}
   \begin{tabular}{@{}l>{\raggedright\arraybackslash}p{30mm}>{\raggedright\arraybackslash}p{32mm}>{\raggedright\arraybackslash}p{33mm}@{}}
@@ -216,7 +216,7 @@ Note resolve(Note l, ServerNote r) =>
         : fromServer(r);
 \end{dart}
       \vskip 1mm
-      \muted{One comparison, no per-entity code. That is the entire appeal.}
+      \muted{One comparison, no per-entity code.}
     \end{column}
     \begin{column}{0.46\textwidth}
       \lead{The example.}{A note reads ``Buy milk''. On the phone the user fixes the title to ``Buy oat milk''. On the laptop, a minute later, the same user adds three lines to the body.}
@@ -245,7 +245,7 @@ Note resolve(Note l, ServerNote r) =>
     \end{column}
   \end{columns}
   \begin{takeaway}{First writer wins needs a natural key.}
-    Without one the two creates are simply two different rows, and the rule never fires. A unique constraint on the server enforces it, not a timestamp.
+    Without one the two creates are two different rows, and the rule never fires. A unique constraint on the server enforces it, not a timestamp.
   \end{takeaway}
   \note{Connect this back to the create-and-create shape from Part 1. Ask the teams what the natural key of their main entity is. If they cannot name one, duplicates will show up in the demo.}
 \end{frame}
@@ -332,7 +332,7 @@ Note resolve(Note local, ServerNote remote) {
     \begin{column}{0.50\textwidth}
       \lead{The state space is a join-semilattice.}{Order states by information: $x \le y$ means y contains every update x contains, and possibly more.}
       \vskip 2mm
-      \lead{Merge is the least upper bound.}{$x \sqcup y$ is the smallest state containing both: nothing invented, nothing dropped. Concurrent states are simply incomparable.}
+      \lead{Merge is the least upper bound.}{$x \sqcup y$ is the smallest state containing both: nothing invented, nothing dropped. Concurrent states are incomparable.}
     \end{column}
     \begin{column}{0.46\textwidth}
       \begin{hint}[Why this converges]
@@ -395,7 +395,7 @@ class GCounter {
         k: max(slots[k] ?? 0, o.slots[k] ?? 0)});
 }
 \end{dart}
-  \begin{takeaway}{The map is the whole trick, and the value is derived.}
+  \begin{takeaway}{The value is derived from the map.}
     Generate the replica id once per install and never reuse it: two devices sharing an id lose increments.
   \end{takeaway}
   \note{Point out that the value is computed on read and never stored. Ask what breaks if merge used plus instead of max: every retry double-counts, which is the bug this type exists to prevent.}
@@ -466,7 +466,7 @@ class LwwReg<T> {
     \end{column}
   \end{columns}
   \begin{takeaway}{Add wins, because the remover could not have observed it.}
-    A defensible default for a shopping list and the wrong one for a bank ledger. It is a policy chosen by the type, not a law.
+    A defensible default for a shopping list and the wrong one for a bank ledger.
   \end{takeaway}
   \note{Emphasize that the rule is not arbitrary: the remover may only undo what it had seen, so a concurrent add is outside its intent. Ask what remove-wins would look like and why it needs the same machinery in reverse.}
 \end{frame}
@@ -529,8 +529,7 @@ class OrSet<E> {
   \end{grid}
   \vskip 4mm
   \muted{In a long-lived collaborative document the tombstones can outnumber the live elements by a large factor. Text CRDTs keep a node for every character ever typed, deleted ones included.}
-  \begin{takeaway}{The metadata is the product.}
-    A CRDT buys convergence by storing enough history to make every merge deterministic. If you cannot afford the history, you cannot have the guarantee.
+  \begin{takeaway}{A CRDT stores enough history to make every merge deterministic.}
   \end{takeaway}
   \note{Give the concrete comparison: a note row with five columns and an HLC per column costs roughly forty extra bytes, which is nothing. The same technique per character is what makes libraries like Automerge and Yjs hard engineering.}
 \end{frame}
@@ -562,7 +561,7 @@ class OrSet<E> {
     \bottomrule
   \end{tabular}}
   \vskip 2mm
-  \begin{takeaway}{The project asks for a stated rule, not a clever one.}
+  \begin{takeaway}{The project asks for a stated conflict rule.}
     Lab 5 in week 10 builds the outbox, the drain loop and delta sync. Name your rule per entity in the README, and let the demo show it firing.
   \end{takeaway}
   \note{Be concrete about the defense: the team will be asked to reproduce a conflict on two devices and explain which rule fired. A simple rule they can explain scores better than a CRDT they cannot.}

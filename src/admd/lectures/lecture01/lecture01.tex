@@ -32,7 +32,7 @@
       \muted{Microsoft Teams: course channel}\par
       \muted{rusudinu.com}
       \vskip 4mm
-      \muted{I build Flutter apps professionally. What you see in this course is the toolchain I use at work, not a teaching toy.}
+      \muted{I build Flutter apps professionally. What you see in this course is the toolchain I use at work.}
     \end{column}
     \begin{column}{0.44\textwidth}
       \begin{grid}[2]
@@ -41,8 +41,7 @@
       \end{grid}
     \end{column}
   \end{columns}
-  \begin{takeaway}{Ask during the lecture, not after it.}
-    A question said out loud usually saves five other people the same confusion.
+  \begin{takeaway}{Ask questions during the lecture.}
   \end{takeaway}
   \note{Introduce yourself in one minute, then move on. The point of the two numbers is credibility, not bragging: everything taught here has shipped to real users. Say that questions are welcome during the lecture, not only at the end.}
 \end{frame}
@@ -53,8 +52,7 @@
     \cell[\faIcon{mobile-alt}]{This course}{Application Development for Mobile Devices. How to build the app: Dart and Flutter, state, networking, Firebase, authentication, release. Fourteen lectures and seven labs.}
     \cell[\faServer]{Next semester}{Mobile and Embedded Computing. What runs under the app: runtimes, concurrency, rendering cost, synchronization, remote procedure calls, and the embedded side.}
   \end{grid}
-  \begin{takeaway}{One course builds the app, the other explains the machine.}
-    When a topic belongs to the second course, this one names it in a line and moves on.
+  \begin{takeaway}{Topics that belong to the second course are only named here.}
   \end{takeaway}
   \note{Students often ask why a topic is skipped. This slide is the answer: the sibling course owns it. Say that the two courses are designed as a pair and that the lab app from this semester becomes the project in the next one.}
 \end{frame}
@@ -129,7 +127,6 @@
   \end{grid}
   \vskip 4mm
   \begin{takeaway}{You pass with at least 50 points out of 100.}
-    Most of the grade is decided in the lab, week by week, not in a single evening at the end.
   \end{takeaway}
   \note{Say the pass line out loud and repeat it. The message students need is that lab work is most of the grade, so falling behind in the labs cannot be recovered later. Mention that the lab test in week 14 is individual and practical, and that the colloquium and the midterm are separate from it.}
 \end{frame}
@@ -142,7 +139,6 @@
     \cell[\faIcon{check-double}]{One pull request}{Each lab ends with a pull request, merged into \code{main} so the next lab starts from it.}
   \end{grid}
   \begin{takeaway}{Every lab lives in the repository.}
-    History matters: small commits with real messages read better than one commit called final.
   \end{takeaway}
   \note{This rule removes every argument about deadlines and file versions. Show a repository on screen if you have one open. Say explicitly that a lab pushed after the next lab has started is late.}
 \end{frame}
@@ -228,7 +224,7 @@ git pull
 \end{shell}
     \end{column}
     \begin{column}{0.40\textwidth}
-      \lead{Run this loop once per lab.}{Clone, branch, commit, push, review, merge, pull. Nothing else is needed for the whole semester.}
+      \lead{Run this loop once per lab.}{Clone, branch, commit, push, review, merge, pull.}
       \vskip 2mm
       \muted{\code{git status} answers most questions. Run it whenever you are unsure what Git is about to do.}
     \end{column}
@@ -256,7 +252,6 @@ asdf
     \end{column}
   \end{columns}
   \begin{takeaway}{Write the message for the person reading it in six months.}
-    That person is usually you, looking for the commit that broke something.
   \end{takeaway}
   \note{Ask the room what the bottom three messages tell a reviewer. Nothing. Mention that the imperative mood matches what Git itself writes for merges and reverts.}
 \end{frame}
@@ -276,7 +271,6 @@ asdf
     \end{column}
   \end{columns}
   \begin{takeaway}{Open the pull request early, even when the work is unfinished.}
-    Feedback on a half-built branch is cheap. Feedback on a finished one costs a rewrite.
   \end{takeaway}
   \note{Say that review is not a formality: in industry it is where most bugs are caught. Tell students to open the pull request early, even when the work is unfinished, so the conversation starts sooner.}
 \end{frame}
@@ -290,8 +284,7 @@ asdf
   \end{grid}
   \vskip 3mm
   \muted{Continuous integration, usually shortened to CI, is a service that runs those steps on a clean machine for every pull request and every merge.}
-  \begin{takeaway}{If it only builds on your laptop, it does not build.}
-    A clean machine is the honest test of whether the repository holds everything the project needs.
+  \begin{takeaway}{A clean machine shows whether the repository holds everything the project needs.}
   \end{takeaway}
   \note{Keep this short: the full pipeline comes back in the release lecture. The idea students need now is that a pull request runs checks automatically, and a red check is not someone else's problem.}
 \end{frame}
@@ -357,7 +350,7 @@ asdf
     \end{column}
     \begin{column}{0.46\textwidth}
       \begin{itemize}
-        \item The user interface is genuinely native, so each platform keeps its own look and behavior.
+        \item The user interface is native, so each platform keeps its own look and behavior.
         \item JavaScript can be updated over the air, without a new store release.
         \item Every interaction crosses the boundary between JavaScript and native code.
       \end{itemize}
@@ -388,7 +381,6 @@ asdf
     \end{column}
   \end{columns}
   \begin{takeaway}{React Native borrows the platform's widgets. Flutter brings its own.}
-    That single difference explains almost every trade-off between the two.
   \end{takeaway}
   \note{This is the slide to slow down on, because the whole course sits on it. Say that drawing everything is why a Flutter app looks identical on an old Android phone and a new iPhone, and also why it cannot inherit a platform redesign for free.}
 \end{frame}
@@ -444,8 +436,7 @@ asdf
     One small team, identical screens, fast iteration & Flutter \\
     \bottomrule
   \end{tabular}
-  \begin{takeaway}{The constraint that decides is almost never technical.}
-    Team skills, deadline and hardware access pick the strategy. Performance rarely does.
+  \begin{takeaway}{Team skills, deadline and hardware access usually pick the strategy.}
   \end{takeaway}
   \note{Ask the room to place an app they use daily into one of the rows, and to justify it. The useful habit is deciding on constraints first, then choosing the tool, rather than the other way around.}
 \end{frame}
@@ -475,7 +466,7 @@ asdf
     \end{column}
     \begin{column}{0.41\textwidth}
       \begin{warning}[Say the cost out loud]
-        Every strategy costs something. An engineer who can only list the advantages of their tool has not finished evaluating it.
+        Every strategy costs something.
       \end{warning}
     \end{column}
   \end{columns}

@@ -9,6 +9,10 @@ writing a slide. The macro reference is in `README.md` in this folder; the two d
 - Simple, direct, professional English. Short sentences. One idea per sentence.
 - Explain like a good engineer explains to a colleague. No slogans, no jokes, no rhetorical
   questions, no "let's dive in", no exclamation marks.
+- No rhetorical "X, not Y" contrasts where the second half is only there for effect ("decided in
+  the lab, week by week, not in a single evening at the end"). No aphorisms or quotable closers,
+  no motivational or moralizing asides about studying, grading or habits, no "the honest answer".
+  A takeaway body states a fact or a rule, or is left empty.
 - **No em-dashes anywhere** (not in slides, code comments, or speaker notes). Use a colon for an
   explanation, a period to split two sentences, commas for an aside. En-dashes only inside numeric
   ranges such as `8–16 GB`.

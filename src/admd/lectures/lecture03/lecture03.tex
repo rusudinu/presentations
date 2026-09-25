@@ -53,7 +53,7 @@ Text('Todos')         // a new instance
     \begin{column}{0.42\textwidth}
       \lead{Change means rebuild.}{Changing the screen means constructing a new description, never editing the old one.}
       \muted{Comparing two immutable descriptions is fast, so the framework can skip whole subtrees that did not change.}
-      \muted{Write \code{const} wherever the analyzer allows it. It is free performance.}
+      \muted{Write \code{const} wherever the analyzer allows it.}
     \end{column}
   \end{columns}
   \begin{takeaway}{Immutability is what makes rebuilding cheap.}
@@ -97,9 +97,8 @@ Padding(
 \end{dart}
     \end{column}
     \begin{column}{0.42\textwidth}
-      \lead{One widget, one job.}{Layout comes from nesting small widgets, not from one widget with fifty properties.}
+      \lead{One widget, one job.}{Layout comes from nesting small widgets.}
       \muted{That is why trees get deep. Deep trees are normal and cheap.}
-      \muted{There is no inheritance hierarchy to learn. There is a catalog of widgets to combine.}
     \end{column}
   \end{columns}
   \note{Compare with Android XML or UIKit, where you configure one view object with many attributes. Ask the room which is easier to test. Mention that the same nesting reads badly at first and reads fine after a week.}
@@ -339,7 +338,7 @@ Stack(
     \bottomrule
   \end{tabular}}
   \vskip 4mm
-  \muted{Keep this table open during the lab. Six widgets cover almost every screen you will build this semester.}
+  \muted{Keep this table open during the lab.}
   \note{Tell the room the full catalog has hundreds of widgets and that nobody memorizes it. The Flutter widget catalog page is the reference. These six are the ones worth knowing by heart.}
 \end{frame}
 
@@ -366,7 +365,7 @@ Row(children: [
         The yellow and black stripes name the widget and the axis. The console names the file and line.
       \end{warning}
       \muted{Three usual fixes: wrap the child in \code{Expanded}, wrap it in \code{Flexible}, or make the Row scroll.}
-      \muted{For text, \code{maxLines} with an ellipsis overflow is often what you actually wanted.}
+      \muted{For text, \code{maxLines} with an ellipsis overflow is often what you want.}
     \end{column}
   \end{columns}
   \note{Trigger this live by renaming a todo to something long. Say that the error is a normal part of building layouts, not a sign of broken code. The console line number is the fastest way in.}
@@ -515,7 +514,7 @@ final ok = await showDialog<bool>(
   \begin{grid}[3]
     \cell[\faIcon{apple-alt}]{Cupertino exists}{CupertinoApp, CupertinoPageScaffold, CupertinoNavigationBar and CupertinoButton mirror the iOS look.}
     \cell[\faIcon{clone}]{Adaptive constructors}{Switch.adaptive and CircularProgressIndicator.adaptive pick the platform look at runtime.}
-    \cell[\faIcon{mobile-alt}]{Pick one and commit}{Most teams ship Material on both platforms. Two full designs is two designs to maintain.}
+    \cell[\faIcon{mobile-alt}]{Pick one and commit}{Most teams ship Material on both platforms.}
   \end{grid}
   \begin{takeaway}{This course uses Material.}
     Page transitions already adapt. The labs are graded on Material widgets.
@@ -628,7 +627,7 @@ ScaffoldMessenger.of(context).showSnackBar(
 \end{dart}
     \end{column}
     \begin{column}{0.40\textwidth}
-      \lead{A screen is never only its happy path.}{Empty, loading and error states are part of the design.}
+      \lead{Empty, loading and error states are part of the design.}{}
       \muted{Today the empty state is a Text. In Lecture 6 the same branch becomes a switch over bloc states.}
       \begin{hint}[Lab 3]
         You build this screen, then add swipe to delete.

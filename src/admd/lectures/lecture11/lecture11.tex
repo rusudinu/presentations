@@ -35,10 +35,7 @@
     Cost while idle & a request every interval, forever & a few bytes of keepalive \\
     \bottomrule
   \end{tabular}}
-  \begin{takeaway}{A WebSocket is not faster HTTP.}
-    It is a different conversation shape.
-  \end{takeaway}
-  \note{Ask the room how they would build a live chat with plain HTTP. Most say polling; walk through what that costs at scale. The takeaway is the line to repeat: a socket is a different shape, not a speed boost.}
+  \note{Ask the room how they would build a live chat with plain HTTP. Most say polling; walk through what that costs at scale.}
 \end{frame}
 
 \begin{frame}[fragile,eyebrow=Realtime]{The handshake: HTTP 101 Switching Protocols}
@@ -80,8 +77,8 @@ Sec-WebSocket-Accept: s3pPLMBiTxaQ9kYGzw==
     MQTT & pub/sub & TCP or WebSocket & devices: tiny frames, retained messages \\
     \bottomrule
   \end{tabular}}
-  \begin{takeaway}{MQTT is a device topic, not a phone-to-phone one.}
-    A broker fans one reading out to every subscriber. MEC Lecture 4 covers the broker side.
+  \begin{takeaway}{In MQTT, a broker fans one reading out to every subscriber.}
+    MEC Lecture 4 covers the broker side.
   \end{takeaway}
   \note{If a student asks why not just use WebSockets for the sensor too: a broker gives fan-out, a retained last-known value and offline queueing for free. MQTT over WebSocket is common; the transport and the protocol are separate choices.}
 \end{frame}
@@ -132,8 +129,7 @@ await channel.sink.close(status.goingAway);
   \lead{Subprotocol header}{Sec-WebSocket-Protocol carries the credential instead. It is not logged, but some proxies handle it awkwardly.}
   \vskip 2mm
   \lead{First message}{Connect anonymously, send an auth frame immediately, and have the server close the socket if it does not arrive within a second.}
-  \begin{takeaway}{None of the three is free of trade-offs.}
-    Pick the one your server and proxies support, and keep the token short-lived.
+  \begin{takeaway}{Pick the one your server and proxies support, and keep the token short-lived.}
   \end{takeaway}
   \note{None of the three is free of trade-offs. Query string is the one students will reach for first; make sure they know it lands in logs before they ship it with a long-lived token.}
 \end{frame}
@@ -205,7 +201,7 @@ void scheduleReconnect() {
     \end{column}
   \end{columns}
   \begin{takeaway}{A common realtime bug on mobile.}
-    It works foreground and breaks the moment the phone locks. Give every message a server-side id so resync is a gap query, not a guess.
+    It works foreground and breaks the moment the phone locks. Give every message a server-side id so resync is a gap query.
   \end{takeaway}
   \note{Ask the room how they would resync: the answer is a monotonic cursor. The client sends the last id it saw on reconnect and the server replays the gap. Without that, a reconnect either duplicates messages or silently loses them.}
 \end{frame}
@@ -430,7 +426,7 @@ final router = GoRouter(
 \begin{frame}[eyebrow=Routing]{ShellRoute: chrome that does not rebuild}
   \begin{columns}[T]
     \begin{column}{0.55\textwidth}
-      A bottom navigation bar is not a screen, it is a frame around screens. ShellRoute gives a nested Navigator: the Scaffold and its bar are built once, and only the body swaps.
+      A bottom navigation bar is a frame around screens. ShellRoute gives a nested Navigator: the Scaffold and its bar are built once, and only the body swaps.
 
       \lead{StatefulShellRoute.indexedStack goes further.}{Each branch keeps its own navigation stack and its own scroll position.}
 
@@ -487,16 +483,13 @@ final router = GoRouter(
     \cell[\faRoute]{2 · Route}{They tap a friend. context.go('/chat/alice') builds the screen. redirect already checked they are signed in.}
     \cell[\faBroadcastTower]{3 · Socket}{ChatScreen opens wss://.../chat with a token, listens, sends, heartbeats, reconnects with jitter, and closes cleanly in dispose().}
   \end{grid}
-  \begin{takeaway}{Three subsystems, one user gesture.}
-    Each of them fails in a way the user can see, and each has exactly one correct place to be handled.
-  \end{takeaway}
   \note{Walk through this as a single tap in a live demo if possible. The point is that these three subsystems are not separate topics in a real app; they meet on almost every screen.}
 \end{frame}
 
 \begin{frame}[eyebrow=Recap]{Three things to remember}
   \vskip 2mm
   \begin{enumerate}
-    \item A WebSocket is one held-open socket, not a faster request. \muted{Keep it alive with wss, heartbeats and jittered backoff, and close it in dispose().}
+    \item A WebSocket is one held-open socket. \muted{Keep it alive with wss, heartbeats and jittered backoff, and close it in dispose().}
     \item Declaring a permission is not requesting it. \muted{Both platforms punish the gap: silent denial on Android, termination on iOS.}
     \item A route is a location, not a sequence of pushes. \muted{go\_router turns state into a stack, and one redirect guards all of it.}
   \end{enumerate}
