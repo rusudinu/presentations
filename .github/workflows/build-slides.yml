@@ -54,10 +54,10 @@ jobs:
           else
             echo "all=false" >> "$GITHUB_OUTPUT"
             # one target per changed deck folder: src/<course>/<kind>/<deck>/<deck>.pdf
-            { echo "$changed" | grep -E '^src/(admd|mec)/(lectures|labs)/[^/]+/' \
-                | sed -E 's#^(src/[^/]+/[^/]+/([^/]+))/.*#\1/\2.pdf#';
-              echo "$changed" | grep -E '^src/talks/[^/]+/' \
-                | sed -E 's#^(src/talks/([^/]+))/.*#\1/\2.pdf#'; } | sort -u > targets.txt
+            # (sed -n ... p instead of grep | sed: grep exits 1 when nothing matches, failing the step)
+            echo "$changed" | sed -nE \
+              -e 's#^(src/(admd|mec)/(lectures|labs)/([^/]+))/.*#\1/\4.pdf#p' \
+              -e 's#^(src/talks/([^/]+))/.*#\1/\2.pdf#p' | sort -u > targets.txt
             cat targets.txt
           fi
 
