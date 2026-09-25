@@ -22,7 +22,7 @@ runtimes or dates.
 | Grading | Final exam 40 p, laboratory and assignments 30 p, lab test 15 p, team project 15 p. Pass with at least 50 of 100 |
 | Concept presentations | Teams of at most 3 pick a topic from the shared sheet, prepare about 20 minutes of slides plus an optional demo, every member presents, materials go to Moodle |
 | Prerequisite | Application Development for Mobile Devices (ADMD, semester I) or equivalent Flutter and Dart knowledge. Students who took Introduction to SAP instead must work through the ADMD Lectures 2, 3, 5 and 6 decks before week 3 |
-| Instructor | Dinu-Ștefan Rusu, dinu_stefan.rusu@upb.ro, Microsoft Teams course channel, rusudinu.com. Ships Flutter apps professionally: 45+ apps, 400k installs |
+| Instructors | Andrei Vasilățeanu; Dinu-Ștefan Rusu, dinu_stefan.rusu@upb.ro, Microsoft Teams course channel, rusudinu.com. 50+ apps shipped, 500k+ installs |
 | Stack | Flutter and Dart on the phone, Go on the server, TinyGo on the microcontroller, MQTT between them |
 | Repository | github.com/rusudinu/presentations (slides in `mec/`, code examples in `mec/examples/` and `admd/examples/`) |
 | Metadata for `\course{}` | `Mobile and Embedded Computing`, `\date{Spring 2027}` |

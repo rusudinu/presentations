@@ -17,7 +17,7 @@ history). `EX` means `admd/examples/lib/` (the Flutter example project, grouped 
 | Format | 14 weeks. Lecture 2 h every week. Lab 2 h every second week, in even weeks (7 labs). There are 15 lecture decks for 14 slots: see the note under the lecture plan |
 | Evaluation | Verification (V), no exam session |
 | Grading | Colloquium 20 p, midterm 20 p, lab assignments 30 p (cumulative lab app), practical lab test 30 p (Lab 7). Pass with at least 50 of 100 |
-| Instructor | Dinu-Ștefan Rusu, dinu_stefan.rusu@upb.ro, Microsoft Teams course channel, rusudinu.com. Ships Flutter apps professionally: 45+ apps, 400k installs |
+| Instructors | Andrei Vasilățeanu; Dinu-Ștefan Rusu, dinu_stefan.rusu@upb.ro, Microsoft Teams course channel, rusudinu.com. 50+ apps shipped, 500k+ installs |
 | Stack | Flutter and Dart, Firebase, Go only where a tiny backend is needed |
 | Repository | github.com/rusudinu/presentations for the shared material (slides in `admd/`, code examples in `admd/examples/`); each student keeps one course repository on GitHub for all labs |
 | Metadata for `\course{}` | `Application Development for Mobile Devices`, `\date{Autumn 2026}` |
