@@ -107,10 +107,10 @@ The slide is 160 × 90 mm. The theme leaves roughly 60 mm of height under the ti
 
 ## 6. Quality gate
 
-Run, from anywhere:
+Run, from the repository root:
 
 ```bash
-python3 /Users/dinu/dev/upb/presentations/template/qa.py src/<course>/lectures/lectureNN/lectureNN.tex
+python3 template/qa.py src/<course>/lectures/lectureNN/lectureNN.tex
 ```
 
 It compiles the deck, reports every problem, and writes `preview/<deck>-sheetN.png` next to the

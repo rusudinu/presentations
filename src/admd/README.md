@@ -3,7 +3,7 @@
 Course brief. Every lecture and lab deck under `lectures/` and `labs/` in this folder is written from the
 section below that names it, following `template/AUTHORING.md`. `make` here builds them all and publishes
 the PDFs to `admd/` at the top of the repository. Paths below are relative to
-`/Users/dinu/dev/upb/presentations/`. `SRC` and `LABSRC` refer to the previous course's pptx
+the repository root. `SRC` and `LABSRC` refer to the previous course's pptx
 generators (`mobile-and-embedded-computing/slides/`, removed from the tree after the port; see git
 history). `EX` means `admd/examples/lib/` (the Flutter example project, grouped by lecture), and
 `FACTS` means `template/FACTS.md` (verified technical facts, checked 2026).
