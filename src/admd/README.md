@@ -20,7 +20,7 @@ history). `EX` means `admd/examples/lib/` (the Flutter example project, grouped 
 | Instructors | Andrei Vasilățeanu; Dinu-Ștefan Rusu, dinu_stefan.rusu@upb.ro, Microsoft Teams course channel, rusudinu.com. 50+ apps shipped, 500k+ installs |
 | Stack | Flutter and Dart, Firebase, Go only where a tiny backend is needed |
 | Repository | github.com/rusudinu/presentations for the shared material (slides in `admd/`, code examples in `admd/examples/`); each student keeps one course repository on GitHub for all labs |
-| Metadata for `\course{}` | `Application Development for Mobile Devices`; lectures set no `\date`, labs set `\date{Week N}` |
+| Metadata for `\course{}` | `Application Development for Mobile Devices`; lectures set no `\date`, labs set `\date{Week N}` (course index only, not on the slide) |
 
 This course teaches how to build the app. Its sibling, Mobile and Embedded Computing (MEC, semester II), teaches what runs under the app: runtimes, concurrency, rendering cost, sync, RPC, and the embedded side. When a topic belongs to MEC, say so in one line and move on. Do not teach it here.
 

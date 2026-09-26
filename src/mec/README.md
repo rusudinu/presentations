@@ -25,7 +25,7 @@ runtimes or dates.
 | Instructors | Andrei Vasilățeanu; Dinu-Ștefan Rusu, dinu_stefan.rusu@upb.ro, Microsoft Teams course channel, rusudinu.com. 50+ apps shipped, 500k+ installs |
 | Stack | Flutter and Dart on the phone, Go on the server, TinyGo on the microcontroller, MQTT between them |
 | Repository | github.com/rusudinu/presentations (slides in `mec/`, code examples in `mec/examples/` and `admd/examples/`) |
-| Metadata for `\course{}` | `Mobile and Embedded Computing`; lectures set no `\date`, labs set `\date{Week N}` |
+| Metadata for `\course{}` | `Mobile and Embedded Computing`; lectures set no `\date`, labs set `\date{Week N}` (course index only, not on the slide) |
 
 This course teaches what runs under the app and around it: how code executes, how the phone spends energy, how data survives without a network, how the app talks to servers over RPC and to devices over MQTT and BLE, and how a microcontroller program is written. Its sibling ADMD (semester I) taught how to build the app itself. When a topic belongs to ADMD, name the ADMD lecture in one line and move on.
 
