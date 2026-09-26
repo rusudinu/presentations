@@ -12,7 +12,7 @@ history). `EX` means `admd/examples/lib/` (the Flutter example project, grouped 
 
 | | |
 |---|---|
-| Program | Internet of Things Engineering, FILS, year III, semester I (autumn 2026) |
+| Program | Internet of Things Engineering, year III, semester I |
 | Status | Optional, 4 ECTS, paired with Introduction to SAP |
 | Format | 14 weeks. Lecture 2 h every week. Lab 2 h every second week, in even weeks (7 labs). There are 15 lecture decks for 14 slots: see the note under the lecture plan |
 | Evaluation | Verification (V), no exam session |

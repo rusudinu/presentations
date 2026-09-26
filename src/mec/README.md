@@ -15,7 +15,7 @@ runtimes or dates.
 
 | | |
 |---|---|
-| Program | Internet of Things Engineering, FILS, year III, semester II (spring 2027) |
+| Program | Internet of Things Engineering, year III, semester II |
 | Status | Mandatory, 3 ECTS |
 | Format | 14 weeks. Lecture 2 h every week. Lab 2 h every second week, even weeks (7 labs). Project 2 h every second week, odd weeks (7 sessions) |
 | Evaluation | Exam (E) in the exam session |
