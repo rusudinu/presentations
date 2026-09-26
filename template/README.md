@@ -48,8 +48,6 @@ time of the deck folder, which is what lets the CI skip a commit when nothing ch
 \title{Embedded fundamentals}
 \subtitle{MCUs, bare metal vs RTOS, and TinyGo}
 \author{Dinu-Ștefan Rusu}
-\institute{FILS, Universitatea Politehnica București}
-\date{Spring 2027}
 \begin{document}
 \titleframe
 ...
@@ -64,7 +62,7 @@ bottom edge).
 
 | Block | Use |
 |---|---|
-| `\titleframe` | Black title slide from `\title`, `\subtitle`, `\author`, `\institute`, `\date`. |
+| `\titleframe` | Black title slide from `\title`, `\subtitle`, `\author`, and optional `\institute` and `\date`. |
 | `\divider{Eyebrow}{Title}[Subtitle]` | Black section slide. Also creates a PDF bookmark. |
 | `\closingframe{Title}{gray line}` | Black closing slide. |
 | `\begin{frame}[eyebrow=Debugging]{Title}` | Content slide. The eyebrow is the letterspaced label above the title. |

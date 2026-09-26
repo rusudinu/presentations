@@ -194,8 +194,12 @@
     \node[anchor=south west,inner sep=0pt,text width=90mm,align=left]
       at ([xshift=10mm,yshift=9mm]current page.south west) {%
         {\usebeamerfont{author}\color{upbWhite}\insertauthor\par}%
-        \vskip 1mm{\usebeamerfont{date}\color{upbGray}\insertinstitute\ifx\insertdate\@empty\else\ \textperiodcentered\ \insertdate\fi\par}};
+        \ifx\insertinstitute\@empty\ifx\insertdate\@empty\else\vskip 1mm{\usebeamerfont{date}\color{upbGray}\insertdate\par}\fi
+        \else\vskip 1mm{\usebeamerfont{date}\color{upbGray}\insertinstitute\ifx\insertdate\@empty\else\ \textperiodcentered\ \insertdate\fi\par}\fi};
   \end{tikzpicture}}
+
+% no date on the title slide unless the deck sets one (Beamer would default to \today)
+\date{}
 
 % \titleframe : black title slide
 \newcommand\titleframe{{\upb@darktrue\setbeamercolor{background canvas}{bg=upbBlack}%

@@ -91,7 +91,7 @@ The slide is 160 × 90 mm. The theme leaves roughly 60 mm of height under the ti
   \documentclass[10pt,aspectratio=169,t]{beamer}
   \usetheme{upbminimal}            % \usetheme[lab]{upbminimal} for labs
   \course{...} \decklabel{Lecture N} \title{...} \subtitle{...}
-  \author{Dinu-Ștefan Rusu} \institute{FILS, Universitatea Politehnica București} \date{...}
+  \author{Dinu-Ștefan Rusu}       % labs also set \date{Week N}
   ```
 - A frame that contains any code environment (`dart`, `kotlin`, `golang`, `shell`, `yaml`,
   `codeblock`) must be declared `[fragile]`.
