@@ -2,7 +2,7 @@
 \documentclass[10pt,aspectratio=169,t]{beamer}
 \usetheme{upbminimal}
 
-\course{Application Development for Mobile Devices}
+\course[ADMD]{Application Development for Mobile Devices}
 \decklabel{Lecture 5}
 \title{State Management, Part 1}
 \subtitle{Debugging, Stateless vs Stateful, and state placement}
@@ -38,12 +38,12 @@
   \begin{columns}[T]
     \begin{column}{0.56\textwidth}
 \begin{dart}
-print('value: $x');       // logcat truncates
-debugPrint('value: $x');  // throttled, lossless
+print('value: $x');      // truncated
+debugPrint('value: $x'); // lossless
 assert(count >= 0, 'count negative');
 
-debugDumpApp();            // widget tree
-debugDumpRenderTree();     // sizes + constraints
+debugDumpApp();          // widget tree
+debugDumpRenderTree();   // constraints
 (*@\hl{debugPrintRebuildDirtyWidgets = true;}@*)
 \end{dart}
     \end{column}
@@ -92,7 +92,9 @@ debugDumpRenderTree();     // sizes + constraints
 \begin{golang}
 func main() {
     led := machine.LED
-    led.Configure(machine.PinConfig{Mode: machine.PinOutput})
+    led.Configure(machine.PinConfig{
+        Mode: machine.PinOutput,
+    })
     for {
         led.High()
         time.Sleep(200 * time.Millisecond)

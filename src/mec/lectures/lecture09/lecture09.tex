@@ -2,7 +2,7 @@
 \documentclass[10pt,aspectratio=169,t]{beamer}
 \usetheme{upbminimal}
 
-\course{Mobile and Embedded Computing}
+\course[MEC]{Mobile and Embedded Computing}
 \decklabel{Lecture 9}
 \title{Offline-first, part 2: conflicts and CRDTs}
 \subtitle{Logical clocks, conflict resolution, CRDTs}
@@ -95,8 +95,8 @@
 \begin{dart}
 class Lamport {
   int l = 0;
-  int local() => ++l;   // any local event
-  int send()  => ++l;   // stamp the message
+  int local() => ++l; // local event
+  int send()  => ++l; // stamp message
   void receive(int theirs) {
     l = (theirs > l ? theirs : l) + 1;
   }
@@ -411,8 +411,9 @@ class PnCounter {
       PnCounter(p.inc(me), n);
   PnCounter dec(String me) =>
       PnCounter(p, n.inc(me));
-  PnCounter merge(PnCounter o) => PnCounter(
-      p.merge(o.p), n.merge(o.n));
+  PnCounter merge(PnCounter o) =>
+      PnCounter(p.merge(o.p),
+          n.merge(o.n));
 }
 \end{dart}
     \end{column}

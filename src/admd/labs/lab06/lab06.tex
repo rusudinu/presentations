@@ -2,7 +2,7 @@
 \documentclass[10pt,aspectratio=169,t]{beamer}
 \usetheme[lab]{upbminimal}
 
-\course{Application Development for Mobile Devices}
+\course[ADMD]{Application Development for Mobile Devices}
 \decklabel{Lab 6}
 \title{Auth, routing \& a live screen}
 \subtitle{Firebase Auth, go\_router guards, and a WebSocket screen}
@@ -42,11 +42,13 @@ keytool -list -v -keystore ~/.android/debug.keystore \
   \begin{columns}[T]
     \begin{column}{0.55\textwidth}
 \begin{dart}
-Future<void> signUp(String email, String pw) async {
+Future<void> signUp(
+    String email, String pw) async {
   try {
     await FirebaseAuth.instance
         .createUserWithEmailAndPassword(
-            email: email.trim(), password: pw);
+            email: email.trim(),
+            password: pw);
   } on FirebaseAuthException catch (e) {
     throw mapAuthError(e.code);
   }
@@ -68,12 +70,15 @@ Future<void> signUp(String email, String pw) async {
   \begin{columns}[T]
     \begin{column}{0.55\textwidth}
 \begin{dart}
-Future<UserCredential> signInWithGoogle() async {
+Future<UserCredential>
+    signInWithGoogle() async {
   final account =
-      await GoogleSignIn.instance.authenticate();
-  final token = account.authentication.idToken;
-  final cred = GoogleAuthProvider.credential(
-      idToken: token);
+      await GoogleSignIn.instance
+          .authenticate();
+  final token =
+      account.authentication.idToken;
+  final cred = GoogleAuthProvider
+      .credential(idToken: token);
   return FirebaseAuth.instance
       .signInWithCredential(cred);
 }

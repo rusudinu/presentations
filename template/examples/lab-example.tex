@@ -2,7 +2,7 @@
 \documentclass[10pt,aspectratio=169,t]{beamer}
 \usetheme[lab]{upbminimal}
 
-\course{Application Development for Mobile Devices}
+\course[ADMD]{Application Development for Mobile Devices}
 \decklabel{Lab 3}
 \title{Widgets \& UI}
 \subtitle{Composing layouts and handling gestures}
@@ -67,11 +67,15 @@ git checkout -b lab-3
     \begin{column}{0.55\textwidth}
 \begin{dart}
 Dismissible(
-  key: ValueKey(todo.id),          // never the index
+  // Key by id, never by the index
+  key: ValueKey(todo.id),
   direction: DismissDirection.endToStart,
   onDismissed: (_) => onDelete(todo.id),
   background: Container(color: Colors.red),
-  child: TodoTile(todo: todo, onToggle: onToggle),
+  child: TodoTile(
+    todo: todo,
+    onToggle: onToggle,
+  ),
 )
 \end{dart}
     \end{column}

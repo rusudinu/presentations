@@ -2,7 +2,7 @@
 \documentclass[10pt,aspectratio=169,t]{beamer}
 \usetheme{upbminimal}
 
-\course{Application Development for Mobile Devices}
+\course[ADMD]{Application Development for Mobile Devices}
 \decklabel{Lecture 8}
 \title{Firebase, Packages, and Feature Flags}
 \subtitle{Firestore, dependency hygiene, Remote Config, and REST versus GraphQL}
@@ -389,7 +389,9 @@ query ProfileScreen($id: ID!) {
   \begin{columns}[T]
     \begin{column}{0.42\textwidth}
 \begin{codeblock}
-mutation LikePost($postId: ID!) {
+mutation LikePost(
+  $postId: ID!
+) {
   likePost(id: $postId) {
     id
     likeCount

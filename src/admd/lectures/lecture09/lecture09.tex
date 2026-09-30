@@ -2,7 +2,7 @@
 \documentclass[10pt,aspectratio=169,t]{beamer}
 \usetheme{upbminimal}
 
-\course{Application Development for Mobile Devices}
+\course[ADMD]{Application Development for Mobile Devices}
 \decklabel{Lecture 9}
 \title{Observability and local storage}
 \subtitle{Analytics, crash reporting, alerts, local storage, and app lifecycle}
@@ -50,7 +50,8 @@
   \begin{columns}[T]
     \begin{column}{0.56\textwidth}
 \begin{dart}
-final analytics = FirebaseAnalytics.instance;
+final analytics =
+    FirebaseAnalytics.instance;
 
 // snake_case, at most 40 characters.
 await analytics.logEvent(
@@ -362,7 +363,8 @@ class AppDb extends _$AppDb {
 \begin{dart}
 Stream<List<Todo>> watchOpen() =>
     (select(todos)
-      ..where((t) => t.done.equals(false)))
+      ..where((t) =>
+          t.done.equals(false)))
     .watch();
 
 Future<void> toggle(Todo t) =>

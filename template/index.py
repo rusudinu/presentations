@@ -12,7 +12,7 @@ import glob, os, re, sys
 def meta(tex):
     s = open(tex, encoding="utf-8").read()
     def g(k):
-        m = re.search(r"\\" + k + r"\{(.*)\}", s)
+        m = re.search(r"\\" + k + r"(?:\[[^\]]*\])?\{(.*)\}", s)  # skips an optional [short name]
         return re.sub(r"\\[&_%#]", lambda x: x.group(0)[1:], m.group(1)).strip() if m else ""
     return g("title"), g("subtitle"), g("date"), g("course")
 

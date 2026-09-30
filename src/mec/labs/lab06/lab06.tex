@@ -2,7 +2,7 @@
 \documentclass[10pt,aspectratio=169,t]{beamer}
 \usetheme[lab]{upbminimal}
 
-\course{Mobile and Embedded Computing}
+\course[MEC]{Mobile and Embedded Computing}
 \decklabel{Lab 6}
 \title{gRPC: a Go server and a Dart client}
 \subtitle{gRPC unary call, server stream, deadlines, cancellation}
@@ -126,7 +126,8 @@ func (s *server) GetLatest(
     ctx context.Context, req *pb.DeviceRequest,
 ) (*pb.Reading, error) {
     if s.latest == nil {
-        return nil, status.Error(codes.NotFound, "empty")
+        return nil, status.Error(
+            codes.NotFound, "empty")
     }
     return s.latest, nil
 }
@@ -158,7 +159,7 @@ func (s *server) StreamReadings(
 }
 \end{golang}
     \end{column}
-    \begin{column}{0.39\textwidth}
+    \begin{column}{0.40\textwidth}
 \begin{golang}
 func main() {
     lis, _ := net.Listen(
@@ -205,7 +206,8 @@ func main() {
 final channel = ClientChannel(
     '10.0.2.2', port: 50051,
     options: const ChannelOptions(
-        credentials: ChannelCredentials.insecure()));
+        credentials:
+            ChannelCredentials.insecure()));
 final client = ReadingsClient(channel); try {
   final r = await client.getLatest(
     DeviceRequest()..deviceId = id,
@@ -255,7 +257,8 @@ final call = client.streamReadings(
 );
 final sub = call.listen(
   (r) => setState(() => _value = r.value),
-  onError: (_) => setState(() => _live = false),
+  onError: (_) =>
+      setState(() => _live = false),
 );
 
 void _cancel() {

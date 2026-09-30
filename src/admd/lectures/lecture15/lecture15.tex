@@ -2,7 +2,7 @@
 \documentclass[10pt,aspectratio=169,t]{beamer}
 \usetheme{upbminimal}
 
-\course{Application Development for Mobile Devices}
+\course[ADMD]{Application Development for Mobile Devices}
 \decklabel{Lecture 15}
 \title{Release, distribution, and push notifications}
 \subtitle{Build modes, signing, the stores, CI/CD, and FCM}
@@ -115,7 +115,8 @@ version: 1.4.0+27
 \end{yaml}
 \begin{shell}
 flutter build appbundle \
-  --build-name=1.4.0 --build-number=28
+  --build-name=1.4.0 \
+  --build-number=28
 \end{shell}
     \end{column}
     \begin{column}{0.52\textwidth}
@@ -144,8 +145,8 @@ flutter build appbundle \
     \begin{column}{0.56\textwidth}
 \begin{shell}
 keytool -genkey -v -keystore upload.jks \
-  -keyalg RSA -keysize 2048 -validity 10000 \
-  -alias upload
+  -keyalg RSA -keysize 2048 \
+  -validity 10000 -alias upload
 \end{shell}
 \begin{yaml}
 # android/key.properties  (never committed)

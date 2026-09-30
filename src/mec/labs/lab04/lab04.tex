@@ -2,7 +2,7 @@
 \documentclass[10pt,aspectratio=169,t]{beamer}
 \usetheme[lab]{upbminimal}
 
-\course{Mobile and Embedded Computing}
+\course[MEC]{Mobile and Embedded Computing}
 \decklabel{Lab 4}
 \title{Phone sensors and a background task}
 \subtitle{Step detection, location, background tasks}
@@ -125,7 +125,8 @@ Future<Position?> readOnce() async {
     return null;
   }
   return Geolocator.getCurrentPosition(
-    locationSettings: const LocationSettings(accuracy: LocationAccuracy.high));
+      locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.high));
 }
 \end{dart}
 \end{frame}

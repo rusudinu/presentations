@@ -2,7 +2,7 @@
 \documentclass[10pt,aspectratio=169,t]{beamer}
 \usetheme{upbminimal}
 
-\course{Application Development for Mobile Devices}
+\course[ADMD]{Application Development for Mobile Devices}
 \decklabel{Lecture 14}
 \title{UI polish and testing}
 \subtitle{Theming, layout, forms, motion, accessibility, and tests}
@@ -126,7 +126,8 @@ ThemeData(
 final size = MediaQuery.sizeOf(context);
 final pad = MediaQuery.paddingOf(context);
 final keyboard =
-    MediaQuery.viewInsetsOf(context).bottom;
+    MediaQuery.viewInsetsOf(context)
+        .bottom;
 final scaler =
     MediaQuery.textScalerOf(context);
 \end{dart}

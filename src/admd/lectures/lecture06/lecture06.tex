@@ -2,7 +2,7 @@
 \documentclass[10pt,aspectratio=169,t]{beamer}
 \usetheme{upbminimal}
 
-\course{Application Development for Mobile Devices}
+\course[ADMD]{Application Development for Mobile Devices}
 \decklabel{Lecture 6}
 \title{State Management, Part 2}
 \subtitle{BLoC, Cubit, repositories, testing, and Riverpod}
@@ -216,8 +216,10 @@ class TodoBloc extends Bloc<TodoEvent, TodoState> {
 \begin{dart}
 MultiBlocProvider(
   providers: [
-    BlocProvider(create: (c) => AuthCubit(auth)),
-    BlocProvider(create: (c) => TodoBloc(repo)),
+    BlocProvider(
+        create: (c) => AuthCubit(auth)),
+    BlocProvider(
+        create: (c) => TodoBloc(repo)),
   ],
   child: const App(),
 )

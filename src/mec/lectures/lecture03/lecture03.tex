@@ -2,7 +2,7 @@
 \documentclass[10pt,aspectratio=169,t]{beamer}
 \usetheme{upbminimal}
 
-\course{Mobile and Embedded Computing}
+\course[MEC]{Mobile and Embedded Computing}
 \decklabel{Lecture 3}
 \title{Embedded fundamentals and TinyGo}
 \subtitle{Microcontrollers, peripherals, and Go on bare metal}
@@ -94,7 +94,7 @@ func main() {
     led.Configure(machine.PinConfig{
         Mode: machine.PinOutput})
 
-    for {              // this never returns
+    for { // never returns
         led.High()
         time.Sleep(200 * time.Millisecond)
         led.Low()
@@ -357,7 +357,7 @@ tinygo targets
   \begin{columns}[T]
     \begin{column}{0.55\textwidth}
 \begin{shell}
-# Compile to a file you can inspect or copy.
+# Compile to a file you can copy.
 tinygo build -target=pico -o blink.uf2 \
     ./cmd/blink
 
@@ -424,7 +424,8 @@ r := make([]byte, 2)
 if err := i2c.Tx(0x48, w, r); err != nil {
     println("i2c:", err.Error())
 }
-raw := int16(uint16(r[0])<<8 | uint16(r[1]))
+raw := int16(uint16(r[0])<<8 |
+    uint16(r[1]))
 \end{golang}
     \end{column}
     \begin{column}{0.41\textwidth}

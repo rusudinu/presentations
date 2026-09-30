@@ -2,7 +2,7 @@
 \documentclass[10pt,aspectratio=169,t]{beamer}
 \usetheme{upbminimal}
 
-\course{Application Development for Mobile Devices}
+\course[ADMD]{Application Development for Mobile Devices}
 \decklabel{Lecture 10}
 \title{Authentication, OAuth, and App Check}
 \subtitle{Firebase Auth providers, the OAuth handoff, and App Check enforcement}
@@ -135,12 +135,15 @@ Future<void> signUp(
   \begin{columns}[T]
     \begin{column}{0.56\textwidth}
 \begin{dart}
-Future<void> signIn(String email, String pass) async {
+Future<void> signIn(
+    String email, String pass) async {
   try {
     await auth.signInWithEmailAndPassword(
-        email: email.trim(), password: pass);
+        email: email.trim(),
+        password: pass);
   } on FirebaseAuthException catch (e) {
-    throw AuthFailure(mapSignInError(e.code));
+    throw AuthFailure(
+        mapSignInError(e.code));
   }
 }
 \end{dart}

@@ -33,7 +33,9 @@ A lecture is two hours. Target **30 to 38 slides** counting title, dividers, rec
 1. `\titleframe`
 2. `\objectivesframe{...}` with exactly four `\cell`s: what the student can do after the lecture.
 3. Three to five sections, each opened with `\divider{Part N · Name}{One-line title}[Optional subtitle]`.
-   The subtitle is a plain list of the section's topics.
+   The subtitle is a plain list of the section's topics. The divider prints the part number large
+   and the lecture's contents with page numbers, built from the `\divider` titles, so keep those
+   titles short enough for one line of the contents (about 40 characters).
 4. Content slides. Every content slide has an `eyebrow=` that names its section.
 5. A recap slide (`eyebrow=Recap`, titled "Summary") with three numbered points, then a further-reading slide or block
    with two to four links.
@@ -53,6 +55,7 @@ A lab is two hours, every second week. Target **12 to 18 slides**.
 3. Setup: where the code goes, the branch name, packages to add, the command to run first.
 4. Tasks (`eyebrow=Task I`, `Task II`, ...): `steps` with one requirement per step, on the right a
    `checklist` under `\kv{Done when}{}` with two to four acceptance criteria that a grader can check.
+   A task frame may carry `time=30 min`, printed in the running head, when the budget is known.
 5. Reference slides where needed: the one code shape the task needs, with a `hint` that names the
    intended widget or package.
 6. Troubleshooting (`eyebrow=Troubleshooting`): three to five `\trouble{error}{fix}` rows with the
@@ -73,15 +76,18 @@ The slide is 160 × 90 mm. The theme leaves roughly 60 mm of height under the ti
 - Eyebrow: one to three words.
 - Body text: at most about 90 words per slide. Prefer a `grid`, a table, or two `columns` over a
   wall of text.
-- Code blocks: at most 14 lines. Full-width lines at most 78 characters; inside a
-  `0.55\textwidth` column at most 42 characters. Cut comments before cutting code.
+- Code blocks: at most 14 lines. Full-width lines at most 76 characters; inside a
+  `0.55\textwidth` column at most 42 characters. Cut comments before cutting code. A line that
+  is still too long wraps with a gray ↪, and `qa.py` fails on it: break it by hand at a natural
+  point instead, with the indentation the language expects.
 - A slide with a code block and a takeaway fits only when the block is at most 9 lines.
 - Use `\begin{takeaway}{Bold lead.} explanation \end{takeaway}` on the slides that carry a rule
   worth remembering. Not on every slide.
 - Tables: five to seven rows, at most five columns, wrapped in `{\usebeamerfont{small} ... }`
   when they have more than four columns. Use `p{...}` for a long last column.
-- Body copy has no bullet glyphs by design. `itemize` items render as spaced paragraphs. Use
-  `enumerate` only for ordered steps.
+- `itemize` items hang from an en dash. Use `enumerate` only for ordered steps.
+- A pipeline of two to four stages reads better as a `flow` than as prose:
+  `\begin{flow}[3] \stage{Board}{TinyGo publisher} \edge[MQTT] \stage{Broker}{…} … \end{flow}`.
 
 ## 5. LaTeX rules
 
@@ -90,9 +96,11 @@ The slide is 160 × 90 mm. The theme leaves roughly 60 mm of height under the ti
   ```latex
   \documentclass[10pt,aspectratio=169,t]{beamer}
   \usetheme{upbminimal}            % \usetheme[lab]{upbminimal} for labs
-  \course{...} \decklabel{Lecture N} \title{...} \subtitle{...}
+  \course[ADMD]{...} \decklabel{Lecture N} \title{...} \subtitle{...}
   \author{Dinu-Ștefan Rusu}       % labs also set \date{Week N}, used by the course index, not shown
   ```
+  The optional argument of `\course` is the short name printed in the cover's title block
+  (`ADMD` or `MEC`). `\materials{github.com/...}` adds a "Slides and code" field to it.
 - A frame that contains any code environment (`dart`, `kotlin`, `golang`, `shell`, `yaml`,
   `codeblock`) must be declared `[fragile]`.
 - In normal text and inside `\code{...}`, escape `_ & % # $ { }` as `\_ \& \% \# \$ \{ \}`.
@@ -116,7 +124,8 @@ Run, from the repository root:
 python3 template/qa.py src/<course>/lectures/lectureNN/lectureNN.tex
 ```
 
-It compiles the deck, reports every problem, and writes `preview/<deck>-sheetN.png` next to the
+It compiles the deck, reports every problem (including code lines that wrap or run past their
+panel, by page), and writes `preview/<deck>-sheetN.png` next to the
 deck. Commit only the `.tex`; the PDF under `admd/` or `mec/` is rebuilt and committed by the GitHub
 workflow after the push. A deck is done only when qa.py prints `RESULT CLEAN` **and** every contact sheet has been
 looked at and shows no title wrapped to two lines, no text touching the footer, no code wrapping

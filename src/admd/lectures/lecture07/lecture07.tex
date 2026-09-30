@@ -2,7 +2,7 @@
 \documentclass[10pt,aspectratio=169,t]{beamer}
 \usetheme{upbminimal}
 
-\course{Application Development for Mobile Devices}
+\course[ADMD]{Application Development for Mobile Devices}
 \decklabel{Lecture 7}
 \title{Networking: HTTP, JSON, and code generation}
 \subtitle{HTTP, dio, retries, JSON code generation, and repositories}
@@ -118,7 +118,8 @@ final dio = Dio(BaseOptions(
 \begin{dart}
 final dio = Dio(BaseOptions(
     baseUrl: 'https://api.example.com'));
-Future<Reading> fetchReading(String id) async {
+Future<Reading> fetchReading(
+    String id) async {
   try {
     final r =
         await dio.get('/readings/$id');
@@ -210,7 +211,8 @@ if (res.statusCode == 200) {
   return Reading.fromJson(
       jsonDecode(res.body));
 }
-throw ApiFailure('status ${res.statusCode}');
+throw ApiFailure(
+    'status ${res.statusCode}');
 \end{dart}
     \end{column}
     \begin{column}{0.40\textwidth}
@@ -308,10 +310,12 @@ class Reading {
   final String deviceId; final double tempC;
   Reading({required this.deviceId,
       required this.tempC});
-  factory Reading.fromJson(Map j) => Reading(
-    deviceId: j['device_id'] as String,
-    tempC: (j['temp_c'] as num).toDouble(),
-  );
+  factory Reading.fromJson(Map j) =>
+      Reading(
+        deviceId: j['device_id'] as String,
+        tempC: (j['temp_c'] as num)
+            .toDouble(),
+      );
   Map toJson() => {
     'device_id': deviceId, 'temp_c': tempC,
   };
@@ -378,7 +382,8 @@ class Task {
   Task({required this.status,
       required this.dueAt,
       required this.lastReading});
-  factory Task.fromJson(Json j) => _$TaskFromJson(j);
+  factory Task.fromJson(Json j) =>
+      _$TaskFromJson(j);
 }
 \end{dart}
     \end{column}
@@ -420,7 +425,8 @@ part 'task_state.freezed.dart';
 
 @freezed
 sealed class TaskState with _$TaskState {
-  const factory TaskState.loading() = Loading;
+  const factory TaskState.loading() =
+      Loading;
   const factory TaskState.data(
       List<Task> tasks) = Data;
   const factory TaskState.error(

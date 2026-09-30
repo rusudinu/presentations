@@ -2,7 +2,7 @@
 \documentclass[10pt,aspectratio=169,t]{beamer}
 \usetheme{upbminimal}
 
-\course{Application Development for Mobile Devices}
+\course[ADMD]{Application Development for Mobile Devices}
 \decklabel{Lecture 12}
 \title{AI in the app}
 \subtitle{On-device ML, custom models, and safe cloud LLM calls}
@@ -166,10 +166,13 @@ void dispose() => _reader.close();
     \begin{column}{0.52\textwidth}
 \begin{dart}
 bool _busy = false;
-Future<void> onFrame(CameraImage f) async {
+Future<void> onFrame(
+    CameraImage f) async {
   if (_busy) return; else _busy = true;
-  final codes = await _scanner.processImage(_toInput(f));
-  if (codes.isNotEmpty) onCode(codes.first);
+  final codes = await _scanner
+      .processImage(_toInput(f));
+  if (codes.isNotEmpty)
+    onCode(codes.first);
   _busy = false;
 }
 \end{dart}
@@ -291,7 +294,8 @@ const apiKey =
 
 final model = GenerativeModel(
   model: 'gemini-3.5-flash',
-  apiKey: apiKey,  // compiled into the app
+  // Compiled into the app.
+  apiKey: apiKey,
 );
 
 final res = await model.generateContent(
@@ -399,13 +403,15 @@ final model = FirebaseAI.googleAI()
   \begin{columns}[T]
     \begin{column}{0.52\textwidth}
 \begin{dart}
-Stream<String> ask(String prompt) async* {
+Stream<String> ask(
+    String prompt) async* {
   final buf = StringBuffer();
   final s = _model.generateContentStream(
       [Content.text(prompt)]);
   await for (final chunk in s) {
     buf.write(chunk.text ?? '');
-    yield buf.toString();   // UI rebuilds per chunk
+    // The UI rebuilds per chunk.
+    yield buf.toString();
   }
 }
 \end{dart}
@@ -468,10 +474,13 @@ Stream<String> ask(String prompt) async* {
     \end{column}
     \begin{column}{0.44\textwidth}
 \begin{dart}
-responseMimeType: 'application/json',
-responseSchema: Schema.object(properties: {
+responseMimeType:
+    'application/json',
+responseSchema:
+    Schema.object(properties: {
   'category': Schema.enumString(
-      enumValues: ['food', 'travel']),
+      enumValues:
+          ['food', 'travel']),
 }),
 \end{dart}
     \end{column}

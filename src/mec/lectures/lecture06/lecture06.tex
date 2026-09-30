@@ -2,7 +2,7 @@
 \documentclass[10pt,aspectratio=169,t]{beamer}
 \usetheme{upbminimal}
 
-\course{Mobile and Embedded Computing}
+\course[MEC]{Mobile and Embedded Computing}
 \decklabel{Lecture 6}
 \title{Phone sensors and hardware APIs}
 \subtitle{Motion sensors, location, camera, NFC, and energy cost}
@@ -313,10 +313,11 @@ Future<bool> ensureLocation() async {
     await Geolocator.openAppSettings();         // request() is a no-op now
     return false;
   }
-  return p == LocationPermission.whileInUse || p == LocationPermission.always;
+  return p == LocationPermission.whileInUse ||
+      p == LocationPermission.always;
 }
 \end{dart}
-  \muted{Check \code{isLocationServiceEnabled} first: a granted permission with the radio off returns nothing.}
+  \muted{Check \code{isLocationServiceEnabled} first: with the radio off, a grant returns nothing.}
   \note{Students read a granted permission with the location service off as a bug in their own code, so make the service check explicit. Mention that after openAppSettings the user may come back granted, denied or not at all, so re-check the status on resume.}
 \end{frame}
 

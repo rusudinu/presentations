@@ -2,7 +2,7 @@
 \documentclass[10pt,aspectratio=169,t]{beamer}
 \usetheme{upbminimal}
 
-\course{Application Development for Mobile Devices}
+\course[ADMD]{Application Development for Mobile Devices}
 \decklabel{Lecture 3}
 \title{Widgets and layout}
 \subtitle{Composition, constraints, scrolling, and Material scaffolding}
@@ -177,7 +177,8 @@ class _CounterViewState extends State<CounterView> {
     \begin{column}{0.56\textwidth}
 \begin{dart}
 class UserListItem extends StatelessWidget {
-  const UserListItem(this.user, {super.key});
+  const UserListItem(this.user,
+      {super.key});
   final User user;
   @override
   Widget build(BuildContext context) => Row(
@@ -377,7 +378,8 @@ Row(children: [
 \begin{dart}
 ListView(   // eager: every child built now
   children: [
-    for (final t in todos) TodoTile(todo: t),
+    for (final t in todos)
+      TodoTile(todo: t),
   ],
 )
 
@@ -449,10 +451,11 @@ Scaffold(
     actions: const [SearchButton()],
   ),
   body: const TodoList(),
-  floatingActionButton: FloatingActionButton(
-    onPressed: _addTodo,
-    child: const Icon(Icons.add),
-  ),
+  floatingActionButton:
+      FloatingActionButton(
+        onPressed: _addTodo,
+        child: const Icon(Icons.add),
+      ),
   bottomNavigationBar: const HomeNavBar(),
 )
 \end{dart}

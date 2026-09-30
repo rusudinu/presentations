@@ -3,7 +3,7 @@
 \documentclass[10pt,aspectratio=169,t]{beamer}
 \usetheme{upbminimal}
 
-\course{Mobile and Embedded Computing}
+\course[MEC]{Mobile and Embedded Computing}
 \decklabel{Lecture 2}
 \title{Concurrency}
 \subtitle{Event loop, isolates, and goroutines}
@@ -95,7 +95,9 @@ Future<void> refresh() async {
 // A Stream is many values, over time.
 Stream<int> ticker() async* {
   for (var i = 0; ; i++) {
-    await Future.delayed(const Duration(seconds: 1));
+    await Future.delayed(
+      const Duration(seconds: 1),
+    );
     yield i;
   }
 }
@@ -182,7 +184,10 @@ Future<List<Photo>> fetchPhotos() async {
 \begin{dart}
 Future<int> sumInIsolate(int n) async {
   final inbox = ReceivePort();
-  await Isolate.spawn(_worker, [inbox.sendPort, n]);
+  await Isolate.spawn(
+    _worker,
+    [inbox.sendPort, n],
+  );
   return await inbox.first as int;
 }
 
@@ -238,10 +243,13 @@ void _worker(List msg) {
 \begin{shell}
 CGO_ENABLED=0 GOOS=linux \
   GOARCH=arm64 \
-  go build -o server ./cmd/server
+  go build -o server \
+  ./cmd/server
 
-scp server root@vps:/usr/local/bin/
-ssh root@vps 'systemctl restart api'
+scp server \
+  root@vps:/usr/local/bin/
+ssh root@vps \
+  'systemctl restart api'
 \end{shell}
     \end{column}
   \end{columns}

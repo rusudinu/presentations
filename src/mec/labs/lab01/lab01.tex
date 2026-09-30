@@ -2,7 +2,7 @@
 \documentclass[10pt,aspectratio=169,t]{beamer}
 \usetheme[lab]{upbminimal}
 
-\course{Mobile and Embedded Computing}
+\course[MEC]{Mobile and Embedded Computing}
 \decklabel{Lab 1}
 \title{Toolchain, board, broker, and project kickoff}
 \subtitle{TinyGo, a blinking LED, a local MQTT broker, team setup}
@@ -74,10 +74,10 @@ tinygo targets
       \begin{checklist}
         \item \code{tinygo version} prints a version.
         \item Your target appears in the output of \code{tinygo targets}.
-        \item The target name is written in the pull request description.
+        \item The target name is in the pull request description.
       \end{checklist}
       \begin{warning}
-        Board variants have their own targets, such as \code{xiao-esp32c3}. Check the board page for the exact name.
+        Board variants have their own targets, such as \code{xiao-esp32c3}. Check the board page.
       \end{warning}
     \end{column}
   \end{columns}

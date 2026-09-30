@@ -2,7 +2,7 @@
 \documentclass[10pt,aspectratio=169,t]{beamer}
 \usetheme{upbminimal}
 
-\course{Mobile and Embedded Computing}
+\course[MEC]{Mobile and Embedded Computing}
 \decklabel{Lecture 11}
 \title{gRPC, Protocol Buffers, HTTP/2 and HTTP/3}
 \subtitle{Protobuf contracts, streaming, wire format, transport}
@@ -36,7 +36,7 @@
   \begin{columns}[T]
     \begin{column}{0.53\textwidth}
       \begin{itemize}
-        \item \textbf{REST (Representational State Transfer) models nouns.} \muted{You name resources and use a few fixed verbs on them, a good fit for a public API that strangers discover from a URL.}
+        \item \textbf{REST (Representational State Transfer) models nouns.} \muted{You name resources and use a few fixed verbs on them, a good fit for a public API found from a URL.}
         \item \textbf{RPC models verbs.} \muted{You name the operation your app needs, such as GetDashboard, and call it like a local function. Client and server agree on a list of procedures, not a URL space.}
         \item \textbf{On a phone the difference is round trips.} \muted{A resource-shaped screen often needs three or four sequential requests, and each one costs time on cellular before any data moves.}
       \end{itemize}
@@ -95,8 +95,10 @@ message Reading {
   int64  taken_at_unix_ms = 3;
 }
 service Telemetry {
-  rpc SubmitReading(Reading) returns (SubmitReadingResponse);
-  rpc WatchReadings(WatchReadingsRequest) returns (stream Reading);
+  rpc SubmitReading(Reading)
+      returns (SubmitReadingResponse);
+  rpc WatchReadings(WatchReadingsRequest)
+      returns (stream Reading);
 }
 \end{codeblock}
     \end{column}
@@ -146,13 +148,18 @@ protoc -Iproto --dart_out=grpc:lib/gen \
   \begin{columns}[T]
     \begin{column}{0.62\textwidth}
 \begin{golang}
-func (s *server) SubmitReading(ctx context.Context,
-    req *pb.Reading) (*pb.SubmitReadingResponse, error) {
+func (s *server) SubmitReading(
+    ctx context.Context,
+    req *pb.Reading,
+) (*pb.SubmitReadingResponse, error) {
     id, err := s.store.Save(ctx, req)
     if err != nil {
-        return nil, status.Error(codes.Internal, "save failed")
+        return nil, status.Error(
+            codes.Internal, "save failed")
     }
-    return &pb.SubmitReadingResponse{StoredId: id}, nil
+    return &pb.SubmitReadingResponse{
+        StoredId: id,
+    }, nil
 }
 \end{golang}
     \end{column}
@@ -190,13 +197,18 @@ func (s *server) SubmitReading(ctx context.Context,
   \begin{columns}[T]
     \begin{column}{0.6\textwidth}
 \begin{dart}
-final channel = ClientChannel('api.example.com', port: 443,
-    options: const ChannelOptions(
-        credentials: ChannelCredentials.secure()));
+final channel = ClientChannel(
+  'api.example.com',
+  port: 443,
+  options: const ChannelOptions(
+    credentials: ChannelCredentials.secure(),
+  ),
+);
 final client = TelemetryClient(channel);
 final res = await client.submitReading(
   Reading()..deviceId = id..tempC = 21.5,
-  options: CallOptions(timeout: const Duration(seconds: 2)),
+  options: CallOptions(
+      timeout: const Duration(seconds: 2)),
 );
 debugPrint(res.storedId);
 \end{dart}
@@ -221,7 +233,8 @@ func (s *server) WatchReadings(
     stream pb.Telemetry_WatchReadingsServer,
 ) error {
     ctx := stream.Context()
-    for r := range s.store.Sub(ctx, req.DeviceId) {
+    sub := s.store.Sub(ctx, req.DeviceId)
+    for r := range sub {
         if err := stream.Send(r); err != nil {
             return err
         }
@@ -244,8 +257,12 @@ func (s *server) WatchReadings(
 \begin{dart}
 final call = client.watchReadings(
   WatchReadingsRequest()..deviceId = id,
-  options: CallOptions(timeout: const Duration(seconds: 5)));
-final sub = call.listen(_onReading, onError: _onError);
+  options: CallOptions(
+    timeout: const Duration(seconds: 5),
+  ),
+);
+final sub = call.listen(
+    _onReading, onError: _onError);
 @override
 void dispose() {
   sub.cancel(); channel.shutdown();
@@ -256,29 +273,31 @@ void dispose() {
     \begin{column}{0.42\textwidth}
       \lead{Cancel in dispose().}{An open stream keeps the radio and the server busy for a screen the user already left.}
       \muted{The deadline still applies: a stream silent that long fails too.}
+      \begin{takeaway}{Listen, cancel, and set a deadline:}
+        the three habits Lab 6 grades directly.
+      \end{takeaway}
     \end{column}
   \end{columns}
-  \begin{takeaway}{Listen, cancel, and set a deadline:}
-    the three habits Lab 6 grades directly.
-  \end{takeaway}
   \note{Tie this straight to Lab 6's acceptance criteria: canceling stops the stream, and a short deadline against a server that sleeps three seconds fails visibly. call.listen returns a subscription like any other Dart Stream.}
 \end{frame}
 
 \begin{frame}[fragile,eyebrow=Implementing]{Client streaming: draining an offline queue}
   \begin{columns}[T]
-    \begin{column}{0.47\textwidth}
+    \begin{column}{0.36\textwidth}
       Many requests, one response: the shape of an outbox drain from Lecture 8. Queue rows offline, then stream them upstream for one acknowledgement.
     \end{column}
-    \begin{column}{0.5\textwidth}
+    \begin{column}{0.6\textwidth}
 \begin{dart}
 // service Telemetry adds:
-// rpc UploadReadings(stream Reading) returns (Ack);
+// rpc UploadReadings(stream Reading)
+//     returns (Ack);
 Stream<Reading> _drain() async* {
   for (final r in await outbox.rows()) {
     yield r.toReading();
   }
 }
-final sum = await client.uploadReadings(_drain());
+final sum =
+    await client.uploadReadings(_drain());
 debugPrint('stored: ${sum.accepted}');
 \end{dart}
     \end{column}

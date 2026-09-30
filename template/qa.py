@@ -79,12 +79,38 @@ def main():
     for m in re.finditer(r"Overfull \\vbox \(([\d.]+)pt too high\) detected at line (\d+)", log):
         problems.append(f"line {m.group(2)}: slide is {float(m.group(1)):.0f}pt too tall and runs into the footer. "
                         "Cut text, shorten code, or split the slide.")
-    for m in re.finditer(r"Overfull \\hbox \(([\d.]+)pt too wide\) in paragraph at lines (\d+)--(\d+)", log):
-        if float(m.group(1)) > 3:
-            problems.append(f"line {m.group(2)}: text or table is {float(m.group(1)):.0f}pt too wide.")
+    for ch in sorted(set(re.findall(r"Missing character: There is no (.) \((U\+[0-9A-F]+)\)", log))):
+        problems.append(f"the fonts have no glyph for '{ch[0]}' ({ch[1]}); it prints as an empty box.")
+    # Code in a [fragile] frame is read back from the .vrb file, so its line numbers mean nothing;
+    # report those by page. Beamer prints [N] after shipping page N, so the next page is N + 1.
+    page, in_vrb = 0, False
+    for l in log.split("\n"):
+        for m in re.finditer(r"\[(\d+)", l):
+            page, in_vrb = int(m.group(1)), False
+        if f"{base}.vrb" in l and "openout" not in l:
+            in_vrb = True
+        m = re.search(r"Overfull \\hbox \(([\d.]+)pt too wide\) in paragraph at lines (\d+)--(\d+)", l)
+        if m and float(m.group(1)) > 3:
+            if in_vrb:
+                problems.append(f"page {page + 1}: a code line is {float(m.group(1)):.0f}pt wider than its panel "
+                                "and has no space to wrap at. Shorten it.")
+            else:
+                problems.append(f"line {m.group(2)}: text or table is {float(m.group(1)):.0f}pt too wide.")
+
+    # ---------------------------------------------------------------- code wraps
+    # The theme starts a wrapped code line with a hooked arrow, which pdftotext reads as ",→".
+    pdf = os.path.join(d, base + ".pdf"); sheets = []; npages = 0
+    if os.path.exists(pdf) and r.returncode == 0:
+        text = subprocess.run(["pdftotext", pdf, "-"], capture_output=True, text=True).stdout
+        for n, pg in enumerate(text.split("\f"), 1):
+            lines = pg.split("\n")
+            for i, l in enumerate(lines):
+                if ",→" in l or "↪" in l:
+                    prev = lines[i - 1].strip() if i else ""
+                    problems.append(f"page {n}: a code line wraps after '{prev[-50:]}'. "
+                                    "Break it by hand or shorten it (78 characters full width, 42 in a column).")
 
     # ---------------------------------------------------------------- render
-    pdf = os.path.join(d, base + ".pdf"); sheets = []; npages = 0
     if render and os.path.exists(pdf) and r.returncode == 0:
         prev = os.path.join(d, "preview"); os.makedirs(prev, exist_ok=True)
         for f in glob.glob(os.path.join(prev, base + "-*.png")):

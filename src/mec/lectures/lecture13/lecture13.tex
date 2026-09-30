@@ -3,7 +3,7 @@
 \documentclass[10pt,aspectratio=169,t]{beamer}
 \usetheme{upbminimal}
 
-\course{Mobile and Embedded Computing}
+\course[MEC]{Mobile and Embedded Computing}
 \decklabel{Lecture 13}
 \title{Rendering and Optimization}
 \subtitle{Frame budget, widget trees, optimization, profiling}
@@ -454,7 +454,7 @@ flutter run --profile        # on a real device
 
 \begin{frame}[fragile,eyebrow=Profiling]{Example: a list screen that drops frames}
   \begin{columns}[T]
-    \begin{column}{0.52\textwidth}
+    \begin{column}{0.56\textwidth}
 \begin{dart}
 ListView(children: users.map((u) =>
   Opacity(
@@ -467,7 +467,7 @@ ListView(children: users.map((u) =>
 ).toList())
 \end{dart}
     \end{column}
-    \begin{column}{0.44\textwidth}
+    \begin{column}{0.40\textwidth}
       \begin{itemize}
         \item 1,200 users. Every row builds up front, before frame one shows.
         \item Avatars decode at full source size, not tile size.

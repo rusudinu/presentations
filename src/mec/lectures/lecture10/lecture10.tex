@@ -3,7 +3,7 @@
 \documentclass[10pt,aspectratio=169,t]{beamer}
 \usetheme{upbminimal}
 
-\course{Mobile and Embedded Computing}
+\course[MEC]{Mobile and Embedded Computing}
 \decklabel{Lecture 10}
 \title{Backends for mobile}
 \subtitle{Serverless, VPS hosting, Go backends, API design}
@@ -236,7 +236,8 @@ func handle(w http.ResponseWriter,
       {\bfseries Dart: the client side of the call}\par
 \begin{dart}
 final dio = Dio(BaseOptions(
-  baseUrl: 'https://api.example.com',
+  baseUrl:
+      'https://api.example.com',
 ));
 final res = await dio.post(
   '/readings',
@@ -253,9 +254,9 @@ final res = await dio.post(
   \begin{columns}[T]
     \begin{column}{0.62\textwidth}
       \begin{itemize}
-        \item When a service fails briefly, ten thousand clients fail at once and every one retries after exactly one second. The retry wave is larger than the original load: a brief outage becomes a long one. That is a thundering herd.
+        \item When a service fails briefly, ten thousand clients fail at once and all retry after exactly one second. The retry wave exceeds the original load: a brief outage becomes a long one. That is a thundering herd.
         \item Full jitter spreads retries across the whole interval, so a recovering server sees load ramp up instead of arriving all at once.
-        \item Hedging is the opposite problem: a small fraction of requests are slow. Send a second copy after a short delay, take whichever answers first, and cancel the other.
+        \item Hedging solves the opposite problem: a few requests are slow. Send a second copy after a short delay, take whichever answers first, and cancel the other.
       \end{itemize}
     \end{column}
     \begin{column}{0.34\textwidth}
@@ -281,14 +282,14 @@ final res = await dio.post(
 
 \begin{frame}[fragile,eyebrow=API design]{Cursor-based pagination}
   \begin{columns}[T]
-    \begin{column}{0.56\textwidth}
+    \begin{column}{0.43\textwidth}
       \begin{itemize}
-        \item An offset-and-limit page breaks when rows are inserted or deleted between requests: page two can skip or repeat rows.
-        \item A cursor is an opaque token that encodes the last item's sort key. The client sends it back to get the next page; nothing else has to stay stable.
-        \item Cursors compose with real-time inserts, work with any sort order, and never need a total row count the database would have to compute.
+        \item Offset and limit break when rows change between requests: page two can skip or repeat rows.
+        \item A cursor is an opaque token that encodes the last item's sort key. The client sends it back to get the next page.
+        \item Cursors survive live inserts, work with any sort order, and need no total row count.
       \end{itemize}
     \end{column}
-    \begin{column}{0.4\textwidth}
+    \begin{column}{0.53\textwidth}
 \begin{golang}
 // cursor, limit: query params
 type Page struct {
@@ -434,18 +435,19 @@ WantedBy=multi-user.target
 
 \begin{frame}[fragile,eyebrow=Deploying]{Environment variables and secrets}
   \begin{columns}[T]
-    \begin{column}{0.58\textwidth}
+    \begin{column}{0.50\textwidth}
       \begin{itemize}
         \item Configuration that changes between environments belongs in environment variables, read once at startup, never hardcoded.
-        \item Secrets are configuration too, but never in the code or the git repository. A leaked key is compromised the moment it is pushed, even after deletion.
-        \item On a VPS: a root-only environment file loaded by systemd. On Cloud Run: a secret manager, never baked into the image.
+        \item Secrets are configuration too, but never in the code or the git repository. A pushed key is compromised, even after deletion.
+        \item On a VPS: a root-only environment file loaded by systemd. On Cloud Run: a secret manager, not the image.
       \end{itemize}
     \end{column}
-    \begin{column}{0.38\textwidth}
+    \begin{column}{0.46\textwidth}
 \begin{golang}
 dsn := os.Getenv("DATABASE_URL")
 if dsn == "" {
-    log.Fatal("DATABASE_URL is required")
+    log.Fatal(
+        "DATABASE_URL is required")
 }
 \end{golang}
     \end{column}

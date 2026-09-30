@@ -2,7 +2,7 @@
 \documentclass[10pt,aspectratio=169,t]{beamer}
 \usetheme{upbminimal}
 
-\course{Mobile and Embedded Computing}
+\course[MEC]{Mobile and Embedded Computing}
 \decklabel{Lecture 7}
 \title{Background execution and power management}
 \subtitle{App lifecycle, background execution, and energy}
@@ -551,8 +551,8 @@ adb bugreport report.zip
     \item Writes go to the local database and an outbox in one transaction, so nothing depends on the sync running.
     \item Foreground triggers first: sync on resume, and on regaining connectivity.
     \item One scheduled task on top, with a network constraint and a retry result on failure.
-    \item The task opens its own database, reads a stored cursor, and never assumes how long it slept.
-    \item The work is idempotent and the drain is bounded, so a task cut off halfway is safe to repeat.
+    \item The task opens its own database, reads a stored cursor, never assumes how long it slept.
+    \item The work is idempotent and the drain bounded: a task cut off halfway is safe to repeat.
     \item State is written to disk before the task returns, and the app reads it on the next launch.
   \end{checklist}
   \vskip 2mm

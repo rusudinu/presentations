@@ -3,7 +3,7 @@
 \documentclass[10pt,aspectratio=169,t]{beamer}
 \usetheme[lab]{upbminimal}
 
-\course{Application Development for Mobile Devices}
+\course[ADMD]{Application Development for Mobile Devices}
 \decklabel{Lab 3}
 \title{Widgets, UI, and DevTools}
 \subtitle{Layouts, gestures and debugging}
@@ -84,11 +84,14 @@
   \begin{columns}[T]
     \begin{column}{0.55\textwidth}
 \begin{dart}
-class _TodoState extends State<TodoScreen> {
+class _TodoState
+    extends State<TodoScreen> {
   final _items = <Todo>[];
   final _input = TextEditingController();
   void _add() {
-    setState(() => _items.add(Todo(_input.text)));
+    setState(() {
+      _items.add(Todo(_input.text));
+    });
     _input.clear();
   }
   // Dispose the controller in dispose()
@@ -113,8 +116,11 @@ class _TodoState extends State<TodoScreen> {
 Dismissible(
   key: ValueKey(todo.id),
   direction: DismissDirection.endToStart,
-  onDismissed: (_) => setState(
-      () => _items.removeWhere((t) => t.id == todo.id)),
+  onDismissed: (_) => setState(() {
+    _items.removeWhere(
+      (t) => t.id == todo.id,
+    );
+  }),
   background: Container(color: Colors.red),
   child: TodoTile(todo: todo),
 )
