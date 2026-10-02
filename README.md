@@ -13,6 +13,8 @@ Each folder has an index of every lecture and lab, the PDFs, and the code exampl
 
 - [AI in mobile apps: on-device ML, LLMs, RAG and MCP](talks/ai-in-mobile-apps/), with the demos
 - [GitHub and Flutter](talks/he/)
+- [DevTalks](talks/devtalks/)
+- [DevCon](talks/devcon/)
 
 ## Running everything
 
