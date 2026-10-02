@@ -28,7 +28,7 @@ Code examples that go with the lectures are in [examples/](examples/).
 
 | | Deck | About |
 |---|---|---|
-| Lab 01 | [Orientation, set-up, and your first pull request](ADMD-Lab-01.pdf) | Environment, tooling and the GitHub workflow (Week 2) |
+| Lab 01 | [Orientation, set-up, and your first app](ADMD-Lab-01.pdf) | Environment, tooling and a first app on a device (Week 2) |
 | Lab 02 | [Dart and null safety](ADMD-Lab-02.pdf) | Classes, null-safe types and collections (Week 4) |
 | Lab 03 | [Widgets, UI, and DevTools](ADMD-Lab-03.pdf) | Layouts, gestures and debugging (Week 6) |
 | Lab 04 | [Serialization and networking](ADMD-Lab-04.pdf) | Code generation, equality, HTTP, retry (Week 8) |
