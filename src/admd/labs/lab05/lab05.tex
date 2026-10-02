@@ -21,12 +21,12 @@
     \cell[\faVial]{Prove it with a test}{Write one bloc\_test that drives events through the bloc and checks the exact states it emits, in order.}
   \end{grid}
   \vskip 6mm
-  \taskmeta{Time}{2 hours}{Submit}{Push to your admd-labs repo, branch \code{lab-5}, before next lab}
+  \taskmeta{Time}{2 hours}{Present}{To the lab instructor, at the end of this lab}
 \end{frame}
 
-\begin{frame}[fragile,eyebrow=Setup]{Branch and file layout}
+\begin{frame}[fragile,eyebrow=Setup]{File layout}
   \begin{steps}
-    \item Open the project from Lab 4 and create a branch: \code{git checkout -b lab-5}
+    \item Open the project from Lab 4.
     \item Keep \code{lib/models/todo.dart} from Lab 4. Create a new \code{lib/todos/} folder for everything else.
     \item Run the app once before changing anything. If it does not build, fix that first.
   \end{steps}
@@ -284,6 +284,6 @@ void main() {
   \trouble{Toggling a todo does nothing on screen}{The new state is \code{==} to the old one. Check that \code{copyWith} swaps the toggled item.}
 \end{frame}
 
-\closingframe{Submission}{Branch lab-5 · TodoBloc replaces TodoCubit · one passing bloc\_test in the PR}
+\closingframe{Presentation}{TodoBloc replaces TodoCubit · one bloc\_test passing, run live}
 
 \end{document}

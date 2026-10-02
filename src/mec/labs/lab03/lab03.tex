@@ -20,14 +20,13 @@
     \cell[\faBluetoothB]{Write the central}{Scan, connect, subscribe and show the value live in Flutter, and keep working after the peripheral disappears.}
   \end{grid}
   \vskip 6mm
-  \taskmeta{Time}{2 hours}{Submit}{Branch \code{lab-3} in the team repository, pushed before the next lab}
+  \taskmeta{Time}{2 hours}{Present}{To the lab instructor, at the end of this lab}
 \end{frame}
 
-\begin{frame}[fragile,eyebrow=Setup]{Branch, dependencies, file layout}
+\begin{frame}[fragile,eyebrow=Setup]{Dependencies and file layout}
   \begin{steps}
-    \item Branch the team repository and add the two packages:
+    \item Add the two packages:
 \begin{shell}
-git checkout -b lab-3
 flutter pub add flutter_blue_plus permission_handler
 \end{shell}
     \item The peripheral lives in \code{peripheral/main.go}, in its own Go module.
@@ -261,22 +260,22 @@ Future<void> _tryConnect() async {
   \trouble{Nothing works on an ESP32}{Only the ESP32-C3 and ESP32-S3 advertise on their own, through espradio. A plain ESP32 needs an HCI co-processor: use the nRF52840 or a laptop instead.}
 \end{frame}
 
-\begin{frame}[eyebrow=Submission]{Acceptance checks}
+\begin{frame}[eyebrow=Acceptance]{Acceptance checks}
   \vskip 2mm
   \begin{columns}[T]
     \begin{column}{0.52\textwidth}
-      \kv{Checked on your branch}{}
+      \kv{Checked when you present}{}
       \begin{checklist}
         \item \code{peripheral/main.go} builds and advertises.
-        \item The manifest and Info.plist entries are committed.
+        \item The manifest and Info.plist entries are in place.
         \item The scan list shows name and RSSI.
         \item The live value updates once per second.
         \item The peripheral is killed and restarted, and the app recovers.
       \end{checklist}
     \end{column}
     \begin{column}{0.44\textwidth}
-      \kv{How to submit}{}
-      \muted{Branch \code{lab-3} in the team repository, one commit per task, pushed before the next lab. Put your two UUIDs and the byte encoding in the README.}
+      \kv{How to present}{}
+      \muted{On a physical phone, at the end of the lab. Be ready to name your two UUIDs and the byte encoding.}
       \vskip 2mm
       \begin{hint}[Before you leave]
         Run the whole path once from a fresh install of the app, with the phone unplugged from the laptop.
@@ -285,6 +284,6 @@ Future<void> _tryConnect() async {
   \end{columns}
 \end{frame}
 
-\closingframe{Submission}{Branch lab-3 · peripheral, scan, live value, reconnect}
+\closingframe{Presentation}{Peripheral, scan, live value, reconnect: shown live}
 
 \end{document}

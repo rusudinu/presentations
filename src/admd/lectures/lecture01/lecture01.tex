@@ -14,7 +14,7 @@
 
 \objectivesframe{
   \cell[\faIcon{calendar-alt}]{Course organization}{The fourteen lectures, the seven labs, how the grade is built, and what to bring to Lab 1.}
-  \cell[\faIcon{code-branch}]{Git setup}{A GitHub account and the loop you run every lab: branch, commit, push, pull request, review, merge.}
+  \cell[\faIcon{code-branch}]{Git setup}{A GitHub account and the loop every team runs: branch, commit, push, pull request, review, merge.}
   \cell[\faLayerGroup]{Four build strategies}{Native, web, cross-platform in two flavors, and shared logic with native user interfaces.}
   \cell[\faIcon{mobile-alt}]{Choosing a strategy}{Why this course uses Flutter, what that choice costs, and when another strategy fits better.}
 }
@@ -101,7 +101,7 @@
     \toprule
     \thead{Week} & \thead{Lab} & \thead{What you build} \\
     \midrule
-    2  & Lab 1 & Set-up, first repository, first pull request \\
+    2  & Lab 1 & Set-up and your first app on a device \\
     4  & Lab 2 & Dart classes, null-safe types, collections \\
     6  & Lab 3 & The todo screen, widgets, and DevTools \\
     8  & Lab 4 & JSON models and a network call with retry \\
@@ -129,16 +129,17 @@
   \note{Say the pass line out loud and repeat it. The message students need is that lab work is most of the grade, so falling behind in the labs cannot be recovered later. Mention that the lab test in week 14 is individual and practical, and that the colloquium and the midterm are separate from it.}
 \end{frame}
 
-\begin{frame}[eyebrow=Orientation]{Lab repository and branches}
+\begin{frame}[eyebrow=Orientation]{Lab work and presentation}
   \vskip 2mm
   \begin{grid}[3]
-    \cell[\faIcon{folder-open}]{One repository}{Each student keeps one GitHub repository named \code{admd-labs}. Every lab lands in it.}
-    \cell[\faIcon{code-branch}]{One branch per lab}{Work for Lab N goes on a branch named \code{lab-N}, created from \code{main} and pushed before the next lab.}
-    \cell[\faIcon{check-double}]{One pull request}{Each lab ends with a pull request, merged into \code{main} so the next lab starts from it.}
+    \cell[\faIcon{mobile-alt}]{One app}{Every lab continues the same Flutter project. Bring the working app from the previous lab.}
+    \cell[\faIcon{chalkboard-teacher}]{Present at the end}{At the end of each lab you run your work for the lab instructor and walk through each task.}
+    \cell[\faIcon{comments}]{Explain your code}{You answer questions about any line of it.}
   \end{grid}
-  \begin{takeaway}{Every lab lives in the repository.}
+  \begin{takeaway}{Every lab is graded live, at the end of the lab.}
+    A lab can only be presented in its own session.
   \end{takeaway}
-  \note{This rule removes every argument about deadlines and file versions. Show a repository on screen if you have one open. Say explicitly that a lab pushed after the next lab has started is late.}
+  \note{State the rule once and plainly: what a student shows running at the end of the lab is what is graded, and a lab cannot be presented in a later session. Remind them that the app is cumulative, so an unfinished lab still has to be caught up before the next one.}
 \end{frame}
 
 \divider{Part 2 · Git and GitHub}{Git workflow}[Git hosting, branches, commits, pull requests, continuous integration]
@@ -170,14 +171,14 @@
     \begin{column}{0.55\textwidth}
       \begin{itemize}
         \item Sign up, free, at \link{https://github.com/signup}{github.com/signup}. Use a name you are happy to show a future employer.
-        \item Your commits are part of your grade. Every lab is read from your repository.
+        \item Keep your lab app in a repository of your own. The app grows all semester, and you will want every working state back.
         \item Turn on two-factor authentication. GitHub requires it for accounts that contribute code.
       \end{itemize}
     \end{column}
     \begin{column}{0.41\textwidth}
       \kv{Shared course material}{\link{https://github.com/rusudinu/presentations}{github.com/rusudinu/presentations}}
       \vskip 3mm
-      \kv{Your own repository}{\code{admd-labs}, created in Lab 1}
+      \kv{Your own repository}{One for your lab app, created in Lab 1}
     \end{column}
   \end{columns}
   \note{Make this the one homework item of the week. A student without an account loses the first thirty minutes of Lab 1. Point at the shared repository: slides, examples and lab starters all live there.}
@@ -195,7 +196,7 @@
       \end{itemize}
     \end{column}
     \begin{column}{0.39\textwidth}
-      \kv{In this course}{\code{main} is the finished state of your app. \code{lab-3} is the work in progress for Lab 3.}
+      \kv{For example}{\code{main} is the working state of your app. \code{todo-screen} is the screen you are still building.}
       \vskip 3mm
       \muted{A repository is a Git concept, not a GitHub one. GitHub only hosts it.}
     \end{column}
@@ -208,12 +209,12 @@
     \begin{column}{0.56\textwidth}
 \begin{shell}
 git clone <repo-url>   # once
-git checkout -b lab-1
+git checkout -b todo-screen
 
 # edit files, then:
 git add .
 git commit -m "Add todo screen"
-git push -u origin lab-1
+git push -u origin todo-screen
 
 # open a pull request, get a review
 
@@ -222,7 +223,7 @@ git pull
 \end{shell}
     \end{column}
     \begin{column}{0.40\textwidth}
-      \lead{Run this loop once per lab.}{Clone, branch, commit, push, review, merge, pull.}
+      \lead{The loop every team runs.}{Clone, branch, commit, push, review, merge, pull.}
       \vskip 2mm
       \muted{\code{git status} answers most questions. Run it whenever you are unsure what Git is about to do.}
     \end{column}
@@ -265,7 +266,7 @@ asdf
       \end{itemize}
     \end{column}
     \begin{column}{0.40\textwidth}
-      \kv{In your labs}{The description names what you built, what you could not finish, and any code an agent wrote for you.}
+      \kv{In your labs}{The review happens live. You present the work at the end of the lab and answer questions on it.}
     \end{column}
   \end{columns}
   \begin{takeaway}{Open the pull request early, even when the work is unfinished.}
@@ -508,7 +509,7 @@ flutter run
 \begin{frame}[eyebrow=Recap]{Summary}
   \vskip 2mm
   \begin{enumerate}
-    \item Every lab lives in one repository. \muted{One repository, a branch per lab, a pull request per lab.}
+    \item Every lab ends with a presentation. \muted{One app that grows, shown running to the lab instructor at the end of each lab.}
     \item There are four ways to build a mobile app. \muted{Native, web, cross-platform, and shared logic with native screens.}
     \item Every strategy has a cost. \muted{This course uses Flutter, and states what that choice gives up.}
   \end{enumerate}

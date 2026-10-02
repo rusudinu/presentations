@@ -19,7 +19,7 @@ history). `EX` means `admd/examples/lib/` (the Flutter example project, grouped 
 | Grading | Colloquium 20 p, midterm 20 p, lab assignments 30 p (cumulative lab app), practical lab test 30 p (Lab 7). Pass with at least 50 of 100 |
 | Instructors | Andrei Vasilățeanu; Dinu-Ștefan Rusu, dinu_stefan.rusu@upb.ro, Microsoft Teams course channel, rusudinu.com. 50+ apps shipped, 500k+ installs |
 | Stack | Flutter and Dart, Firebase, Go only where a tiny backend is needed |
-| Repository | github.com/rusudinu/presentations for the shared material (slides in `admd/`, code examples in `admd/examples/`); each student keeps one course repository on GitHub for all labs |
+| Repository | github.com/rusudinu/presentations for the shared material (slides in `admd/`, code examples in `admd/examples/`); labs are individual, and each one is graded when the student presents it to the lab instructor at the end of its session |
 | Metadata for `\course{}` | `Application Development for Mobile Devices`; lectures set no `\date`, labs set `\date{Week N}` (course index only, not on the slide) |
 
 This course teaches how to build the app. Its sibling, Mobile and Embedded Computing (MEC, semester II), teaches what runs under the app: runtimes, concurrency, rendering cost, sync, RPC, and the embedded side. When a topic belongs to MEC, say so in one line and move on. Do not teach it here.
@@ -52,7 +52,7 @@ Week numbers are lecture weeks. Labs run in even weeks.
 
 Port from SRC/build-lecture1.js the orientation, Git and GitHub, and the four build strategies. Leave out the device spectrum, resource budgets, the LLM-loading example, and the embedded slide: those open MEC Lecture 1.
 
-- Orientation: who teaches, the 14 lectures (table from the plan above), the 7 labs, how grading works (table above), the one-repository rule, where to ask questions. One slide that says what ADMD covers and what MEC covers next semester.
+- Orientation: who teaches, the 14 lectures (table from the plan above), the 7 labs, how grading works (table above), the lab presentation rule (each lab is presented live at the end of its own session), where to ask questions. One slide that says what ADMD covers and what MEC covers next semester.
 - Git and GitHub: what Git is, hosting services, repositories and branches, the exact workflow with commands (clone, checkout -b, add, commit, push, pull request, review, merge, pull), what a good commit message is, what the CI pipeline does after merge. Students must create a GitHub account before Lab 1.
 - Four ways to build a mobile app: native baseline (Swift/SwiftUI, Kotlin/Jetpack Compose), web and PWA, cross-platform in two flavors (React Native drives native widgets through JSI, Flutter draws every pixel with Impeller), Kotlin Multiplatform shares logic and keeps native UI. How to choose. Why this course uses Flutter, and its trade-offs.
 - Close with what to install before Lab 1 (Flutter SDK, Android Studio or Xcode, an emulator) and the link to the shared repository.
@@ -79,7 +79,7 @@ Port the Flutter widgets section of SRC/build-lecture3.js and the "widgets are i
 
 Port the concurrency section of SRC/build-lecture3.js, but only the parts an app developer needs: Futures, async and await, error handling with try and catch, Streams, FutureBuilder and StreamBuilder, "async is not parallel", and `compute()` as the one-call escape for heavy work. Leave out event loop internals, Isolate.spawn and ports, and the goroutine comparison: MEC Lecture 2 owns them. Say so in one line.
 
-Port the agent-assisted coding section (the 2026 tool landscape, what agents are good at and where they fail, prompting with context, reviewing generated code like any pull request) and add how students are expected to use these tools in the labs: allowed, must be understood, must be reviewed, cited in the pull request description.
+Port the agent-assisted coding section (the 2026 tool landscape, what agents are good at and where they fail, prompting with context, reviewing generated code like any pull request) and add how students are expected to use these tools in the labs: allowed, must be understood, must be reviewed.
 
 ### Lecture 5: Debugging and state management, part 1
 
@@ -181,11 +181,11 @@ New deck. Ends with the course recap and the lab test rules.
 
 ## Lab plan
 
-Each lab is two hours, in even weeks. The student's course repository holds one Flutter app that grows across labs. Branch `lab-N` per lab, pushed before the next lab.
+Each lab is two hours, in even weeks. Each student keeps one Flutter app that grows across labs and presents every lab to the lab instructor at the end of its session. A lab cannot be presented in a later session. Git is recommended for keeping the app, and is not graded.
 
 | Week | Deck | Title | Source material |
 |---|---|---|---|
-| 2 | lab01 | Orientation, set-up, and your first pull request | LABSRC/build-lab1.js |
+| 2 | lab01 | Orientation, set-up, and your first app | LABSRC/build-lab1.js |
 | 4 | lab02 | Dart and null safety | LABSRC/build-lab2.js |
 | 6 | lab03 | Widgets, UI, and DevTools | LABSRC/build-lab3.js, LABSRC/build-lab4.js |
 | 8 | lab04 | Serialization and networking | LABSRC/build-lab5.js |
@@ -193,9 +193,9 @@ Each lab is two hours, in even weeks. The student's course repository holds one 
 | 12 | lab06 | Authentication, routing, and a live screen | new |
 | 14 | lab07 | Lab test | new |
 
-### Lab 1: Orientation, set-up, and your first pull request
+### Lab 1: Orientation, set-up, and your first app
 
-Port LABSRC/build-lab1.js, but replace the semester-project rules with the cumulative lab app rules: one repository per student, named `admd-labs`, one branch per lab, one pull request per lab merged to main. Keep the grading slide (table in Course facts). Keep the environment set-up and both troubleshooting slides (flutter doctor problems; no devices, emulators that will not boot, macOS). Tasks: install and run `flutter doctor`, create the repository, create the starter app, run it on an emulator, open a pull request with a screenshot in the description.
+Port LABSRC/build-lab1.js, but replace the semester-project rules with the cumulative lab app rules: one Flutter project per student, continued in every lab, presented to the lab instructor at the end of each lab. Keep the grading slide (table in Course facts). Keep the environment set-up and both troubleshooting slides (flutter doctor problems; no devices, emulators that will not boot, macOS). Tasks: install and run `flutter doctor`, create the repository, create the starter app, run it on an emulator, open a pull request with a screenshot in the description.
 
 ### Lab 2: Dart and null safety
 
@@ -203,7 +203,7 @@ Port LABSRC/build-lab2.js: classes, null-safe types, collections, with the minim
 
 ### Lab 3: Widgets, UI, and DevTools
 
-Merge LABSRC/build-lab3.js and LABSRC/build-lab4.js. Task I builds the todo screen (Stateless or Stateful, layout widgets, reusable TodoTile). Task II adds the swipeable row with Dismissible. Task III attaches DevTools to the same app, plants the three bugs from the old Lab 4, finds them with the inspector and breakpoints, and explains in the pull request what actually rebuilds. Keep both troubleshooting slides merged into one.
+Merge LABSRC/build-lab3.js and LABSRC/build-lab4.js. Task I builds the todo screen (Stateless or Stateful, layout widgets, reusable TodoTile). Task II adds the swipeable row with Dismissible. Task III attaches DevTools to the same app, plants the three bugs from the old Lab 4, finds them with the inspector and breakpoints, and explains when presenting what actually rebuilds. Keep both troubleshooting slides merged into one.
 
 ### Lab 4: Serialization and networking
 
@@ -219,4 +219,4 @@ New. Task I: Firebase Auth with email and password plus Google sign-in, authStat
 
 ### Lab 7: Lab test
 
-New. The practical test worth 30 points. The deck states the rules (individual, 90 minutes, own laptop, internet allowed, agents allowed but every line must be explained on request), the format (a one-page spec of a small app with four requirements: a screen built from the layout widgets, state in a Cubit, one network call with a model class, one navigation with go_router), the rubric (one point per requirement, partial credit rules), how the submission is made (branch `lab-7`, pushed at the end), and two practice specs of the same shape. Include a "how to prepare" slide that maps each requirement to the lab that taught it.
+New. The practical test worth 30 points. The deck states the rules (individual, 90 minutes, own laptop, internet allowed, agents allowed but every line must be explained on request), the format (a one-page spec of a small app with four requirements: a screen built from the layout widgets, state in a Cubit, one network call with a model class, one navigation with go_router), the rubric (one point per requirement, partial credit rules), how the test is presented (live, to the lab instructor, when the ninety minutes end), and two practice specs of the same shape. Include a "how to prepare" slide that maps each requirement to the lab that taught it.

@@ -1,12 +1,12 @@
-% Lab 1: Orientation, set-up, and your first pull request
+% Lab 1: Orientation, set-up, and your first app
 % Application Development for Mobile Devices
 \documentclass[10pt,aspectratio=169,t]{beamer}
 \usetheme[lab]{upbminimal}
 
 \course[ADMD]{Application Development for Mobile Devices}
 \decklabel{Lab 1}
-\title{Orientation, set-up, and your first pull request}
-\subtitle{Environment, tooling and the GitHub workflow}
+\title{Orientation, set-up, and your first app}
+\subtitle{Environment, tooling and a first app on a device}
 \author{Dinu-Ștefan Rusu}
 \date{Week 2}
 
@@ -21,14 +21,14 @@
     \cell[\faServer]{Run an app on a device}{An emulator or simulator that boots, with the default Flutter app running on it.}
   \end{grid}
   \vskip 6mm
-  \taskmeta{Time}{2 hours}{Submit}{Push to \code{admd-labs}, branch \code{lab-1}, before Lab 2}
+  \taskmeta{Time}{2 hours}{Present}{To the lab instructor, at the end of this lab}
 \end{frame}
 
 \begin{frame}[eyebrow=Setup]{The cumulative lab app}
   \begin{steps}
-    \item One repository per student, named \code{admd-labs}.
-    \item One branch per lab. One pull request per lab, merged into \code{main}.
-    \item Create the branch and install tools before starting.
+    \item One Flutter project per student. Every lab continues it.
+    \item At the end of each lab, present what you built to the lab instructor.
+    \item Install the tools before starting.
   \end{steps}
   \vskip 4mm
   \begin{takeaway}{Seven labs build one app that grows from empty to networked and authenticated.}
@@ -50,7 +50,7 @@
   }
   \vskip 2mm
   \begin{hint}
-    Your grader checks the repository history, not just the final state. Commit early and often, with clear messages.
+    Each lab is graded when you present it. Be ready to run the app and explain any line.
   \end{hint}
 \end{frame}
 
@@ -115,7 +115,6 @@ flutter doctor -v
         \item Run it: \code{flutter run}.
         \item Change the app title string in \code{lib/main.dart}.
         \item Press r to hot-reload and see it update.
-        \item Take a screenshot.
       \end{steps}
     \end{column}
     \begin{column}{0.41\textwidth}
@@ -123,7 +122,7 @@ flutter doctor -v
       \begin{checklist}
         \item The counter app runs and the button increments it.
         \item Your edited title appears after hot reload.
-        \item A screenshot is in \code{/screenshots}.
+        \item You can repeat the hot reload on request.
       \end{checklist}
     \end{column}
   \end{columns}
@@ -141,36 +140,35 @@ flutter doctor -v
   \trouble{Xcode but no simulator}{Open Xcode once and accept the license, then run \code{open -a Simulator}. If it still fails, run \code{xcode-select --install}.}
 \end{frame}
 
-\begin{frame}[eyebrow=GitHub]{The pull request workflow}
+\begin{frame}[eyebrow=GitHub]{Keeping your work in Git}
   \begin{steps}
     \item Create a repository on GitHub.
     \item Clone it: \code{git clone <url>}.
-    \item Create a branch: \code{git checkout -b lab-N}.
     \item Work on your code, commit often with clear messages.
-    \item Push the branch: \code{git push -u origin lab-N}.
-    \item Open a pull request on GitHub to merge into \code{main}.
-    \item Merge it, so the next lab starts from \code{main}.
+    \item Push your commits: \code{git push}.
   \end{steps}
+  \vskip 3mm
+  \muted{The app grows across seven labs. A commit after each task keeps every working state one command away.}
 \end{frame}
 
-\begin{frame}[fragile,eyebrow=GitHub]{First pull request}
+\begin{frame}[eyebrow=Presentation]{Presenting your work}
   \begin{columns}[T]
     \begin{column}{0.55\textwidth}
-\begin{shell}
-git add .
-git commit -m "Lab 1: app runs"
-git push -u origin lab-1
-\end{shell}
-      \vskip 2mm
-      On GitHub, open a PR from lab-1 to main. Paste your screenshot in the description.
+      \begin{steps}
+        \item Call the lab instructor when your checklists are done, or in the last twenty minutes.
+        \item Run the app live, on your emulator or device.
+        \item Walk through each task and answer questions on your code.
+      \end{steps}
     \end{column}
     \begin{column}{0.41\textwidth}
-      \kv{In the PR description}{}
-      Add your screenshot and write: \emph{``App runs and hot reload works.''}
+      \kv{Today}{}
+      Show \code{flutter doctor}, the counter app running, and your edited title after a hot reload.
     \end{column}
   \end{columns}
+  \begin{takeaway}{A lab can only be presented in its own session.}
+  \end{takeaway}
 \end{frame}
 
-\closingframe{Submission}{Push to branch \code{lab-1} with a screenshot and one commit}
+\closingframe{Presentation}{The app running · one hot reload, shown live}
 
 \end{document}

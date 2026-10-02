@@ -170,7 +170,7 @@ Port the compilation section of SRC/build-lecture11.js (three ways to turn code 
 
 ## Lab plan
 
-Each lab is two hours, in even weeks. Students work in their project team's repository, on a branch `lab-N`, pushed before the next lab.
+Each lab is two hours, in even weeks. Labs are individual: each student works in their own copy of the ADMD app and presents the lab to the lab instructor at the end of its session. A lab cannot be presented in a later session. The team of at most 3 is for the project only.
 
 | Week | Deck | Title |
 |---|---|---|
@@ -208,4 +208,4 @@ A .proto with one unary call and one server-streaming call for readings. Generat
 
 ### Lab 7: Lab test
 
-The practical test worth 15 points. Rules (individual, 90 minutes, own laptop, board or simulator allowed, internet allowed, agents allowed but every line must be explained on request), the format (a one-page spec with three requirements drawn from Labs 2 to 6: publish or subscribe over MQTT, one offline-capable write with an outbox, one gRPC or BLE read), the rubric, submission (branch `lab-7`), two practice specs, and a preparation slide that maps each requirement to the lab that taught it.
+The practical test worth 15 points. Rules (individual, 90 minutes, own laptop, board or simulator allowed, internet allowed, agents allowed but every line must be explained on request), the format (a one-page spec with three requirements drawn from Labs 2 to 6: publish or subscribe over MQTT, one offline-capable write with an outbox, one gRPC or BLE read), the rubric, the presentation when the ninety minutes end, two practice specs, and a preparation slide that maps each requirement to the lab that taught it.

@@ -20,12 +20,12 @@
     \cell[\faSatelliteDish]{Watch a stream live}{Subscribe to a server-streaming RPC, show one reading a second on screen, and cancel it cleanly with a button.}
   \end{grid}
   \vskip 6mm
-  \taskmeta{Time}{2 hours}{Submit}{Push to your team repo, branch \code{lab-6}, before next lab}
+  \taskmeta{Time}{2 hours}{Present}{To the lab instructor, at the end of this lab}
 \end{frame}
 
 \begin{frame}[fragile,eyebrow=Setup]{Install the toolchain}
   \vskip 1mm
-  Install these once per machine, then branch the team repository for this lab.
+  Install these once per machine.
 \begin{shell}
 brew install protobuf   # or: apt install protobuf-compiler
 
@@ -39,12 +39,8 @@ dart pub global activate protoc_plugin
   \end{hint}
 \end{frame}
 
-\begin{frame}[fragile,eyebrow=Setup]{Branch and file layout}
+\begin{frame}[fragile,eyebrow=Setup]{File layout}
   \begin{steps}
-    \item Branch the team repository:
-\begin{shell}
-git checkout -b lab-6
-\end{shell}
     \item Put the contract in \code{proto/readings/v1/}.
     \item Server code in \code{server/lab6/main.go}. App code in \code{lib/lab6/}.
     \item Run the server once before writing any Dart code.
@@ -289,9 +285,9 @@ void _cancel() {
       \end{checklist}
     \end{column}
     \begin{column}{0.48\textwidth}
-      \kv{In the repository}{}
-      \muted{The .proto file, the server, the app code, and a README naming your device id scheme and the port you used.\par\vskip 1.5mm
-      One commit per task, on branch \code{lab-6}.}
+      \kv{Be ready to explain}{}
+      \muted{The .proto file, the server, and the app code.\par\vskip 1.5mm
+      Your device id scheme and the port you used.}
     \end{column}
   \end{columns}
 \end{frame}
@@ -304,6 +300,6 @@ void _cancel() {
   \trouble{CLEARTEXT communication not permitted}{Android blocks it. Set \code{usesCleartextTraffic}.}
 \end{frame}
 
-\closingframe{Submission}{Branch lab-6 · one commit per task · README with device id scheme and port}
+\closingframe{Presentation}{Stream, cancel, deadline: shown live}
 
 \end{document}

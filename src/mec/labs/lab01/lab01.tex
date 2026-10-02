@@ -20,23 +20,22 @@
     \cell[\faServer]{Run your own broker}{Install Mosquitto, publish and subscribe from the command line, then agree on a project idea that meets all five requirements.}
   \end{grid}
   \vskip 8mm
-  \taskmeta{Time}{2 hours}{Submit}{Branch \code{lab-1} in your team repository, before next lab}
+  \taskmeta{Time}{2 hours}{Present}{To the lab instructor, at the end of this lab}
   \vskip 3mm
   \muted{Bring a board if you have one. If you do not, Task III replaces Task II and is worth the same.}
 \end{frame}
 
-\begin{frame}[fragile,eyebrow=Setup]{Repository and branch}
+\begin{frame}[fragile,eyebrow=Setup]{Project folder}
   \begin{steps}
-    \item One repository per team. Use the Flutter app repository from ADMD: the project extends that app.
-    \item Create the branch and the folder this lab writes into:
+    \item Work in your own copy of the Flutter app from ADMD. Every lab adds to it.
+    \item Create the folder this lab writes into:
 \begin{shell}
-git checkout -b lab-1
 mkdir -p device/blink
 \end{shell}
-    \item Open a pull request from \code{lab-1} on the first commit.
+    \item Present your work to the lab instructor at the end of the lab.
   \end{steps}
   \begin{hint}
-    Pull requests, not pushes to main.
+    Labs are individual. The team you form in Task V is for the project.
   \end{hint}
 \end{frame}
 
@@ -74,7 +73,7 @@ tinygo targets
       \begin{checklist}
         \item \code{tinygo version} prints a version.
         \item Your target appears in the output of \code{tinygo targets}.
-        \item The target name is in the pull request description.
+        \item You can name the target for your board.
       \end{checklist}
       \begin{warning}
         Board variants have their own targets, such as \code{xiao-esp32c3}. Check the board page.
@@ -122,7 +121,7 @@ tinygo monitor
       \begin{checklist}
         \item The LED blinks about once a second.
         \item \code{tinygo monitor} prints one line per blink.
-        \item A photo or a short video of the board is in the pull request.
+        \item The board blinks when you present.
       \end{checklist}
     \end{column}
   \end{columns}
@@ -147,7 +146,7 @@ tinygo build -o blink.elf \
       \begin{checklist}
         \item The simulated LED blinks.
         \item The Wokwi serial monitor prints one line per blink.
-        \item One screenshot shows the board and the serial output.
+        \item The simulation runs when you present.
       \end{checklist}
     \end{column}
   \end{columns}
@@ -199,16 +198,16 @@ mosquitto_pub -h localhost \
   \begin{columns}[T]
     \begin{column}{0.55\textwidth}
       \begin{steps}
-        \item Form a team of at most three. Fill one row in the team sheet in the Teams channel: names, GitHub handles, repository URL.
-        \item Write the idea in the repository README: one paragraph, then one line for each of the five requirements on the next slide.
+        \item Form a project team of at most three. Fill one row in the team sheet in the Teams channel: the names, and the idea in one paragraph.
+        \item Add one line for each of the five requirements on the next slide.
         \item Show it to me during this lab. Milestone 1 is the team and the idea approved.
       \end{steps}
     \end{column}
     \begin{column}{0.41\textwidth}
       \kv{Done when}{}
       \begin{checklist}
-        \item The sheet row is filled and the repository URL opens.
-        \item The README names the sensor, the transport, and the conflict rule.
+        \item The sheet row is filled.
+        \item The row names the sensor, the transport, and the conflict rule.
         \item The idea is approved.
       \end{checklist}
     \end{column}
@@ -246,16 +245,16 @@ mosquitto_pub -h localhost \
   \trouble{Address already in use}{A broker is already running, often as a system service. Use that one, or stop the service before starting your own.}
 \end{frame}
 
-\begin{frame}[eyebrow=GitHub]{Pull request contents}
+\begin{frame}[eyebrow=Presentation]{What you present}
   \vskip 2mm
   \begin{grid}[2]
-    \cell[\faMicrochip]{Proof it ran}{A photo of the blinking board, or a screenshot of the Wokwi simulation, plus the serial output copied as text.}
+    \cell[\faMicrochip]{Proof it ran}{The board blinking, or the Wokwi simulation running, with the serial output next to it.}
     \cell[\faServer]{Proof it talks}{The two terminals from Task IV, subscriber and publisher, with the messages visible.}
   \end{grid}
   \vskip 4mm
-  \kv{Also in the description}{The board and the target name you used, and a link to the team sheet row.}
+  \kv{Also}{The board and the target name you used, and your project team's row in the sheet.}
 \end{frame}
 
-\closingframe{Submission}{Branch lab-1 · blink and serial output in the PR · idea approved}
+\closingframe{Presentation}{Blink and serial output shown live · idea approved}
 
 \end{document}

@@ -20,7 +20,7 @@
     \cell[\faMobile]{Show it live in the app}{Subscribe with mqtt\_client, push every message into a BLoC, render it in a BlocBuilder, and survive the broker or the board going away.}
   \end{grid}
   \vskip 6mm
-  \taskmeta{Time}{2 hours}{Submit}{Push to your team repo, branch \code{lab-2}, before next lab}
+  \taskmeta{Time}{2 hours}{Present}{To the lab instructor, at the end of this lab}
 \end{frame}
 
 \begin{frame}[embedded,eyebrow=Setup]{Hardware setups and message contract}
@@ -35,11 +35,10 @@
   \muted{The broker is the Mosquitto you installed in Lab 1. Start it before anything else.}
 \end{frame}
 
-\begin{frame}[fragile,eyebrow=Setup]{Branch, dependencies, file layout}
+\begin{frame}[fragile,eyebrow=Setup]{Dependencies and file layout}
   \begin{steps}
-    \item Branch the team repository and add the dependencies:
+    \item Add the dependencies:
 \begin{shell}
-git checkout -b lab-2
 cd device && go get tinygo.org/x/drivers github.com/soypat/natiu-mqtt
 cd ../app && flutter pub add mqtt_client
 \end{shell}
@@ -111,7 +110,7 @@ seq++
   \begin{columns}[T]
     \begin{column}{0.48\textwidth}
       \kv{On Wokwi}{}
-      \muted{Use the board Lab 1 named for you. If the part library carries an I2C sensor with a TinyGo driver, wire it in the diagram. If not, feed the loop the counter above and say so in your README.}
+      \muted{Use the board Lab 1 named for you. If the part library carries an I2C sensor with a TinyGo driver, wire it in the diagram. If not, feed the loop the counter above and say so when you present.}
     \end{column}
     \begin{column}{0.48\textwidth}
       \kv{The broker, from Wokwi}{}
@@ -127,8 +126,8 @@ seq++
     \begin{column}{0.55\textwidth}
       \begin{steps}
         \item Join the network. On the ESP32-C3 and ESP32-S3 the radio comes from the espradio package, not from the standard library.
-        \item Connect to the broker with a client id that carries your team name.
-        \item Publish one JSON document on \code{course/<team>/reading} every two seconds, with QoS 1 and the retain flag off.
+        \item Connect to the broker with a client id that carries your name.
+        \item Publish one JSON document on \code{course/<name>/reading} every two seconds, with QoS 1 and the retain flag off.
         \item Print the result of every step.
       \end{steps}
     \end{column}
@@ -174,8 +173,8 @@ c.Connect(ctx, conn, &v)
 \begin{frame}[embedded,fragile,eyebrow=Task II]{Topic and payload}
   \vskip 1mm
 \begin{golang}
-topic := "course/" + team + "/reading"          // one team, one topic
-p := fmt.Sprintf(`{"team":%q,"c":%.2f,"seq":%d}`, team, celsius, seq)
+topic := "course/" + name + "/reading"       // one student, one topic
+p := fmt.Sprintf(`{"name":%q,"c":%.2f,"seq":%d}`, name, celsius, seq)
 fl, _ := mqtt.NewPublishFlags(mqtt.QoS1, false, false)   // retain off
 pv := mqtt.VariablesPublish{TopicName: []byte(topic)}
 c.PublishPayload(fl, pv, []byte(p))  // then HandleNext for the PUBACK
@@ -216,7 +215,7 @@ done
     \begin{column}{0.55\textwidth}
       \begin{steps}
         \item Add a \code{ReadingBloc} with one event for an incoming document and a state holding the last value and its sequence number.
-        \item Connect an \code{MqttServerClient} and subscribe to your team topic at QoS 1.
+        \item Connect an \code{MqttServerClient} and subscribe to your topic at QoS 1.
         \item Decode each message on the updates stream and add an event to the BLoC.
         \item Render the value in a \code{BlocBuilder}, with a visible waiting state before the first message.
         \item Reconnect with a growing delay when the connection drops.
@@ -236,12 +235,12 @@ done
 
 \begin{frame}[fragile,eyebrow=Task III]{Connect, subscribe, decode}
 \begin{dart}
-final c = MqttServerClient('10.0.2.2', 'phone-$team')  // mqtt_client
+final c = MqttServerClient('10.0.2.2', 'phone-$name')  // mqtt_client
   ..port = 1883
   ..keepAlivePeriod = 30
   ..onDisconnected = _scheduleReconnect;
 await c.connect();
-c.subscribe('course/$team/reading', MqttQos.atLeastOnce);
+c.subscribe('course/$name/reading', MqttQos.atLeastOnce);
 c.updates!.listen((events) {
   final m = events.first.payload as MqttPublishMessage;
   final text = MqttPublishPayload.bytesToStringAsString(m.payload.message);
@@ -287,9 +286,9 @@ mosquitto_sub -h localhost -q 1 -t 'course/+/reading' -v
       \end{checklist}
     \end{column}
     \begin{column}{0.48\textwidth}
-      \kv{In the repository}{}
-      \muted{The firmware, the app code, and a README naming your team topic, your board or simulator, and the broker address you used.\par\vskip 1.5mm
-      One commit per task. A screenshot of the app next to the subscriber terminal.}
+      \kv{Be ready to explain}{}
+      \muted{The firmware and the app code, line by line.\par\vskip 1.5mm
+      Your topic, your board or simulator, and the broker address you used.}
     \end{column}
   \end{columns}
 \end{frame}
@@ -302,6 +301,6 @@ mosquitto_sub -h localhost -q 1 -t 'course/+/reading' -v
   \trouble{CLEARTEXT not permitted}{Android blocks a plain broker. Set usesCleartextTraffic true in the manifest.}
 \end{frame}
 
-\closingframe{Submission}{Branch lab-2 · one commit per task · your topic in the README}
+\closingframe{Presentation}{The demo, live · your topic, explained}
 
 \end{document}

@@ -445,7 +445,7 @@ where possible. Add a widget test.
     \cell[\faIcon{code-branch}]{Keep the slices small}{One concern per branch and pull request; generated code is only reviewable in slices.}
     \cell[\faIcon{users}]{You own it}{``The agent wrote it'' is not a defense in code review, and not one here either.}
   \end{grid}
-  \note{Tie this back to Lecture 1: every lab runs on the branch, pull request, review loop. Agent-generated code makes review more important, not less, because the volume of code goes up.}
+  \note{Tie this back to Lecture 1: every lab ends with the student explaining the code live. Agent-generated code makes review more important, not less, because the volume of code goes up.}
 \end{frame}
 
 \begin{frame}[eyebrow=Agents]{Rules for agent use in the labs}
@@ -457,27 +457,9 @@ where possible. Add a widget test.
     Allowed             & Use any agent or assistant you like, for every lab and the semester app. \\
     Must be understood  & You must be able to explain any generated line if asked, live, during the lab. \\
     Must be reviewed    & Read the diff before you commit it, exactly like a teammate's pull request. \\
-    Cited in the PR     & Name the tool and what you asked it to do, in the pull request description. \\
     \bottomrule
   \end{tabular}}
-  \note{These four rules are graded, not optional. If a student cannot explain a line during a lab check, the grading assumes they do not understand it and marks it accordingly.}
-\end{frame}
-
-\begin{frame}[fragile,eyebrow=Agents]{Citing an agent in a pull request}
-\begin{codeblock}
-## What changed
-Added pagination to the feed screen.
-
-## Agent use
-Claude Code drafted the ListView.builder
-conversion and the loading-row widget
-test from a written prompt. I reviewed
-every line, fixed one wrong Dio option,
-and added the empty-state case myself.
-\end{codeblock}
-  \vskip 2mm
-  \muted{This is what \emph{must be reviewed} and \emph{cited in the PR} look like together: specific about what the agent did, specific about what you checked yourself.}
-  \note{Contrast this with a one-line "used AI" note, which tells a grader nothing. The bar is: another student could read this description and know exactly which lines to look at first.}
+  \note{These three rules are graded, not optional. If a student cannot explain a line during a lab check, the grading assumes they do not understand it and marks it accordingly.}
 \end{frame}
 
 \begin{frame}[eyebrow=Recap]{Summary}

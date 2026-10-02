@@ -21,12 +21,12 @@
     \cell[\faBug]{Attach the tools}{Launch DevTools, plant three bugs, find them with breakpoints and the inspector.}
   \end{grid}
   \vskip 6mm
-  \taskmeta{Time}{2 hours}{Submit}{Push to \code{admd-labs}, branch \code{lab-3}, before Lab 4}
+  \taskmeta{Time}{2 hours}{Present}{To the lab instructor, at the end of this lab}
 \end{frame}
 
-\begin{frame}[fragile,eyebrow=Setup]{Branch and file layout}
+\begin{frame}[fragile,eyebrow=Setup]{File layout}
   \begin{steps}
-    \item Open the project from Lab 2 and create a branch: \code{git checkout -b lab-3}
+    \item Open the project from Lab 2.
     \item Create \code{lib/screens/todo\_screen.dart}. All three tasks happen there.
     \item Run the app once before changing anything. If it does not build, fix that first.
     \item Keep the todo app. Task III debugs this app with DevTools.
@@ -239,6 +239,6 @@ final visible = _items.where(
   \trouble{The data changed, the screen did not}{You mutated state outside \code{setState}. No rebuilds.}
 \end{frame}
 
-\closingframe{Submission}{Branch lab-3 · one commit per task · screenshots of DevTools in the PR description}
+\closingframe{Presentation}{The todo screen running · DevTools open on it}
 
 \end{document}

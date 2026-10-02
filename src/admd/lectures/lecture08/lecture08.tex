@@ -239,7 +239,7 @@ flutter pub outdated   # newer
     \item Do not commit it for a package you publish: there, consumers should resolve against their own constraint set.
     \item flutter pub get obeys the lockfile. flutter pub upgrade rewrites it.
   \end{enumerate}
-  \note{This is the rule the admd-labs repository is graded against: commit pubspec.lock so the grader resolves the exact versions you tested against, not whatever is newest on the day it is cloned.}
+  \note{This is the rule for the lab app too: commit pubspec.lock so every machine resolves the exact versions you tested against, not whatever is newest on the day it is cloned.}
 \end{frame}
 
 \divider{Part 3 · Feature flags}{Feature flags}[Firebase Remote Config, staged rollout, kill switch]

@@ -20,14 +20,13 @@
     \cell[\faIcon{exchange-alt}]{Resolve one conflict, visibly}{Two devices editing the same note converge on the server's version, and the device that lost the race shows a marker.}
   \end{grid}
   \vskip 6mm
-  \taskmeta{Time}{2 hours}{Submit}{Push to your team repo, branch \code{lab-5}, before next lab}
+  \taskmeta{Time}{2 hours}{Present}{To the lab instructor, at the end of this lab}
 \end{frame}
 
-\begin{frame}[fragile,eyebrow=Setup]{Branch, dependencies, file layout}
+\begin{frame}[fragile,eyebrow=Setup]{Dependencies and file layout}
   \begin{steps}
-    \item Branch the repository, add Drift, and generate the boilerplate:
+    \item Add Drift and generate the boilerplate:
 \begin{shell}
-git checkout -b lab-5
 flutter pub add drift sqlite3_flutter_libs path_provider http
 flutter pub add -d drift_dev build_runner
 dart run build_runner build
@@ -273,9 +272,9 @@ ListTile(
       \end{checklist}
     \end{column}
     \begin{column}{0.48\textwidth}
-      \kv{In the repository}{}
-      \muted{The Drift schema, the sync engine, and \code{server/lab5/main.go}, with a README naming your conflict rule.\par\vskip 1.5mm
-      One commit per task. A screenshot of both devices showing the same value.}
+      \kv{Be ready to explain}{}
+      \muted{The Drift schema, the sync engine, and \code{server/lab5/main.go}.\par\vskip 1.5mm
+      Your conflict rule, and where in the code it is applied.}
     \end{column}
   \end{columns}
 \end{frame}
@@ -287,6 +286,6 @@ ListTile(
   \trouble{A device keeps re-downloading rows it already has}{The checkpoint was saved before the transaction committed, or the comparison used \code{>=} instead of \code{>}.}
 \end{frame}
 
-\closingframe{Submission}{Branch lab-5 · one commit per task · your conflict rule named in the README}
+\closingframe{Presentation}{The demo on two devices · your conflict rule, explained}
 
 \end{document}

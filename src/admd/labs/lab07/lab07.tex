@@ -17,17 +17,17 @@
   \vskip 2mm
   \begin{grid}[2]
     \cell[\faIcon{stopwatch}]{Prove four skills, once}{Build a small app from a one-page spec in ninety minutes: a screen, a Cubit, a network call, and a route.}
-    \cell[\faIcon{graduation-cap}]{Worth 30 points}{7.5 points per requirement, graded from your pushed branch. There is no live demo.}
+    \cell[\faIcon{graduation-cap}]{Worth 30 points}{7.5 points per requirement, graded when you present the app at the end of the test.}
   \end{grid}
   \vskip 6mm
-  \taskmeta{Time}{90 minutes}{Submit}{Push to admd-labs, branch lab-7, before time is up}
+  \taskmeta{Time}{90 minutes}{Present}{To the lab instructor, when the time is up}
 \end{frame}
 
 \begin{frame}[eyebrow=Rules]{Rules}
   \begin{steps}
-    \item You work alone. No pair programming, no shared screens, no copying a classmate's branch.
+    \item You work alone. No pair programming, no shared screens, no copying a classmate's code.
     \item Ninety minutes, one sitting, starting when you receive the spec.
-    \item Your own laptop, your existing \code{admd-labs} repository from Labs 1 to 6.
+    \item Your own laptop, your existing lab app from Labs 1 to 6.
     \item No new packages beyond what Labs 2 to 6 already added, unless the spec names one.
   \end{steps}
   \begin{takeaway}{Time lost to a crashed emulator or a broken hot reload is not added back.}
@@ -50,7 +50,7 @@
   \vskip 2mm
   \begin{grid}[2]
     \cell[\faIcon{file-alt}]{One page, handed at the start}{An app idea and four requirements, on paper or a shared document. Nothing changes once the clock starts.}
-    \cell[\faClock]{Ninety minutes, one push}{Build, commit as you go, and push to branch lab-7 before time is up. No extensions.}
+    \cell[\faClock]{Ninety minutes, then you present}{Build until time is up, then run the app for the lab instructor. No extensions.}
   \end{grid}
   \vskip 6mm
   \muted{Every spec asks for the same four kinds of requirement, described next.}
@@ -80,19 +80,15 @@
   \muted{Anything not attempted scores zero.}
 \end{frame}
 
-\begin{frame}[fragile,eyebrow=Submission]{Submission}
-\begin{shell}
-git checkout -b lab-7
-git push -u origin lab-7
-\end{shell}
+\begin{frame}[eyebrow=Presentation]{Presentation}
   \begin{steps}
-    \item Create the branch the moment you receive the spec.
-    \item Commit as you finish each requirement, with a message that names it.
-    \item Push before the ninety minutes end.
-    \item Open one pull request titled with your name.
+    \item Stop coding when the ninety minutes end.
+    \item Run the app on your emulator or device when you are called.
+    \item Show each requirement working, in the order of the spec.
+    \item Answer questions on any line of your code.
   \end{steps}
   \begin{warning}
-    The grader reads the branch as it stands at the deadline. A late push is not graded.
+    What runs when you are called is what is graded. The test cannot be presented later.
   \end{warning}
 \end{frame}
 
@@ -170,6 +166,6 @@ git push -u origin lab-7
   \trouble{setState() or emit() called after dispose()}{A response arrived after the screen closed. Check \code{mounted} before calling either.}
 \end{frame}
 
-\closingframe{Submission}{Branch lab-7 · one pull request · nothing after the deadline}
+\closingframe{Presentation}{Each requirement shown running · presented when time is up}
 
 \end{document}

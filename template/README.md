@@ -92,7 +92,7 @@ Lab tools (any deck, but meant for `[lab]`):
 
 | Block | Use |
 |---|---|
-| `\taskmeta{Time}{2 hours}{Submit}{branch lab-3}` | Two label/value pairs in one row. |
+| `\taskmeta{Time}{2 hours}{Present}{at the end of this lab}` | Two label/value pairs in one row. |
 | `\begin{steps} \item ... \end{steps}` | Numbered steps, one requirement per step. |
 | `\begin{checklist} \item ... \end{checklist}` | Acceptance criteria as a ruled form with checkboxes. |
 | `\trouble{error text}{what to do}` | One row of a troubleshooting table. |

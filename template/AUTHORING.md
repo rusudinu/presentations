@@ -51,8 +51,8 @@ A lab is two hours, every second week. Target **12 to 18 slides**.
 
 1. `\titleframe`
 2. "Lab objectives" (`eyebrow=Today`): a two-cell `grid` with the two skills practiced, then
-   `\taskmeta{Time}{2 hours}{Submit}{...}`.
-3. Setup: where the code goes, the branch name, packages to add, the command to run first.
+   `\taskmeta{Time}{2 hours}{Present}{...}`.
+3. Setup: where the code goes, packages to add, the command to run first.
 4. Tasks (`eyebrow=Task I`, `Task II`, ...): `steps` with one requirement per step, on the right a
    `checklist` under `\kv{Done when}{}` with two to four acceptance criteria that a grader can check.
    A task frame may carry `time=30 min`, printed in the running head, when the budget is known.
@@ -60,11 +60,11 @@ A lab is two hours, every second week. Target **12 to 18 slides**.
    intended widget or package.
 6. Troubleshooting (`eyebrow=Troubleshooting`): three to five `\trouble{error}{fix}` rows with the
    exact error text students will see.
-7. `\closingframe{...}{...}` that restates what to push and where.
+7. `\closingframe{Presentation}{...}` that restates what the student shows running.
 
-Labs are graded from the student's repository. One submission channel, stated on the meta row and
-on the closing slide: a branch named `lab-N` in the student's course repository, pushed before the
-next lab.
+Labs are individual and are graded live. The student presents the work to the lab instructor at the
+end of the lab, stated on the meta row and on the closing slide. A lab cannot be presented in a later
+session.
 
 ## 4. Fitting the slide
 
