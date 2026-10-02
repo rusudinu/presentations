@@ -2,4 +2,4 @@
 
 The talk given at [DevTalks](https://www.devtalks.ro/).
 
-- **Slides:** the PowerPoint file goes in this folder.
+If you want them, you will have to request them at dinu@codingshadows.com or on Linkedin.
