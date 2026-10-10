@@ -16,7 +16,7 @@ dependencies:
   # HTTP libraries
   http: ^1.1.0              # Simple HTTP client with RetryClient support
   dio: ^5.11.1               # Feature-rich HTTP client with interceptors
-  chopper: ^8.7.0           # Declarative REST API client
+  chopper: ^8.7.1           # Declarative REST API client
   retrofit: ^4.10.0          # Type-safe REST API client with annotations
   json_annotation: ^4.12.0   # JSON serialization annotations
 
@@ -26,7 +26,7 @@ dev_dependencies:
   flutter_lints: ^6.0.0
   # Code generation
   build_runner: ^2.16.1           # Build system for Dart code generation
-  chopper_generator: ^8.7.0      # Code generator for Chopper
+  chopper_generator: ^8.7.1      # Code generator for Chopper
   retrofit_generator: ^10.2.11     # Code generator for Retrofit
   json_serializable: ^6.14.1      # JSON serialization code generator
 
