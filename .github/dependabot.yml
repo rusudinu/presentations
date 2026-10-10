@@ -8,7 +8,7 @@ updates:
       - "/talks/he/demo2"
     schedule:
       interval: "weekly"
-      day: "sunday"
+      day: "saturday"
       time: "03:00"
       timezone: "Europe/Bucharest"
     groups:
@@ -35,7 +35,7 @@ updates:
       - "/talks/he/demo2/android"
     schedule:
       interval: "weekly"
-      day: "sunday"
+      day: "saturday"
       time: "03:00"
       timezone: "Europe/Bucharest"
     groups:
@@ -59,7 +59,7 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
-      day: "sunday"
+      day: "saturday"
       time: "03:00"
       timezone: "Europe/Bucharest"
     groups:
