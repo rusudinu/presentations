@@ -27,6 +27,9 @@ One Flutter project. The code under `lib/` is grouped by the lecture that uses i
 | `lib/lecture05_state/sharing/` | 5, State management part 1 | Lifting state up, prop drilling, the same screen with an InheritedWidget, value equality and rebuilds |
 | `lib/lecture05_state/equatable/` | 5, State management part 1 | Console: `==` with and without Equatable, and a field missing from `props` |
 | `lib/lecture06_bloc/` | 6, BLoC and Riverpod | The counter as a Cubit and as a Bloc with events |
+| `lib/lecture06_bloc/todos/` | 6, BLoC and Riverpod | The todos feature in the folder structure from the slides: `data/` (API, repository), `bloc/` (events, state, handlers), `cubit/`, `auth/` (sealed states), `view/` (BlocBuilder, BlocListener, BlocConsumer, read, watch, select) |
+| `lib/lecture06_bloc/riverpod/` | 6, BLoC and Riverpod | The same todo list with Riverpod providers and a Notifier |
+| `test/lecture06/` | 6, BLoC and Riverpod | One test per layer: the repository with a fake API, the bloc with `bloc_test`, the view with a mock bloc |
 | `lib/lecture07_networking/` | 7, Networking | json_serializable code generation, http and dio clients, retries with backoff and jitter, hedged requests |
 
 The isolate and concurrency demos used by Mobile and Embedded Computing, Lecture 2, are in

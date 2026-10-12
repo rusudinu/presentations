@@ -19,6 +19,7 @@ dependencies:
   chopper: ^8.7.0           # Declarative REST API client
   retrofit: ^4.10.0          # Type-safe REST API client with annotations
   json_annotation: ^4.12.0   # JSON serialization annotations
+  flutter_riverpod: ^3.4.3
 
 dev_dependencies:
   flutter_test:
@@ -29,6 +30,8 @@ dev_dependencies:
   chopper_generator: ^8.7.0      # Code generator for Chopper
   retrofit_generator: ^10.2.11     # Code generator for Retrofit
   json_serializable: ^6.14.1      # JSON serialization code generator
+  bloc_test: ^10.0.0
+  mocktail: ^1.0.5
 
 flutter:
   uses-material-design: true
