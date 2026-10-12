@@ -5,6 +5,9 @@ One Flutter project. The code under `lib/` is grouped by the lecture that uses i
 | Folder | Lecture | What is in it |
 |---|---|---|
 | `lib/lecture02_dart/` | 2, Dart and null safety | The same class with and without null safety (Dart and Java) |
+| `lib/lecture02_dart/null_safety/` | 2, Dart and null safety | The operators, flow promotion, `late` and `required`, and the Dart and Kotlin comparison |
+| `lib/lecture02_dart/basics/` | 2, Dart and null safety | Variables, functions, classes, equality, collections, records, pattern matching, the async preview, and the Dart and Kotlin model class |
+| `lib/lecture02_dart/flutter_overview/` | 2, Dart and null safety | The widget catalog on one screen, and hot reload versus hot restart |
 | `lib/lecture03_widgets/state/` | 3, Widgets and layout | A StatelessWidget and a StatefulWidget side by side |
 | `lib/lecture03_widgets/composition/` | 3, Widgets and layout | A list item built badly (one big widget) and well (small composable widgets) |
 | `lib/lecture04_async/` | 4, Async Dart | `compute()` and a small async demo |
