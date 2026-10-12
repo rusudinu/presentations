@@ -21,6 +21,11 @@ One Flutter project. The code under `lib/` is grouped by the lecture that uses i
 | `lib/lecture04_async/streams/` | 4, Async Dart | Console: an `async*` ticker read with `await for` and with `listen` |
 | `lib/lecture04_async/main.dart`, `ui/` | 4, Async Dart | The entry point and its screens: errors in a State, FutureBuilder, a Future created in `build`, StreamBuilder, a Future with a Stream, `compute()` |
 | `lib/lecture05_state/` | 5, State management part 1 | Parent and child widgets, an Equatable state, a widget to debug |
+| `lib/lecture05_state/main.dart` | 5, State management part 1 | The entry point: a list that opens every screen below. Attach DevTools to it |
+| `lib/lecture05_state/debugging/` | 5, State management part 1 | `debugPrint`, `assert` and the debug switches, a jank screen with the performance overlay, a console program for breakpoints |
+| `lib/lecture05_state/state/` | 5, State management part 1 | setState scope with build counts, element reuse by type and key, the State lifecycle and `dispose` |
+| `lib/lecture05_state/sharing/` | 5, State management part 1 | Lifting state up, prop drilling, the same screen with an InheritedWidget, value equality and rebuilds |
+| `lib/lecture05_state/equatable/` | 5, State management part 1 | Console: `==` with and without Equatable, and a field missing from `props` |
 | `lib/lecture06_bloc/` | 6, BLoC and Riverpod | The counter as a Cubit and as a Bloc with events |
 | `lib/lecture07_networking/` | 7, Networking | json_serializable code generation, http and dio clients, retries with backoff and jitter, hedged requests |
 
