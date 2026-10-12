@@ -33,6 +33,8 @@ One Flutter project. The code under `lib/` is grouped by the lecture that uses i
 | `lib/lecture07_networking/` | 7, Networking | json_serializable code generation, http and dio clients, retries with backoff and jitter, hedged requests |
 | `lib/lecture07_networking/tasks/` | 7, Networking | The slides' Reading and Task example by layer: `models/` (manual JSON, json_serializable, a freezed state), `api/` (dio with timeouts and interceptors, cancel tokens, `package:http`, `withRetry`, the repository), `cubit/`, and a server on localhost so it runs offline. `tasks_demo.dart` walks through all of it in the terminal, `main.dart` is the "adding a task" screen |
 | `test/lecture07/` | 7, Networking | `withRetry` rules, the repository against the localhost server, the Cubit with a fake repository |
+| `lib/lecture14_polish/` | 14, UI polish and testing | `theming/` (one seed color, color roles, dark mode, component themes), `layout/` (MediaQuery, LayoutBuilder breakpoint), `forms/` (validators, focus order, error display), `motion/` (implicit animations, Hero, reduced motion), `access/` (labels, tap targets, text scaling), `l10n/` (ARB files, plurals, dates, right to left) |
+| `test/lecture14/`, `integration_test/` | 14, UI polish and testing | One test of each kind: unit, widget, `pump` and `pumpAndSettle`, mocktail, bloc, golden, generated localizations, and an integration test |
 
 The isolate and concurrency demos used by Mobile and Embedded Computing, Lecture 2, are in
 `../../mec/examples/`.
@@ -45,6 +47,7 @@ make setup    # flutter pub get
 make gen      # regenerates the *.g.dart files
 make list     # every runnable file, with the command that runs it
 make analyze  # static analysis
+make test     # every test under test/
 ```
 
 `make run TARGET=lib/lecture06_bloc/cubit/main.dart` runs one example as the app entry point, with

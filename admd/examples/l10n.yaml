@@ -1,0 +1,4 @@
+# Used by lecture 14: flutter gen-l10n turns the ARB files into AppLocalizations.
+arb-dir: lib/lecture14_polish/l10n
+template-arb-file: app_en.arb
+output-localization-file: app_localizations.dart

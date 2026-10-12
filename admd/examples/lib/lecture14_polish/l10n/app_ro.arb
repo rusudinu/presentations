@@ -1,0 +1,8 @@
+{
+  "@@locale": "ro",
+  "localizationTitle": "Texte localizate",
+  "todoCount": "{count, plural, =0{Nicio sarcină} =1{O sarcină} few{{count} sarcini} other{{count} de sarcini}}",
+  "dueOn": "Termen: {date}",
+  "addTodo": "Adaugă o sarcină",
+  "removeTodo": "Șterge o sarcină"
+}

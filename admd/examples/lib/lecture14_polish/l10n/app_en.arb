@@ -1,0 +1,11 @@
+{
+  "@@locale": "en",
+  "localizationTitle": "Localized strings",
+  "@localizationTitle": { "description": "Title of the localization example screen" },
+  "todoCount": "{count, plural, =0{No todos} =1{1 todo} other{{count} todos}}",
+  "@todoCount": { "placeholders": { "count": { "type": "int" } } },
+  "dueOn": "Due on {date}",
+  "@dueOn": { "placeholders": { "date": { "type": "String" } } },
+  "addTodo": "Add a todo",
+  "removeTodo": "Remove a todo"
+}
