@@ -17,6 +17,9 @@ One Flutter project. The code under `lib/` is grouped by the lecture that uses i
 | `lib/lecture03_widgets/material/` | 3, Widgets and layout | Scaffold with a drawer and a NavigationBar, buttons, SnackBars and dialogs, Cupertino and adaptive widgets |
 | `lib/lecture03_widgets/todo/` | 3, Widgets and layout | The worked example: the Lab 3 todo screen, steps 1 to 5 |
 | `lib/lecture04_async/` | 4, Async Dart | `compute()` and a small async demo |
+| `lib/lecture04_async/futures/` | 4, Async Dart | Console: `then`, `async` and `await`, sequential and concurrent awaits, errors around `await` |
+| `lib/lecture04_async/streams/` | 4, Async Dart | Console: an `async*` ticker read with `await for` and with `listen` |
+| `lib/lecture04_async/main.dart`, `ui/` | 4, Async Dart | The entry point and its screens: errors in a State, FutureBuilder, a Future created in `build`, StreamBuilder, a Future with a Stream, `compute()` |
 | `lib/lecture05_state/` | 5, State management part 1 | Parent and child widgets, an Equatable state, a widget to debug |
 | `lib/lecture06_bloc/` | 6, BLoC and Riverpod | The counter as a Cubit and as a Bloc with events |
 | `lib/lecture07_networking/` | 7, Networking | json_serializable code generation, http and dio clients, retries with backoff and jitter, hedged requests |
