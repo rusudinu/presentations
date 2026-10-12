@@ -356,7 +356,7 @@ print('$name scored $score');
     \begin{column}{0.40\textwidth}
       \lead{One type, many values}{A record bundles values without declaring a class. Two records are equal if their fields are equal.}
       \vskip 2mm
-      \muted{Named fields read like a tiny class: \code{(title: String, week: int)}.}
+      \muted{Named fields read like a tiny class: \code{(\{String title, int week\})}.}
     \end{column}
   \end{columns}
   \note{Records replace the old pattern of returning a small custom class, or worse, a List<Object>, just to hand back two values. The destructuring assignment on the left is new syntax; the next slide names it.}
