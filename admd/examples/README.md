@@ -31,6 +31,8 @@ One Flutter project. The code under `lib/` is grouped by the lecture that uses i
 | `lib/lecture06_bloc/riverpod/` | 6, BLoC and Riverpod | The same todo list with Riverpod providers and a Notifier |
 | `test/lecture06/` | 6, BLoC and Riverpod | One test per layer: the repository with a fake API, the bloc with `bloc_test`, the view with a mock bloc |
 | `lib/lecture07_networking/` | 7, Networking | json_serializable code generation, http and dio clients, retries with backoff and jitter, hedged requests |
+| `lib/lecture07_networking/tasks/` | 7, Networking | The slides' Reading and Task example by layer: `models/` (manual JSON, json_serializable, a freezed state), `api/` (dio with timeouts and interceptors, cancel tokens, `package:http`, `withRetry`, the repository), `cubit/`, and a server on localhost so it runs offline. `tasks_demo.dart` walks through all of it in the terminal, `main.dart` is the "adding a task" screen |
+| `test/lecture07/` | 7, Networking | `withRetry` rules, the repository against the localhost server, the Cubit with a fake repository |
 
 The isolate and concurrency demos used by Mobile and Embedded Computing, Lecture 2, are in
 `../../mec/examples/`.
