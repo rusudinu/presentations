@@ -8,8 +8,14 @@ One Flutter project. The code under `lib/` is grouped by the lecture that uses i
 | `lib/lecture02_dart/null_safety/` | 2, Dart and null safety | The operators, flow promotion, `late` and `required`, and the Dart and Kotlin comparison |
 | `lib/lecture02_dart/basics/` | 2, Dart and null safety | Variables, functions, classes, equality, collections, records, pattern matching, the async preview, and the Dart and Kotlin model class |
 | `lib/lecture02_dart/flutter_overview/` | 2, Dart and null safety | The widget catalog on one screen, and hot reload versus hot restart |
+| `lib/lecture03_widgets/main.dart` | 3, Widgets and layout | The entry point: a list that opens every example below, in slide order |
+| `lib/lecture03_widgets/widgets/` | 3, Widgets and layout | Structure, style and behavior as widgets, immutability and `const`, wrapping, rebuild scope, keys |
 | `lib/lecture03_widgets/state/` | 3, Widgets and layout | A StatelessWidget and a StatefulWidget side by side |
 | `lib/lecture03_widgets/composition/` | 3, Widgets and layout | A list item built badly (one big widget) and well (small composable widgets) |
+| `lib/lecture03_widgets/layout/` | 3, Widgets and layout | Constraints, Padding, SizedBox and Container, Row and Column, Expanded and Flexible, Stack, overflow errors and their fixes |
+| `lib/lecture03_widgets/scrolling/` | 3, Widgets and layout | ListView eager, builder and separated, GridView, SingleChildScrollView, CustomScrollView |
+| `lib/lecture03_widgets/material/` | 3, Widgets and layout | Scaffold with a drawer and a NavigationBar, buttons, SnackBars and dialogs, Cupertino and adaptive widgets |
+| `lib/lecture03_widgets/todo/` | 3, Widgets and layout | The worked example: the Lab 3 todo screen, steps 1 to 5 |
 | `lib/lecture04_async/` | 4, Async Dart | `compute()` and a small async demo |
 | `lib/lecture05_state/` | 5, State management part 1 | Parent and child widgets, an Equatable state, a widget to debug |
 | `lib/lecture06_bloc/` | 6, BLoC and Riverpod | The counter as a Cubit and as a Bloc with events |
