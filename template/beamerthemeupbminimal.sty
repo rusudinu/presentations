@@ -92,8 +92,9 @@
 % ------------------------------------------------------ course metadata -----
 % \course[ADMD]{Application Development for Mobile Devices}: the short form goes in the cover's title block.
 % \materials{github.com/owner/repo}: where the PDF and the code live, on the title slide.
-% \authorlabel{Speaker}: the label of the author field on the cover (default "Lecturer"). Lab covers show no label.
-\def\upb@course{}\def\upb@courseshort{}\def\upb@decklabel{}\def\upb@materials{}\def\upb@authorlabel{Lecturer}
+% \authorlabel{Speaker}: labels the author field on the cover and turns on the labels of the other
+% cover fields. Without it the cover shows the bare values.
+\def\upb@course{}\def\upb@courseshort{}\def\upb@decklabel{}\def\upb@materials{}\def\upb@authorlabel{}
 \newcommand\course[2][]{\def\upb@course{#2}\def\upb@courseshort{#1}}
 \newcommand\authorlabel[1]{\def\upb@authorlabel{#1}}
 \newcommand\decklabel[1]{\def\upb@decklabel{#1}}
@@ -213,9 +214,9 @@
 
 % The cover ends in a title block, the way an engineering drawing does: who, which course,
 % which deck, and where the files are.
-% An empty label drops the label line. Lab covers show the author and the course without one.
+% The cells carry their labels only when \authorlabel is set, so a row is labeled as a whole or not at all.
 \newcommand\upb@tbcell[2]{\begin{minipage}[t]{\upb@tbw}\upb@nohyph
-  \ifstrempty{#1}{}{{\usebeamerfont{label}\color{upbGray}#1\par}\vskip 0.8mm}%
+  \ifdefempty{\upb@authorlabel}{}{{\usebeamerfont{label}\color{upbGray}#1\par}\vskip 0.8mm}%
   {\fontsize{9}{11.5}\selectfont\color{upbInk}#2\par}\end{minipage}}
 \newlength\upb@tbw
 \setbeamertemplate{title page}{%
@@ -227,9 +228,9 @@
         \ifx\insertsubtitle\@empty\else\vskip 4mm{\usebeamerfont{subtitle}\color{upbInkSoft}\insertsubtitle\par}\fi};
     \fill[upbInk] ([xshift=10mm,yshift=24.4mm]current page.south west) rectangle ([xshift=-10mm,yshift=24mm]current page.south east);
     \node[anchor=north west,inner sep=0pt] at ([xshift=10mm,yshift=21.5mm]current page.south west) {%
-      \setlength\upb@tbw{34mm}\ifupb@lab\upb@tbcell{}{\insertauthor}\else\upb@tbcell{\upb@authorlabel}{\insertauthor}\fi\hspace{3mm}%
+      \setlength\upb@tbw{34mm}\upb@tbcell{\upb@authorlabel}{\insertauthor}\hspace{3mm}%
       \setlength\upb@tbw{20mm}%
-      \ifdefempty{\upb@courseshort}{}{\ifupb@lab\upb@tbcell{}{\upb@courseshort}\else\upb@tbcell{Course}{\upb@courseshort}\fi\hspace{3mm}}%
+      \ifdefempty{\upb@courseshort}{}{\upb@tbcell{Course}{\upb@courseshort}\hspace{3mm}}%
       \ifupb@lab\else\ifx\insertdate\@empty\else\upb@tbcell{Date}{\insertdate}\hspace{3mm}\fi\fi
       \setlength\upb@tbw{60mm}%
       \ifx\insertinstitute\@empty\else\upb@tbcell{Affiliation}{\insertinstitute}\hspace{3mm}\fi

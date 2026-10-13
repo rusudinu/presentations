@@ -55,7 +55,7 @@ commit time of the deck folder, which is what lets the CI skip a commit when not
 \subtitle{MCUs, bare metal vs RTOS, and TinyGo}
 \author{Dinu-Ștefan Rusu}
 % \materials{github.com/owner/repo}   optional: a "Slides and code" field on the cover
-% \authorlabel{Speaker}               optional: the cover's author label, "Lecturer" by default, none on lab covers
+% \authorlabel{Speaker}               optional: the cover's author label, off by default; setting it labels every cover field
 \begin{document}
 \titleframe
 ...
