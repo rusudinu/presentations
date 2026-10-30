@@ -5,7 +5,7 @@
 \course[MEC]{Mobile and Embedded Computing}
 \decklabel{Lab 7}
 \title{Lab test}
-\subtitle{Rules, format, task types}
+\subtitle{Rules and format}
 \author{Dinu-Ștefan Rusu}
 \date{Week 14}
 
@@ -39,16 +39,6 @@
   \begin{grid}[2]
     \cell[\faIcon{file-alt}]{One page, handed at the start}{Three tasks. Nothing changes once the clock starts.}
     \cell[\faClock]{One hour, then you submit}{Work until time is up, then submit your answers to the lab instructor. No extensions.}
-  \end{grid}
-  \vskip 6mm
-  \muted{Every spec has the same three kinds of task, described next.}
-\end{frame}
-
-\begin{frame}[embedded,eyebrow=Format]{Task types}
-  \begin{grid}[3]
-    \cell[\faWifi]{Publish or subscribe over MQTT}{Talk to the broker: publish a reading, or subscribe and show a value live, with reconnect handled.}
-    \cell[\faDatabase]{One offline-capable write}{A local write goes through an outbox and reaches the server once connectivity returns.}
-    \cell[\faBluetoothB]{One gRPC or BLE read}{A unary call to the Go server, or a characteristic read from a peripheral, parsed into a model.}
   \end{grid}
 \end{frame}
 

@@ -219,4 +219,4 @@ New. Task I: Firebase Auth with email and password plus Google sign-in, authStat
 
 ### Lab 7: Lab test
 
-New. The practical test worth 30 points. Four slides only: the objectives (four tasks, 7.5 points each, 1 hour), the rules (individual, one sitting, every line must be explained on request), the format (a one-page spec with four tasks, submitted to the lab instructor when the hour ends), and the task types (a screen built from the layout widgets, state in a Cubit, one network call with a model class, one navigation with go_router). No rubric, submission, preparation, practice or troubleshooting slides.
+New. The practical test worth 30 points. Three slides only: the objectives (four tasks, 7.5 points each, 1 hour), the rules (individual, one sitting, every line must be explained on request), the format (a one-page spec with four tasks, submitted to the lab instructor when the hour ends). The tasks cover a screen built from the layout widgets, state in a Cubit, one network call with a model class, and one navigation with go_router, and are named only on the objectives slide. No task types, rubric, submission, preparation, practice or troubleshooting slides.

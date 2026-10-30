@@ -208,4 +208,4 @@ A .proto with one unary call and one server-streaming call for readings. Generat
 
 ### Lab 7: Lab test
 
-The practical test worth 15 points. Four slides only: the objectives (three tasks, 5 points each, 1 hour), the rules (individual, one sitting, every line must be explained on request), the format (a one-page spec with three tasks, submitted to the lab instructor when the hour ends), and the task types drawn from Labs 2 to 6 (publish or subscribe over MQTT, one offline-capable write with an outbox, one gRPC or BLE read). No rubric, submission, preparation, practice or troubleshooting slides.
+The practical test worth 15 points. Three slides only: the objectives (three tasks, 5 points each, 1 hour), the rules (individual, one sitting, every line must be explained on request), the format (a one-page spec with three tasks, submitted to the lab instructor when the hour ends). The tasks are drawn from Labs 2 to 6 (publish or subscribe over MQTT, one offline-capable write with an outbox, one gRPC or BLE read) and are named only on the objectives slide. No task types, rubric, submission, preparation, practice or troubleshooting slides.
