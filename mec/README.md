@@ -33,4 +33,4 @@ Code examples that go with the lectures are in [examples/](examples/).
 | Lab 04 | [Phone sensors and a background task](MEC-Lab-04.pdf) | Step detection, location, background tasks (Week 8) |
 | Lab 05 | [Offline-first sync](MEC-Lab-05.pdf) | Outbox, drain loop, delta sync, conflict rule (Week 10) |
 | Lab 06 | [gRPC: a Go server and a Dart client](MEC-Lab-06.pdf) | gRPC unary call, server stream, deadlines, cancellation (Week 12) |
-| Lab 07 | [Lab test](MEC-Lab-07.pdf) | Rules, format, two practice specs (Week 14) |
+| Lab 07 | [Lab test](MEC-Lab-07.pdf) | Rules, format, task types (Week 14) |

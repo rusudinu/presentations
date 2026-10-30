@@ -34,4 +34,4 @@ Code examples that go with the lectures are in [examples/](examples/).
 | Lab 04 | [Serialization and networking](ADMD-Lab-04.pdf) | Code generation, equality, HTTP, retry (Week 8) |
 | Lab 05 | [BLoC](ADMD-Lab-05.pdf) | Cubit, Bloc events and bloc_test (Week 10) |
 | Lab 06 | [Auth, routing & a live screen](ADMD-Lab-06.pdf) | Firebase Auth, go_router guards, and a WebSocket screen (Week 12) |
-| Lab 07 | [Lab test](ADMD-Lab-07.pdf) | Rules, format, practice specs (Week 14) |
+| Lab 07 | [Lab test](ADMD-Lab-07.pdf) | Rules, format, task types (Week 14) |
