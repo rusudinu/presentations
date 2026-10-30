@@ -16,41 +16,29 @@
 \begin{frame}[eyebrow=Today]{Lab objectives}
   \vskip 2mm
   \begin{grid}[2]
-    \cell[\faIcon{stopwatch}]{Prove four skills, once}{Build a small app from a one-page spec in ninety minutes: a screen, a Cubit, a network call, and a route.}
-    \cell[\faIcon{graduation-cap}]{Worth 30 points}{7.5 points per requirement, graded when you present the app at the end of the test.}
+    \cell[\faIcon{stopwatch}]{Prove four skills, once}{Write a small app from a one-page spec in one hour: a screen, a Cubit, a network call, and a route.}
+    \cell[\faIcon{graduation-cap}]{Worth 30 points}{7.5 points per requirement, graded at the end of the test.}
   \end{grid}
   \vskip 6mm
-  \taskmeta{Time}{90 minutes}{Present}{To the lab instructor, when the time is up}
+  \taskmeta{Time}{1 hour}{Submit}{To the lab instructor, when the time is up}
 \end{frame}
 
 \begin{frame}[eyebrow=Rules]{Rules}
   \begin{steps}
     \item You work alone. No pair programming, no shared screens, no copying a classmate's code.
-    \item Ninety minutes, one sitting, starting when you receive the spec.
-    \item Your own laptop, your existing lab app from Labs 1 to 6.
+    \item One hour, one sitting, starting when you receive the spec.
+    \item You must be able to explain any line the grader points to, in your own words.
     \item No new packages beyond what Labs 2 to 6 already added, unless the spec names one.
   \end{steps}
-  \begin{takeaway}{Time lost to a crashed emulator or a broken hot reload is not added back.}
+  \begin{takeaway}{The clock does not pause, and the hour is not extended.}
   \end{takeaway}
-\end{frame}
-
-\begin{frame}[eyebrow=Rules]{Allowed resources}
-  \begin{steps}
-    \item Internet access is allowed: official docs, package pages, your own past labs.
-    \item AI agents are allowed for writing code.
-    \item You must be able to explain any line the grader points to, in your own words.
-    \item Asking another person, in the room or online, to write code for you is not allowed.
-  \end{steps}
-  \begin{warning}
-    An agent-written line you cannot explain earns no credit for that requirement, even if it compiles.
-  \end{warning}
 \end{frame}
 
 \begin{frame}[eyebrow=Format]{Test format}
   \vskip 2mm
   \begin{grid}[2]
-    \cell[\faIcon{file-alt}]{One page, handed at the start}{An app idea and four requirements, on paper or a shared document. Nothing changes once the clock starts.}
-    \cell[\faClock]{Ninety minutes, then you present}{Build until time is up, then run the app for the lab instructor. No extensions.}
+    \cell[\faIcon{file-alt}]{One page, handed at the start}{An app idea and four requirements. Nothing changes once the clock starts.}
+    \cell[\faClock]{One hour, then you submit}{Work until time is up, then submit your solution to the lab instructor. No extensions.}
   \end{grid}
   \vskip 6mm
   \muted{Every spec asks for the same four kinds of requirement, described next.}
@@ -70,9 +58,9 @@
     \toprule
     \thead{Requirement} & \thead{Full credit (7.5 p)} & \thead{Partial credit (3.75 p)} \\
     \midrule
-    Screen & Matches the spec's widgets, no overflow & Builds, but the layout differs from spec \\
+    Screen & Matches the spec's widgets, no overflow & Screen exists, but the layout differs from spec \\
     Cubit state & UI updates through emit, never setState & Cubit exists, but a screen still calls setState \\
-    Network + model & Parses the real response into a model & Call runs, but fields come from a raw map \\
+    Network + model & Parses the real response into a model & Call is made, but fields come from a raw map \\
     go\_router nav & Navigates and returns with the right data & Route exists, but push or data is wrong \\
     \bottomrule
   \end{tabular}}
@@ -80,15 +68,15 @@
   \muted{Anything not attempted scores zero.}
 \end{frame}
 
-\begin{frame}[eyebrow=Presentation]{Presentation}
+\begin{frame}[eyebrow=Submission]{Submission}
   \begin{steps}
-    \item Stop coding when the ninety minutes end.
-    \item Run the app on your emulator or device when you are called.
-    \item Show each requirement working, in the order of the spec.
-    \item Answer questions on any line of your code.
+    \item Stop working when the hour ends.
+    \item Submit your solution to the lab instructor.
+    \item Each requirement is graded in the order of the spec.
+    \item Be ready to explain any line of your code.
   \end{steps}
   \begin{warning}
-    What runs when you are called is what is graded. The test cannot be presented later.
+    What you submit when time is up is what is graded. The test cannot be taken later.
   \end{warning}
 \end{frame}
 
@@ -125,7 +113,7 @@
     \begin{column}{0.4\textwidth}
       \kv{Grader checks}{}
       \begin{checklist}
-        \item The app builds and runs.
+        \item Each piece sits in its layer: widget, Cubit, repository.
         \item A checkbox toggle goes through the Cubit, never setState.
         \item The AppBar name comes from the API, not a hardcoded string.
         \item The back button returns from the detail screen to the list.
@@ -152,7 +140,7 @@
         \item A chip filters the list through the Cubit, not a local variable.
         \item Every field on screen comes from the Event model, never a raw map key.
         \item The detail route reads the id from the URL.
-        \item The app does not crash when the network call is slow.
+        \item A slow or failed network call shows a loading or an error state.
       \end{checklist}
     \end{column}
   \end{columns}
@@ -166,6 +154,6 @@
   \trouble{setState() or emit() called after dispose()}{A response arrived after the screen closed. Check \code{mounted} before calling either.}
 \end{frame}
 
-\closingframe{Presentation}{Each requirement shown running · presented when time is up}
+\closingframe{Submission}{Each requirement graded · submitted when time is up}
 
 \end{document}

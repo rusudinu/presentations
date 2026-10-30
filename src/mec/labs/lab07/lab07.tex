@@ -16,52 +16,29 @@
 \begin{frame}[eyebrow=Today]{Lab objectives}
   \vskip 2mm
   \begin{grid}[2]
-    \cell[\faIcon{stopwatch}]{Prove three skills, once}{Build a small app from a one-page spec in ninety minutes: a device message, an offline write, and a remote read.}
-    \cell[\faIcon{graduation-cap}]{Worth 15 points}{5 points per requirement, graded when you present the app at the end of the test.}
+    \cell[\faIcon{stopwatch}]{Prove three skills, once}{Write a small app from a one-page spec in one hour: a device message, an offline write, and a remote read.}
+    \cell[\faIcon{graduation-cap}]{Worth 15 points}{5 points per requirement, graded at the end of the test.}
   \end{grid}
   \vskip 6mm
-  \taskmeta{Time}{90 minutes}{Present}{To the lab instructor, when the time is up}
+  \taskmeta{Time}{1 hour}{Submit}{To the lab instructor, when the time is up}
 \end{frame}
 
 \begin{frame}[eyebrow=Rules]{Rules}
   \begin{steps}
     \item You work alone. No pair programming, no shared screens, no copying a classmate's code.
-    \item Ninety minutes, one sitting, starting when you receive the spec.
-    \item Your own laptop, your existing lab code from Labs 1 to 6.
-    \item A real board or the Wokwi simulator, whichever you used in the labs. Either is accepted.
+    \item One hour, one sitting, starting when you receive the spec.
+    \item You must be able to explain any line the grader points to, in your own words.
   \end{steps}
   \begin{takeaway}{The clock does not pause.}
-    A crashed simulator or a broker that refuses a connection counts against your ninety minutes.
+    The hour is not extended for any reason.
   \end{takeaway}
-\end{frame}
-
-\begin{frame}[eyebrow=Rules]{Allowed resources}
-  \begin{steps}
-    \item Internet access is allowed: official docs, package pages, your own past labs.
-    \item AI agents are allowed for writing code.
-    \item You must be able to explain any line the grader points to, in your own words.
-    \item Asking another person, in the room or online, to write code for you is not allowed.
-  \end{steps}
-  \begin{warning}
-    An agent-written line you cannot explain earns no credit for that requirement, even if it compiles.
-  \end{warning}
-\end{frame}
-
-\begin{frame}[embedded,eyebrow=Setup]{Infrastructure for the test}
-  \vskip 2mm
-  \begin{grid}[2]
-    \cell[\faWifi]{A broker on the instructor's machine}{A Mosquitto broker for the MQTT requirement. No need to run your own.}
-    \cell[\faServer]{Two Go servers on the instructor's machine}{The outbox server from Lab 5 and the gRPC server from Lab 6, already running.}
-  \end{grid}
-  \vskip 6mm
-  \muted{Addresses and ports are announced at the start of the test. Write them down before the clock starts.}
 \end{frame}
 
 \begin{frame}[eyebrow=Format]{Test format}
   \vskip 2mm
   \begin{grid}[2]
-    \cell[\faIcon{file-alt}]{One page, handed at the start}{An app idea and three requirements, on paper or a shared document. Nothing changes once the clock starts.}
-    \cell[\faClock]{Ninety minutes, then you present}{Build until time is up, then run the app for the lab instructor. No extensions.}
+    \cell[\faIcon{file-alt}]{One page, handed at the start}{An app idea and three requirements. Nothing changes once the clock starts.}
+    \cell[\faClock]{One hour, then you submit}{Work until time is up, then submit your solution to the lab instructor. No extensions.}
   \end{grid}
   \vskip 6mm
   \muted{Every spec asks for the same three kinds of requirement, described next.}
@@ -81,23 +58,23 @@
     \thead{Requirement} & \thead{Full credit (5 p)} & \thead{Partial credit (2.5 p)} \\
     \midrule
     MQTT pub or sub & Connects, and reconnects after a broker drop & Connects once, but does not recover from a drop \\
-    Offline write + outbox & Written offline, reaches the server once online & Outbox exists, but the drain loop never runs \\
-    gRPC or BLE read & Parses the real response into a model, shown live & Call or read succeeds, but fields come from a raw map \\
+    Offline write + outbox & Written offline, reaches the server once online & Outbox exists, but nothing drains it \\
+    gRPC or BLE read & Parses the real response into a model, shown live & Call or read is made, but fields come from a raw map \\
     \bottomrule
   \end{tabular}}
   \vskip 2mm
   \muted{Anything not attempted scores zero.}
 \end{frame}
 
-\begin{frame}[eyebrow=Presentation]{Presentation}
+\begin{frame}[eyebrow=Submission]{Submission}
   \begin{steps}
-    \item Stop coding when the ninety minutes end.
-    \item Run the app on your emulator or device when you are called.
-    \item Show each requirement working, in the order of the spec.
-    \item Answer questions on any line of your code.
+    \item Stop working when the hour ends.
+    \item Submit your solution to the lab instructor.
+    \item Each requirement is graded in the order of the spec.
+    \item Be ready to explain any line of your code.
   \end{steps}
   \begin{warning}
-    What runs when you are called is what is graded. The test cannot be presented later.
+    What you submit when time is up is what is graded. The test cannot be taken later.
   \end{warning}
 \end{frame}
 
@@ -169,6 +146,6 @@
   \trouble{BLE scan returns no devices}{A runtime permission was never requested: \code{BLUETOOTH\_SCAN} on Android, the usage string on iOS.}
 \end{frame}
 
-\closingframe{Presentation}{Each requirement shown running · presented when time is up}
+\closingframe{Submission}{Each requirement graded · submitted when time is up}
 
 \end{document}

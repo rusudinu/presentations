@@ -16,7 +16,7 @@ history). `EX` means `admd/examples/lib/` (the Flutter example project, grouped 
 | Status | Optional, 4 ECTS, paired with Introduction to SAP |
 | Format | 14 weeks. Lecture 2 h every week. Lab 2 h every second week, in even weeks (7 labs). There are 15 lecture decks for 14 slots: see the note under the lecture plan |
 | Evaluation | Verification (V), no exam session |
-| Grading | Colloquium 20 p, midterm 20 p, lab assignments 30 p (cumulative lab app), practical lab test 30 p (Lab 7). Pass with at least 50 of 100 |
+| Grading | Colloquium 20 p (1 h), midterm 20 p (1 h), lab assignments 30 p (cumulative lab app), practical lab test 30 p (Lab 7, 1 h). Pass with at least 50 of 100 |
 | Instructors | Andrei Vasilățeanu; Dinu-Ștefan Rusu, dinu_stefan.rusu@upb.ro, Microsoft Teams course channel, rusudinu.com. 50+ apps shipped, 500k+ installs |
 | Stack | Flutter and Dart, Firebase, Go only where a tiny backend is needed |
 | Repository | github.com/rusudinu/presentations for the shared material (slides in `admd/`, code examples in `admd/examples/`); labs are individual, and each one is graded when the student presents it to the lab instructor at the end of its session |
@@ -219,4 +219,4 @@ New. Task I: Firebase Auth with email and password plus Google sign-in, authStat
 
 ### Lab 7: Lab test
 
-New. The practical test worth 30 points. The deck states the rules (individual, 90 minutes, own laptop, internet allowed, agents allowed but every line must be explained on request), the format (a one-page spec of a small app with four requirements: a screen built from the layout widgets, state in a Cubit, one network call with a model class, one navigation with go_router), the rubric (one point per requirement, partial credit rules), how the test is presented (live, to the lab instructor, when the ninety minutes end), and two practice specs of the same shape. Include a "how to prepare" slide that maps each requirement to the lab that taught it.
+New. The practical test worth 30 points. The deck states the rules (individual, 1 hour, every line must be explained on request; the slides do not say whether the test is on paper or on a laptop), the format (a one-page spec of a small app with four requirements: a screen built from the layout widgets, state in a Cubit, one network call with a model class, one navigation with go_router), the rubric (one point per requirement, partial credit rules), how the test is submitted (to the lab instructor, when the hour ends), and two practice specs of the same shape. Include a "how to prepare" slide that maps each requirement to the lab that taught it.
