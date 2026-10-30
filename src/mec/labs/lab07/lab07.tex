@@ -5,7 +5,7 @@
 \course[MEC]{Mobile and Embedded Computing}
 \decklabel{Lab 7}
 \title{Lab test}
-\subtitle{Rules, format, two practice specs}
+\subtitle{Rules, format, task types}
 \author{Dinu-Ștefan Rusu}
 \date{Week 14}
 
@@ -16,8 +16,8 @@
 \begin{frame}[eyebrow=Today]{Lab objectives}
   \vskip 2mm
   \begin{grid}[2]
-    \cell[\faIcon{stopwatch}]{Prove three skills, once}{Write a small app from a one-page spec in one hour: a device message, an offline write, and a remote read.}
-    \cell[\faIcon{graduation-cap}]{Worth 15 points}{5 points per requirement, graded at the end of the test.}
+    \cell[\faIcon{stopwatch}]{Prove three skills, once}{Solve three tasks from a one-page spec in one hour: a device message, an offline write, and a remote read.}
+    \cell[\faIcon{graduation-cap}]{Worth 15 points}{5 points per task, graded at the end of the test.}
   \end{grid}
   \vskip 6mm
   \taskmeta{Time}{1 hour}{Submit}{To the lab instructor, when the time is up}
@@ -25,7 +25,7 @@
 
 \begin{frame}[eyebrow=Rules]{Rules}
   \begin{steps}
-    \item You work alone. No pair programming, no shared screens, no copying a classmate's code.
+    \item You work alone. No help from anyone else, no copying a classmate's work.
     \item One hour, one sitting, starting when you receive the spec.
     \item You must be able to explain any line the grader points to, in your own words.
   \end{steps}
@@ -37,14 +37,14 @@
 \begin{frame}[eyebrow=Format]{Test format}
   \vskip 2mm
   \begin{grid}[2]
-    \cell[\faIcon{file-alt}]{One page, handed at the start}{An app idea and three requirements. Nothing changes once the clock starts.}
-    \cell[\faClock]{One hour, then you submit}{Work until time is up, then submit your solution to the lab instructor. No extensions.}
+    \cell[\faIcon{file-alt}]{One page, handed at the start}{Three tasks. Nothing changes once the clock starts.}
+    \cell[\faClock]{One hour, then you submit}{Work until time is up, then submit your answers to the lab instructor. No extensions.}
   \end{grid}
   \vskip 6mm
-  \muted{Every spec asks for the same three kinds of requirement, described next.}
+  \muted{Every spec has the same three kinds of task, described next.}
 \end{frame}
 
-\begin{frame}[embedded,eyebrow=Format]{Requirement types}
+\begin{frame}[embedded,eyebrow=Format]{Task types}
   \begin{grid}[3]
     \cell[\faWifi]{Publish or subscribe over MQTT}{Talk to the broker: publish a reading, or subscribe and show a value live, with reconnect handled.}
     \cell[\faDatabase]{One offline-capable write}{A local write goes through an outbox and reaches the server once connectivity returns.}
@@ -52,100 +52,6 @@
   \end{grid}
 \end{frame}
 
-\begin{frame}[eyebrow=Rubric]{Rubric}
-  {\usebeamerfont{small}\begin{tabular}{@{}p{30mm}p{42mm}p{42mm}@{}}
-    \toprule
-    \thead{Requirement} & \thead{Full credit (5 p)} & \thead{Partial credit (2.5 p)} \\
-    \midrule
-    MQTT pub or sub & Connects, and reconnects after a broker drop & Connects once, but does not recover from a drop \\
-    Offline write + outbox & Written offline, reaches the server once online & Outbox exists, but nothing drains it \\
-    gRPC or BLE read & Parses the real response into a model, shown live & Call or read is made, but fields come from a raw map \\
-    \bottomrule
-  \end{tabular}}
-  \vskip 2mm
-  \muted{Anything not attempted scores zero.}
-\end{frame}
-
-\begin{frame}[eyebrow=Submission]{Submission}
-  \begin{steps}
-    \item Stop working when the hour ends.
-    \item Submit your solution to the lab instructor.
-    \item Each requirement is graded in the order of the spec.
-    \item Be ready to explain any line of your code.
-  \end{steps}
-  \begin{warning}
-    What you submit when time is up is what is graded. The test cannot be taken later.
-  \end{warning}
-\end{frame}
-
-\begin{frame}[eyebrow=Prepare]{Preparation}
-  \vskip 2mm
-  {\usebeamerfont{small}\begin{tabular}{@{}p{62mm}p{20mm}@{}}
-    \toprule
-    \thead{Requirement} & \thead{Taught in} \\
-    \midrule
-    Publish or subscribe over MQTT & Lab 2 \\
-    One offline-capable write with an outbox & Lab 5 \\
-    A gRPC unary call, or a BLE characteristic read & Lab 6, Lab 3 \\
-    \bottomrule
-  \end{tabular}}
-  \vskip 4mm
-  \begin{takeaway}{Nothing on the test is new.}
-    Re-read the Task slides and the reference code in those three labs. Redo one small piece from memory before you come.
-  \end{takeaway}
-\end{frame}
-
-\begin{frame}[embedded,eyebrow=Practice A]{Practice A: greenhouse monitor}
-  \muted{An app that shows a greenhouse reading live and logs manual care events.}
-  \vskip 2mm
-  \begin{columns}[T]
-    \begin{column}{0.56\textwidth}
-      \begin{steps}
-        \item Subscribe with \code{mqtt\_client} to \code{greenhouse/temp} and show the value live in a BlocBuilder, with reconnect on broker loss.
-        \item A \emph{Log watering} button writes to a local table and an outbox in one transaction. A drain loop posts it to the outbox server.
-        \item Call the gRPC server for the care thresholds for the plant and show them once parsed into a model.
-      \end{steps}
-    \end{column}
-    \begin{column}{0.4\textwidth}
-      \kv{Grader checks}{}
-      \begin{checklist}
-        \item Stopping and restarting the broker resumes live updates.
-        \item A watering event logged in airplane mode reaches the server once online.
-        \item The threshold values on screen come from the model, not a raw map.
-      \end{checklist}
-    \end{column}
-  \end{columns}
-\end{frame}
-
-\begin{frame}[embedded,eyebrow=Practice B]{Practice B: delivery tracker}
-  \muted{An app that tracks a van's status and one delivery scan.}
-  \vskip 2mm
-  \begin{columns}[T]
-    \begin{column}{0.56\textwidth}
-      \begin{steps}
-        \item Publish the van's status to \code{fleet/van1/status} every few seconds with QoS 1.
-        \item Marking a delivery complete writes to a local table and an outbox in one transaction, synced by a drain loop.
-        \item Connect to the scanner peripheral over BLE and subscribe to the last scanned code, shown live on screen.
-      \end{steps}
-    \end{column}
-    \begin{column}{0.4\textwidth}
-      \kv{Grader checks}{}
-      \begin{checklist}
-        \item Publishing resumes after the broker connection drops and comes back.
-        \item A delivery marked complete offline appears on the server once the sync loop runs.
-        \item The scanned code updates the screen without polling the peripheral.
-      \end{checklist}
-    \end{column}
-  \end{columns}
-\end{frame}
-
-\begin{frame}[eyebrow=Troubleshooting]{Common mistakes}
-  \trouble{Client not connected}{You published before the MQTT connect finished. Await the connection state before the first publish or subscribe.}
-  \trouble{An outbox row stays queued forever}{The drain loop never marks the row sent after a successful post. Update its status inside the same transaction as the network call.}
-  \trouble{A gRPC call hangs and the screen never updates}{No deadline was set. Attach one, and handle the deadline-exceeded status instead of swallowing it.}
-  \trouble{BLE scan returns no devices}{A runtime permission was never requested: \code{BLUETOOTH\_SCAN} on Android, the usage string on iOS.}
-\end{frame}
-
-\closingframe{Submission}{Each requirement graded · submitted when time is up}
+\closingframe{Lab test}{Three tasks · one hour}
 
 \end{document}
