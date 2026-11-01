@@ -12,7 +12,7 @@ dependencies:
     sdk: flutter
   cupertino_icons: ^1.0.8
   flutter_bloc: ^9.1.1
-  equatable: ^2.0.7
+  equatable: ^3.0.0
   # HTTP libraries
   http: ^1.1.0              # Simple HTTP client with RetryClient support
   dio: ^5.11.1               # Feature-rich HTTP client with interceptors
